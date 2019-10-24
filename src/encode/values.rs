@@ -1,3 +1,4 @@
+use super::util::loop_encode;
 use super::Encoder;
 use crate::structure::values::{Byte, Name};
 use byteorder::{LittleEndian, WriteBytesExt};
@@ -57,8 +58,6 @@ where
 {
     fn encode(&self, bytes: &mut Vec<u8>) {
         (self.len() as u32).encode(bytes);
-        for x in self {
-            x.encode(bytes);
-        }
+        loop_encode(self, bytes);
     }
 }
