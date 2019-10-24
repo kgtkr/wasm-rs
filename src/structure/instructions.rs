@@ -2,7 +2,7 @@ use super::modules::{FuncIdx, GlobalIdx, LabelIdx, LocalIdx, TypeIdx};
 use super::types::ResultType;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Expr(pub Instr);
+pub struct Expr(pub Vec<Instr>);
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Instr {
