@@ -4,69 +4,69 @@ use super::values::{Byte, Name};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Module {
-    types: Vec<FuncType>,
-    funcs: Vec<Func>,
-    tables: Vec<Table>,
-    mems: Vec<Mem>,
-    globals: Vec<Global>,
-    elem: Vec<Elem>,
-    data: Vec<Data>,
-    start: Option<Start>,
-    imports: Vec<Import>,
-    exports: Vec<Export>,
+    pub types: Vec<FuncType>,
+    pub funcs: Vec<Func>,
+    pub tables: Vec<Table>,
+    pub mems: Vec<Mem>,
+    pub globals: Vec<Global>,
+    pub elem: Vec<Elem>,
+    pub data: Vec<Data>,
+    pub start: Option<Start>,
+    pub imports: Vec<Import>,
+    pub exports: Vec<Export>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct TypeIdx(u32);
+pub struct TypeIdx(pub u32);
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct FuncIdx(u32);
+pub struct FuncIdx(pub u32);
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct TableIdx(u32);
+pub struct TableIdx(pub u32);
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct MemIdx(u32);
+pub struct MemIdx(pub u32);
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GlobalIdx(u32);
+pub struct GlobalIdx(pub u32);
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct LocalIdx(u32);
+pub struct LocalIdx(pub u32);
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct LabelIdx(u32);
+pub struct LabelIdx(pub u32);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Func {
-    type_: TypeIdx,
-    locals: Vec<ValType>,
-    body: Expr,
+    pub type_: TypeIdx,
+    pub locals: Vec<ValType>,
+    pub body: Expr,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Table {
-    type_: TableType,
+    pub type_: TableType,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Mem {
-    type_: MemType,
+    pub type_: MemType,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Global {
-    type_: GlobalType,
+    pub type_: GlobalType,
     // constant expression
-    init: Expr,
+    pub init: Expr,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Elem {
-    table: TableIdx,
+    pub table: TableIdx,
     // constant expression
-    offset: Expr,
-    init: Vec<FuncIdx>,
+    pub offset: Expr,
+    pub init: Vec<FuncIdx>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
