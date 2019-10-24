@@ -34,3 +34,6 @@ pub enum Mut {
     Const,
     Var,
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ResultType(Option<ValType>);
