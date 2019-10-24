@@ -1,4 +1,4 @@
-use super::expr::Expr;
+use super::instructions::Expr;
 use super::types::{FuncType, GlobalType, MemType, TableType, ValType};
 
 #[derive(Debug, Clone, PartialEq)]
