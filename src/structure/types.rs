@@ -1,5 +1,5 @@
 #[derive(Debug, Clone, PartialEq)]
-pub struct FuncType(Vec<ValType>, Vec<ValType>);
+pub struct FuncType(pub Vec<ValType>, pub Vec<ValType>);
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ValType {
@@ -11,15 +11,15 @@ pub enum ValType {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Limits {
-    min: u32,
-    max: Option<u32>,
+    pub min: u32,
+    pub max: Option<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct MemType(Limits);
+pub struct MemType(pub Limits);
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct TableType(Limits, ElemType);
+pub struct TableType(pub Limits, pub ElemType);
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ElemType {
@@ -27,7 +27,7 @@ pub enum ElemType {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GlobalType(Mut, ValType);
+pub struct GlobalType(pub Mut, pub ValType);
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Mut {
@@ -36,4 +36,4 @@ pub enum Mut {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ResultType(Option<ValType>);
+pub struct ResultType(pub Option<ValType>);

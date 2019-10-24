@@ -71,21 +71,21 @@ pub struct Elem {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Data {
-    data: MemIdx,
+    pub data: MemIdx,
     // constant expression
-    offset: Expr,
-    init: Vec<Byte>,
+    pub offset: Expr,
+    pub init: Vec<Byte>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Start {
-    func: FuncIdx,
+    pub func: FuncIdx,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Export {
-    name: Name,
-    desc: ExportDesc,
+    pub name: Name,
+    pub desc: ExportDesc,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -98,9 +98,9 @@ pub enum ExportDesc {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Import {
-    module: Name,
-    name: Name,
-    desc: ImportDesc,
+    pub module: Name,
+    pub name: Name,
+    pub desc: ImportDesc,
 }
 
 #[derive(Debug, Clone, PartialEq)]

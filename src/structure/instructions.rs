@@ -2,7 +2,7 @@ use super::modules::{FuncIdx, GlobalIdx, LabelIdx, LocalIdx, TypeIdx};
 use super::types::ResultType;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Expr(Instr);
+pub struct Expr(pub Instr);
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Instr {
@@ -173,6 +173,6 @@ pub enum FRelOp {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Memarg {
-    offset: u32,
-    align: u32,
+    pub offset: u32,
+    pub align: u32,
 }

@@ -1,5 +1,5 @@
 #[derive(Debug, Clone, PartialEq)]
-pub struct Byte(u8);
+pub struct Byte(pub u8);
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Name(String);
+pub struct Name(pub String);
