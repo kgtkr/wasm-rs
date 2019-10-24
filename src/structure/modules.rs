@@ -1,5 +1,6 @@
 use super::instructions::Expr;
 use super::types::{FuncType, GlobalType, MemType, TableType, ValType};
+use super::values::{Byte, Name};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Module {
@@ -73,7 +74,7 @@ pub struct Data {
     data: MemIdx,
     // constant expression
     offset: Expr,
-    init: Vec<u8>,
+    init: Vec<Byte>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -83,7 +84,7 @@ pub struct Start {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Export {
-    name: String,
+    name: Name,
     desc: ExportDesc,
 }
 
@@ -97,8 +98,8 @@ pub enum ExportDesc {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Import {
-    module: String,
-    name: String,
+    module: Name,
+    name: Name,
     desc: ImportDesc,
 }
 
