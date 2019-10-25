@@ -1,2 +1,2 @@
-pub mod encode;
+pub mod binary;
 pub mod structure;
