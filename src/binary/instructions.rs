@@ -1,6 +1,20 @@
+use super::parser;
+use super::types::{
+    p_elemtype, p_functype, p_globaltype, p_limits, p_memtype, p_mut, p_resulttype, p_tabletype,
+    p_valtype,
+};
 use super::util::loop_encode;
+use super::values::{p_u32, p_vec};
 use super::Encoder;
 use crate::structure::instructions::{Expr, Instr, Memarg};
+use nom::{
+    branch::alt,
+    bytes::complete::{tag, take, take_while_m_n},
+    combinator::{map, map_res, opt},
+    multi::{many0, many_m_n},
+    sequence::tuple,
+    IResult,
+};
 
 impl Encoder for Expr {
     fn encode(&self, bytes: &mut Vec<u8>) {
@@ -324,9 +338,54 @@ impl Encoder for Instr {
     }
 }
 
+pub fn p_inser(input: &[u8]) -> IResult<&[u8], Instr> {
+    alt((
+        map(parser::token(0x00), |_| Instr::Unreachable),
+        map(parser::token(0x01), |_| Instr::Nop),
+        map(
+            tuple((
+                parser::token(0x02),
+                p_resulttype,
+                many0(p_inser),
+                parser::token(0x0b),
+            )),
+            |(_, rt, is, _)| Instr::Block(rt, is),
+        ),
+        map(
+            tuple((
+                parser::token(0x03),
+                p_resulttype,
+                many0(p_inser),
+                parser::token(0x0b),
+            )),
+            |(_, rt, is, _)| Instr::Loop(rt, is),
+        ),
+        map(
+            tuple((
+                parser::token(0x04),
+                p_resulttype,
+                many0(p_inser),
+                opt(map(
+                    tuple((parser::token(0x05), many0(p_inser))),
+                    |(_, is2)| is2,
+                )),
+                parser::token(0x0b),
+            )),
+            |(_, rt, is1, is2, _)| Instr::If(rt, is1, is2.unwrap_or_else(Vec::new)),
+        ),
+    ))(input)
+}
+
 impl Encoder for Memarg {
     fn encode(&self, bytes: &mut Vec<u8>) {
         self.align.encode(bytes);
         self.offset.encode(bytes);
     }
+}
+
+pub fn p_memarg(input: &[u8]) -> IResult<&[u8], Memarg> {
+    map(tuple((p_u32, p_u32)), |(align, offset)| Memarg {
+        align,
+        offset,
+    })(input)
 }
