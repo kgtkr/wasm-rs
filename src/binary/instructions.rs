@@ -26,6 +26,12 @@ impl Encoder for Expr {
     }
 }
 
+pub fn p_expr(input: &[u8]) -> IResult<&[u8], Expr> {
+    map(tuple((many0(p_inser), parser::token(0x0b))), |(is, _)| {
+        Expr(is)
+    })(input)
+}
+
 impl Encoder for Instr {
     fn encode(&self, bytes: &mut Vec<u8>) {
         match &self {
@@ -348,6 +354,27 @@ macro_rules! alt_m {
   ($x:expr,) => {
     $x
   };
+  ($x1:expr, $x2:expr, $x3:expr, $x4:expr, $x5:expr, $x6:expr, $x7:expr, $x8:expr, $($xs:tt)+) => {
+    alt(($x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, alt_m!($($xs)+)))
+  };
+  ($x1:expr, $x2:expr, $x3:expr, $x4:expr, $x5:expr, $x6:expr, $x7:expr, $($xs:tt)+) => {
+    alt(($x1, $x2, $x3, $x4, $x5, $x6, $x7, alt_m!($($xs)+)))
+  };
+  ($x1:expr, $x2:expr, $x3:expr, $x4:expr, $x5:expr, $x6:expr, $($xs:tt)+) => {
+    alt(($x1, $x2, $x3, $x4, $x5, $x6, alt_m!($($xs)+)))
+  };
+  ($x1:expr, $x2:expr, $x3:expr, $x4:expr, $x5:expr, $($xs:tt)+) => {
+    alt(($x1, $x2, $x3, $x4, $x5, alt_m!($($xs)+)))
+  };
+  ($x1:expr, $x2:expr, $x3:expr, $x4:expr, $($xs:tt)+) => {
+    alt(($x1, $x2, $x3, $x4, alt_m!($($xs)+)))
+  };
+  ($x1:expr, $x2:expr, $x3:expr, $($xs:tt)+) => {
+    alt(($x1, $x2, $x3 ,alt_m!($($xs)+)))
+  };
+  ($x1:expr, $x2:expr, $($xs:tt)+) => {
+    alt(($x1, $x2 ,alt_m!($($xs)+)))
+  };
   ($x:expr, $($xs:tt)+) => {
     alt(($x,alt_m!($($xs)+)))
   };
@@ -513,9 +540,132 @@ pub fn p_inser(input: &[u8]) -> IResult<&[u8], Instr> {
         map(tuple((parser::token(0x43), p_f32)), |(_, z)| {
             Instr::F32Const(z)
         }),
-        map(tuple((parser::token(0x43), p_f64)), |(_, z)| {
+        map(tuple((parser::token(0x44), p_f64)), |(_, z)| {
             Instr::F64Const(z)
         }),
+        map(parser::token(0x45), |_| Instr::I32Eqz),
+        map(parser::token(0x46), |_| Instr::I32Eq),
+        map(parser::token(0x47), |_| Instr::I32Ne),
+        map(parser::token(0x48), |_| Instr::I32LtS),
+        map(parser::token(0x49), |_| Instr::I32LtU),
+        map(parser::token(0x4a), |_| Instr::I32GtS),
+        map(parser::token(0x4b), |_| Instr::I32GtU),
+        map(parser::token(0x4c), |_| Instr::I32LeS),
+        map(parser::token(0x4d), |_| Instr::I32LeU),
+        map(parser::token(0x4e), |_| Instr::I32GeS),
+        map(parser::token(0x4f), |_| Instr::I32GeU),
+        map(parser::token(0x50), |_| Instr::I64Eqz),
+        map(parser::token(0x51), |_| Instr::I64Eq),
+        map(parser::token(0x52), |_| Instr::I64Ne),
+        map(parser::token(0x53), |_| Instr::I64LtS),
+        map(parser::token(0x54), |_| Instr::I64LtU),
+        map(parser::token(0x55), |_| Instr::I64GtS),
+        map(parser::token(0x56), |_| Instr::I64GtU),
+        map(parser::token(0x57), |_| Instr::I64LeS),
+        map(parser::token(0x58), |_| Instr::I64LeU),
+        map(parser::token(0x59), |_| Instr::I64GeS),
+        map(parser::token(0x5a), |_| Instr::I64GeU),
+        map(parser::token(0x5b), |_| Instr::F32Eq),
+        map(parser::token(0x5c), |_| Instr::F32Ne),
+        map(parser::token(0x5d), |_| Instr::F32Lt),
+        map(parser::token(0x5e), |_| Instr::F32Gt),
+        map(parser::token(0x5f), |_| Instr::F32Le),
+        map(parser::token(0x60), |_| Instr::F32Ge),
+        map(parser::token(0x61), |_| Instr::F64Eq),
+        map(parser::token(0x62), |_| Instr::F64Ne),
+        map(parser::token(0x63), |_| Instr::F64Lt),
+        map(parser::token(0x64), |_| Instr::F64Gt),
+        map(parser::token(0x65), |_| Instr::F64Le),
+        map(parser::token(0x66), |_| Instr::F64Ge),
+        map(parser::token(0x67), |_| Instr::I32Clz),
+        map(parser::token(0x68), |_| Instr::I32Ctz),
+        map(parser::token(0x69), |_| Instr::I32Popcnt),
+        map(parser::token(0x6a), |_| Instr::I32Add),
+        map(parser::token(0x6b), |_| Instr::I32Sub),
+        map(parser::token(0x6c), |_| Instr::I32Mul),
+        map(parser::token(0x6d), |_| Instr::I32DivS),
+        map(parser::token(0x6e), |_| Instr::I32DivU),
+        map(parser::token(0x6f), |_| Instr::I32RemS),
+        map(parser::token(0x70), |_| Instr::I32RemU),
+        map(parser::token(0x71), |_| Instr::I32And),
+        map(parser::token(0x72), |_| Instr::I32Or),
+        map(parser::token(0x73), |_| Instr::I32Xor),
+        map(parser::token(0x74), |_| Instr::I32ShL),
+        map(parser::token(0x75), |_| Instr::I32ShrS),
+        map(parser::token(0x76), |_| Instr::I32ShrU),
+        map(parser::token(0x77), |_| Instr::I32Rotl),
+        map(parser::token(0x78), |_| Instr::I32Rotr),
+        map(parser::token(0x79), |_| Instr::I64Clz),
+        map(parser::token(0x7a), |_| Instr::I64Ctz),
+        map(parser::token(0x7b), |_| Instr::I64Popcnt),
+        map(parser::token(0x7c), |_| Instr::I64Add),
+        map(parser::token(0x7d), |_| Instr::I64Sub),
+        map(parser::token(0x7e), |_| Instr::I64Mul),
+        map(parser::token(0x7f), |_| Instr::I64DivS),
+        map(parser::token(0x80), |_| Instr::I64DivU),
+        map(parser::token(0x81), |_| Instr::I64RemS),
+        map(parser::token(0x82), |_| Instr::I64RemU),
+        map(parser::token(0x83), |_| Instr::I64And),
+        map(parser::token(0x84), |_| Instr::I64Or),
+        map(parser::token(0x85), |_| Instr::I64Xor),
+        map(parser::token(0x86), |_| Instr::I64ShL),
+        map(parser::token(0x87), |_| Instr::I64ShrS),
+        map(parser::token(0x88), |_| Instr::I64ShrU),
+        map(parser::token(0x89), |_| Instr::I64Rotl),
+        map(parser::token(0x8a), |_| Instr::I64Rotr),
+        map(parser::token(0x8b), |_| Instr::F32Abs),
+        map(parser::token(0x8c), |_| Instr::F32Neg),
+        map(parser::token(0x8d), |_| Instr::F32Ceil),
+        map(parser::token(0x8e), |_| Instr::F32Floor),
+        map(parser::token(0x8f), |_| Instr::F32Trunc),
+        map(parser::token(0x90), |_| Instr::F32Nearest),
+        map(parser::token(0x91), |_| Instr::F32Sqrt),
+        map(parser::token(0x92), |_| Instr::F32Add),
+        map(parser::token(0x93), |_| Instr::F32Sub),
+        map(parser::token(0x94), |_| Instr::F32Mul),
+        map(parser::token(0x95), |_| Instr::F32Div),
+        map(parser::token(0x96), |_| Instr::F32Min),
+        map(parser::token(0x97), |_| Instr::F32Max),
+        map(parser::token(0x98), |_| Instr::F32CopySign),
+        map(parser::token(0x99), |_| Instr::F64Abs),
+        map(parser::token(0x9a), |_| Instr::F64Neg),
+        map(parser::token(0x9b), |_| Instr::F64Ceil),
+        map(parser::token(0x9c), |_| Instr::F64Floor),
+        map(parser::token(0x9d), |_| Instr::F64Trunc),
+        map(parser::token(0x9e), |_| Instr::F64Nearest),
+        map(parser::token(0x9f), |_| Instr::F64Sqrt),
+        map(parser::token(0xa0), |_| Instr::F64Add),
+        map(parser::token(0xa1), |_| Instr::F64Sub),
+        map(parser::token(0xa2), |_| Instr::F64Mul),
+        map(parser::token(0xa3), |_| Instr::F64Div),
+        map(parser::token(0xa4), |_| Instr::F64Min),
+        map(parser::token(0xa5), |_| Instr::F64Max),
+        map(parser::token(0xa6), |_| Instr::F64CopySign),
+        map(parser::token(0xa7), |_| Instr::I32WrapI64),
+        map(parser::token(0xa8), |_| Instr::I32TruncF32S),
+        map(parser::token(0xa9), |_| Instr::I32TruncF32U),
+        map(parser::token(0xaa), |_| Instr::I32TruncF64S),
+        map(parser::token(0xab), |_| Instr::I32TruncF64U),
+        map(parser::token(0xac), |_| Instr::I64ExtendI32S),
+        map(parser::token(0xad), |_| Instr::I64ExtendI32U),
+        map(parser::token(0xae), |_| Instr::I64TruncF32S),
+        map(parser::token(0xaf), |_| Instr::I64TruncF32U),
+        map(parser::token(0xb0), |_| Instr::I64TruncF64S),
+        map(parser::token(0xb1), |_| Instr::I64TruncF64U),
+        map(parser::token(0xb2), |_| Instr::F32ConvertI32S),
+        map(parser::token(0xb3), |_| Instr::F32ConvertI32U),
+        map(parser::token(0xb4), |_| Instr::F32ConvertI64S),
+        map(parser::token(0xb5), |_| Instr::F32ConvertI64U),
+        map(parser::token(0xb6), |_| Instr::F32DemoteF64),
+        map(parser::token(0xb7), |_| Instr::F64ConvertI32S),
+        map(parser::token(0xb8), |_| Instr::F64ConvertI32U),
+        map(parser::token(0xb9), |_| Instr::F64ConvertI64S),
+        map(parser::token(0xba), |_| Instr::F64ConvertI64U),
+        map(parser::token(0xbb), |_| Instr::F64PromoteF32),
+        map(parser::token(0xbc), |_| Instr::I32ReinteretF32),
+        map(parser::token(0xbd), |_| Instr::I64ReinteretF64),
+        map(parser::token(0xbe), |_| Instr::F32ReinteretI32),
+        map(parser::token(0xbf), |_| Instr::F64ReinteretI64),
     )(input)
 }
 
