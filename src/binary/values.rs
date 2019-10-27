@@ -118,9 +118,9 @@ where
     }
 }
 
-pub fn p_vec<T, P: Fn(&[u8]) -> IResult<&[u8], T>>(
+pub fn p_vec<'a, T, P: Fn(&'a [u8]) -> IResult<&'a [u8], T>>(
     p: P,
-) -> impl Fn(&[u8]) -> IResult<&[u8], Vec<T>> {
+) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], Vec<T>> {
     move |input| {
         let (input, size) = p_u32(input)?;
         let size = size as usize;

@@ -91,7 +91,7 @@ pub struct Export {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExportDesc {
     Func(FuncIdx),
-    Table(TypeIdx),
+    Table(TableIdx),
     Mem(MemIdx),
     Global(GlobalIdx),
 }

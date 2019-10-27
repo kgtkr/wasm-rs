@@ -25,6 +25,16 @@ pub fn token<'a, Error: ParseError<&'a [u8]>>(
     }
 }
 
+pub fn eof<'a, Error: ParseError<&'a [u8]>>() -> impl Fn(&'a [u8]) -> IResult<&'a [u8], (), Error> {
+    |input| {
+        if input.len() == 0 {
+            Ok((input, ()))
+        } else {
+            Err(nom::Err::Error(Error::from_char(input, '?')))
+        }
+    }
+}
+
 pub struct ReadBytes<'a> {
     bytes: &'a [u8],
     pos: usize,
