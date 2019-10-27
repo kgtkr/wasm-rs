@@ -1,5 +1,8 @@
 use nom::{
-    bytes::complete::take, combinator::map, error::ParseError, IResult, InputIter, InputTake,
+    bytes::complete::{tag, take},
+    combinator::map,
+    error::ParseError,
+    IResult, InputIter, InputTake,
 };
 
 pub fn any<Input, Error: ParseError<Input>>() -> impl Fn(Input) -> IResult<Input, Input::Item, Error>
@@ -7,6 +10,19 @@ where
     Input: InputIter + InputTake + Clone,
 {
     map(take(1usize), |x: Input| x.iter_indices().next().unwrap().1)
+}
+
+pub fn token<'a, Error: ParseError<&'a [u8]>>(
+    x: u8,
+) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], u8, Error> {
+    move |input| {
+        let (input, token) = any()(input)?;
+        if token == x {
+            Ok((input, token))
+        } else {
+            Err(nom::Err::Error(Error::from_char(input, '?')))
+        }
+    }
 }
 
 pub struct ReadBytes<'a> {
@@ -42,29 +58,4 @@ pub fn io_read<'a, O, Error: ParseError<&'a [u8]>>(
             None => Err(nom::Err::Error(Error::from_char(input, '?'))),
         }
     }
-    /*function::parser(move |input: &mut Input| {
-        let position = input.position();
-        let mut rs = ReadStream {
-            stream: input,
-            consumed_len: 0,
-        };
-        match f(&mut rs) {
-            Some(x) => Ok((
-                x,
-                if rs.consumed_len != 0 {
-                    Consumed::Consumed(())
-                } else {
-                    Consumed::Empty(())
-                },
-            )),
-            None => {
-                let err = Input::Error::empty(position);
-                Err(if rs.consumed_len != 0 {
-                    Consumed::Consumed(err.into())
-                } else {
-                    Consumed::Empty(err.into())
-                })
-            }
-        }
-    })*/
 }

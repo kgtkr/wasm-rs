@@ -20,7 +20,7 @@ impl Encoder for Byte {
     }
 }
 
-fn p_byte(input: &[u8]) -> IResult<&[u8], Byte> {
+pub fn p_byte(input: &[u8]) -> IResult<&[u8], Byte> {
     map(parser::any(), Byte)(input)
 }
 
@@ -30,7 +30,7 @@ impl Encoder for i32 {
     }
 }
 
-fn p_i32(input: &[u8]) -> IResult<&[u8], i32> {
+pub fn p_i32(input: &[u8]) -> IResult<&[u8], i32> {
     parser::io_read(|rb| {
         leb128::read::signed(rb)
             .ok()
@@ -44,7 +44,7 @@ impl Encoder for i64 {
     }
 }
 
-fn p_i64(input: &[u8]) -> IResult<&[u8], i64> {
+pub fn p_i64(input: &[u8]) -> IResult<&[u8], i64> {
     parser::io_read(|rb| leb128::read::signed(rb).ok())(input)
 }
 
@@ -54,7 +54,7 @@ impl Encoder for u32 {
     }
 }
 
-fn p_u32(input: &[u8]) -> IResult<&[u8], u32> {
+pub fn p_u32(input: &[u8]) -> IResult<&[u8], u32> {
     parser::io_read(|rb| {
         leb128::read::unsigned(rb)
             .ok()
@@ -68,7 +68,7 @@ impl Encoder for u64 {
     }
 }
 
-fn p_u64(input: &[u8]) -> IResult<&[u8], u64> {
+pub fn p_u64(input: &[u8]) -> IResult<&[u8], u64> {
     parser::io_read(|rb| leb128::read::unsigned(rb).ok())(input)
 }
 
@@ -78,7 +78,7 @@ impl Encoder for f32 {
     }
 }
 
-fn p_f32(input: &[u8]) -> IResult<&[u8], f32> {
+pub fn p_f32(input: &[u8]) -> IResult<&[u8], f32> {
     parser::io_read(|rb| rb.read_f32::<LittleEndian>().ok())(input)
 }
 
@@ -88,7 +88,7 @@ impl Encoder for f64 {
     }
 }
 
-fn p_f64(input: &[u8]) -> IResult<&[u8], f64> {
+pub fn p_f64(input: &[u8]) -> IResult<&[u8], f64> {
     parser::io_read(|rb| rb.read_f64::<LittleEndian>().ok())(input)
 }
 
@@ -98,8 +98,8 @@ impl Encoder for Name {
     }
 }
 
-fn p_name(input: &[u8]) -> IResult<&[u8], Name> {
-    let (input, bytes) = p_vec(p_byte, input)?;
+pub fn p_name(input: &[u8]) -> IResult<&[u8], Name> {
+    let (input, bytes) = p_vec(p_byte)(input)?;
     let bytes = bytes.into_iter().map(|x| x.0).collect::<Vec<_>>();
     let s = String::from_utf8(bytes).map(Name);
     match s {
@@ -118,8 +118,12 @@ where
     }
 }
 
-fn p_vec<T, P: Fn(&[u8]) -> IResult<&[u8], T>>(p: P, input: &[u8]) -> IResult<&[u8], Vec<T>> {
-    let (input, size) = p_u32(input)?;
-    let size = size as usize;
-    many_m_n(size, size, p)(input)
+pub fn p_vec<T, P: Fn(&[u8]) -> IResult<&[u8], T>>(
+    p: P,
+) -> impl Fn(&[u8]) -> IResult<&[u8], Vec<T>> {
+    move |input| {
+        let (input, size) = p_u32(input)?;
+        let size = size as usize;
+        many_m_n(size, size, &p)(input)
+    }
 }
