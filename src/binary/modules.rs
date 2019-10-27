@@ -1,9 +1,18 @@
+use super::values::{p_u32, p_vec};
 use super::Encoder;
 use crate::structure::modules::{
     Data, Elem, Export, ExportDesc, Func, FuncIdx, Global, GlobalIdx, Import, ImportDesc, LabelIdx,
     LocalIdx, Mem, MemIdx, Module, Start, Table, TableIdx, TypeIdx,
 };
 use crate::structure::values::Byte;
+use nom::{
+    branch::alt,
+    bytes::complete::{tag, take, take_while_m_n},
+    combinator::{flat_map, map, map_res},
+    multi::many_m_n,
+    sequence::tuple,
+    IResult,
+};
 
 trait Zero {
     type NonZero;
@@ -52,10 +61,18 @@ impl Encoder for TypeIdx {
     }
 }
 
+pub fn p_typeidx(input: &[u8]) -> IResult<&[u8], TypeIdx> {
+    map(p_u32, TypeIdx)(input)
+}
+
 impl Encoder for FuncIdx {
     fn encode(&self, bytes: &mut Vec<u8>) {
         self.0.encode(bytes);
     }
+}
+
+pub fn p_funcidx(input: &[u8]) -> IResult<&[u8], FuncIdx> {
+    map(p_u32, FuncIdx)(input)
 }
 
 impl Encoder for GlobalIdx {
@@ -64,10 +81,18 @@ impl Encoder for GlobalIdx {
     }
 }
 
+pub fn p_globalidx(input: &[u8]) -> IResult<&[u8], GlobalIdx> {
+    map(p_u32, GlobalIdx)(input)
+}
+
 impl Encoder for LocalIdx {
     fn encode(&self, bytes: &mut Vec<u8>) {
         self.0.encode(bytes);
     }
+}
+
+pub fn p_localidx(input: &[u8]) -> IResult<&[u8], LocalIdx> {
+    map(p_u32, LocalIdx)(input)
 }
 
 impl Encoder for LabelIdx {
@@ -76,16 +101,28 @@ impl Encoder for LabelIdx {
     }
 }
 
+pub fn p_labelidx(input: &[u8]) -> IResult<&[u8], LabelIdx> {
+    map(p_u32, LabelIdx)(input)
+}
+
 impl Encoder for MemIdx {
     fn encode(&self, bytes: &mut Vec<u8>) {
         self.0.encode(bytes);
     }
 }
 
+pub fn p_memidx(input: &[u8]) -> IResult<&[u8], MemIdx> {
+    map(p_u32, MemIdx)(input)
+}
+
 impl Encoder for TableIdx {
     fn encode(&self, bytes: &mut Vec<u8>) {
         self.0.encode(bytes);
     }
+}
+
+pub fn p_tableidx(input: &[u8]) -> IResult<&[u8], TableIdx> {
+    map(p_u32, TableIdx)(input)
 }
 
 impl Encoder for Import {
