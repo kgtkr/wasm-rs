@@ -1,10 +1,13 @@
+use super::modules::{
+    p_funcidx, p_globalidx, p_labelidx, p_localidx, p_memidx, p_tableidx, p_typeidx,
+};
 use super::parser;
 use super::types::{
     p_elemtype, p_functype, p_globaltype, p_limits, p_memtype, p_mut, p_resulttype, p_tabletype,
     p_valtype,
 };
 use super::util::loop_encode;
-use super::values::{p_u32, p_vec};
+use super::values::{p_f32, p_f64, p_i32, p_i64, p_u32, p_vec};
 use super::Encoder;
 use crate::structure::instructions::{Expr, Instr, Memarg};
 use nom::{
@@ -338,8 +341,20 @@ impl Encoder for Instr {
     }
 }
 
+macro_rules! alt_m {
+  ($x:expr) => {
+    $x
+  };
+  ($x:expr,) => {
+    $x
+  };
+  ($x:expr, $($xs:tt)+) => {
+    alt(($x,alt_m!($($xs)+)))
+  };
+}
+
 pub fn p_inser(input: &[u8]) -> IResult<&[u8], Instr> {
-    alt((
+    alt_m!(
         map(parser::token(0x00), |_| Instr::Unreachable),
         map(parser::token(0x01), |_| Instr::Nop),
         map(
@@ -373,7 +388,135 @@ pub fn p_inser(input: &[u8]) -> IResult<&[u8], Instr> {
             )),
             |(_, rt, is1, is2, _)| Instr::If(rt, is1, is2.unwrap_or_else(Vec::new)),
         ),
-    ))(input)
+        map(tuple((parser::token(0x0c), p_labelidx)), |(_, l)| {
+            Instr::Br(l)
+        }),
+        map(tuple((parser::token(0x0d), p_labelidx)), |(_, l)| {
+            Instr::BrIf(l)
+        }),
+        map(
+            tuple((parser::token(0x0e), p_vec(p_labelidx), p_labelidx)),
+            |(_, ls, l)| Instr::BrTable(ls, l),
+        ),
+        map(parser::token(0x0f), |_| Instr::Return),
+        map(tuple((parser::token(0x10), p_funcidx)), |(_, f)| {
+            Instr::Call(f)
+        }),
+        map(
+            tuple((parser::token(0x11), p_typeidx, parser::token(0x00))),
+            |(_, t, _)| Instr::CallIndirect(t),
+        ),
+        map(parser::token(0x1a), |_| Instr::Drop),
+        map(parser::token(0x1b), |_| Instr::Select),
+        map(tuple((parser::token(0x20), p_localidx)), |(_, x)| {
+            Instr::LocalGet(x)
+        }),
+        map(tuple((parser::token(0x21), p_localidx)), |(_, x)| {
+            Instr::LocalGet(x)
+        }),
+        map(tuple((parser::token(0x20), p_localidx)), |(_, x)| {
+            Instr::LocalSet(x)
+        }),
+        map(tuple((parser::token(0x22), p_localidx)), |(_, x)| {
+            Instr::LocalTee(x)
+        }),
+        map(tuple((parser::token(0x23), p_globalidx)), |(_, x)| {
+            Instr::GlobalGet(x)
+        }),
+        map(tuple((parser::token(0x24), p_globalidx)), |(_, x)| {
+            Instr::GlobalSet(x)
+        }),
+        map(tuple((parser::token(0x28), p_memarg)), |(_, m)| {
+            Instr::I32Load(m)
+        }),
+        map(tuple((parser::token(0x29), p_memarg)), |(_, m)| {
+            Instr::I64Load(m)
+        }),
+        map(tuple((parser::token(0x2a), p_memarg)), |(_, m)| {
+            Instr::F32Load(m)
+        }),
+        map(tuple((parser::token(0x2a), p_memarg)), |(_, m)| {
+            Instr::F32Load(m)
+        }),
+        map(tuple((parser::token(0x2b), p_memarg)), |(_, m)| {
+            Instr::F64Load(m)
+        }),
+        map(tuple((parser::token(0x2c), p_memarg)), |(_, m)| {
+            Instr::I32Load8S(m)
+        }),
+        map(tuple((parser::token(0x2d), p_memarg)), |(_, m)| {
+            Instr::I32Load8U(m)
+        }),
+        map(tuple((parser::token(0x2e), p_memarg)), |(_, m)| {
+            Instr::I32Load16S(m)
+        }),
+        map(tuple((parser::token(0x2f), p_memarg)), |(_, m)| {
+            Instr::I32Load16U(m)
+        }),
+        map(tuple((parser::token(0x30), p_memarg)), |(_, m)| {
+            Instr::I64Load8S(m)
+        }),
+        map(tuple((parser::token(0x31), p_memarg)), |(_, m)| {
+            Instr::I64Load8U(m)
+        }),
+        map(tuple((parser::token(0x32), p_memarg)), |(_, m)| {
+            Instr::I64Load16S(m)
+        }),
+        map(tuple((parser::token(0x33), p_memarg)), |(_, m)| {
+            Instr::I64Load16U(m)
+        }),
+        map(tuple((parser::token(0x34), p_memarg)), |(_, m)| {
+            Instr::I64Load32S(m)
+        }),
+        map(tuple((parser::token(0x35), p_memarg)), |(_, m)| {
+            Instr::I64Load32U(m)
+        }),
+        map(tuple((parser::token(0x36), p_memarg)), |(_, m)| {
+            Instr::I32Store(m)
+        }),
+        map(tuple((parser::token(0x37), p_memarg)), |(_, m)| {
+            Instr::I64Store(m)
+        }),
+        map(tuple((parser::token(0x38), p_memarg)), |(_, m)| {
+            Instr::F32Store(m)
+        }),
+        map(tuple((parser::token(0x39), p_memarg)), |(_, m)| {
+            Instr::F64Store(m)
+        }),
+        map(tuple((parser::token(0x3a), p_memarg)), |(_, m)| {
+            Instr::I32Store8(m)
+        }),
+        map(tuple((parser::token(0x3b), p_memarg)), |(_, m)| {
+            Instr::I32Store16(m)
+        }),
+        map(tuple((parser::token(0x3c), p_memarg)), |(_, m)| {
+            Instr::I64Store8(m)
+        }),
+        map(tuple((parser::token(0x3d), p_memarg)), |(_, m)| {
+            Instr::I64Store16(m)
+        }),
+        map(tuple((parser::token(0x3e), p_memarg)), |(_, m)| {
+            Instr::I64Store32(m)
+        }),
+        map(tuple((parser::token(0x3f), parser::token(0x00))), |_| {
+            Instr::MemorySize
+        }),
+        map(tuple((parser::token(0x40), parser::token(0x00))), |_| {
+            Instr::MemoryGrow
+        }),
+        map(tuple((parser::token(0x41), p_i32)), |(_, n)| {
+            Instr::I32Const(n)
+        }),
+        map(tuple((parser::token(0x42), p_i64)), |(_, n)| {
+            Instr::I64Const(n)
+        }),
+        map(tuple((parser::token(0x43), p_f32)), |(_, z)| {
+            Instr::F32Const(z)
+        }),
+        map(tuple((parser::token(0x43), p_f64)), |(_, z)| {
+            Instr::F64Const(z)
+        }),
+    )(input)
 }
 
 impl Encoder for Memarg {
