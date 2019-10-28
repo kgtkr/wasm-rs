@@ -174,7 +174,7 @@ impl VM {
         }
 
         if let Some(start) = &module.start {
-            vm.call_func(start.func.clone());
+            vm.call_func(start.func.clone(), &vec![]);
         }
 
         if module.imports.len() != 0 {
@@ -197,13 +197,13 @@ impl VM {
         }
     }
 
-    fn call_func(&mut self, idx: FuncIdx) -> Val {
+    fn call_func(&mut self, idx: FuncIdx, params: &Vec<Val>) -> Val {
         unimplemented!();
     }
 
-    pub fn export_call_func(&mut self, name: &str) -> Val {
+    pub fn export_call_func(&mut self, name: &str, params: &Vec<Val>) -> Val {
         if let ExportDesc::Func(idx) = self.find_export(name).desc {
-            self.call_func(idx)
+            self.call_func(idx, params)
         } else {
             panic!();
         }
