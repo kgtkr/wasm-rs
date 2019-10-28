@@ -4,7 +4,7 @@ use crate::structure::modules::{
 };
 use crate::structure::types::{Limits, MemType, TableType};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Copy)]
 pub enum Val {
     I32(i32),
     I64(i64),
