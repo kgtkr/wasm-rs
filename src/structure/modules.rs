@@ -17,24 +17,31 @@ pub struct Module {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub struct TypeIdx(pub u32);
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub struct FuncIdx(pub u32);
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub struct TableIdx(pub u32);
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub struct MemIdx(pub u32);
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub struct GlobalIdx(pub u32);
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub struct LocalIdx(pub u32);
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub struct LabelIdx(pub u32);
 
 #[derive(Debug, Clone, PartialEq)]
@@ -45,11 +52,13 @@ pub struct Func {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub struct Table {
     pub type_: TableType,
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub struct Mem {
     pub type_: MemType,
 }
@@ -78,17 +87,20 @@ pub struct Data {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub struct Start {
     pub func: FuncIdx,
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub struct Export {
     pub name: Name,
     pub desc: ExportDesc,
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub enum ExportDesc {
     Func(FuncIdx),
     Table(TableIdx),
@@ -97,6 +109,7 @@ pub enum ExportDesc {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub struct Import {
     pub module: Name,
     pub name: Name,
@@ -104,6 +117,7 @@ pub struct Import {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub enum ImportDesc {
     Func(TypeIdx),
     Table(TableType),

@@ -179,6 +179,7 @@ pub enum Instr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub struct Memarg {
     pub offset: u32,
     pub align: u32,

@@ -1,4 +1,3 @@
-use super::instructions::p_expr;
 use super::parser;
 use super::Decoder;
 use super::Encoder;
@@ -235,9 +234,10 @@ impl Encoder for Global {
 }
 
 pub fn p_global(input: &[u8]) -> IResult<&[u8], Global> {
-    map(tuple((GlobalType::decode, p_expr)), |(type_, init)| {
-        Global { type_, init }
-    })(input)
+    map(
+        tuple((GlobalType::decode, Expr::decode)),
+        |(type_, init)| Global { type_, init },
+    )(input)
 }
 
 impl Encoder for Export {
@@ -313,7 +313,7 @@ impl Encoder for Elem {
 
 pub fn p_elem(input: &[u8]) -> IResult<&[u8], Elem> {
     map(
-        tuple((p_tableidx, p_expr, super::values::p_vec(p_funcidx))),
+        tuple((p_tableidx, Expr::decode, super::values::p_vec(p_funcidx))),
         |(table, offset, init)| Elem {
             table,
             offset,
@@ -332,7 +332,7 @@ impl Encoder for Data {
 
 pub fn p_data(input: &[u8]) -> IResult<&[u8], Data> {
     map(
-        tuple((p_memidx, p_expr, Vec::<Byte>::decode)),
+        tuple((p_memidx, Expr::decode, Vec::<Byte>::decode)),
         |(data, offset, init)| Data { data, offset, init },
     )(input)
 }
@@ -380,7 +380,7 @@ pub fn p_code(input: &[u8]) -> IResult<&[u8], (Vec<ValType>, Expr)> {
     let size = size as usize;
     let (code_input, input) = input.split_at(size);
     let (_, result) = map(
-        tuple((Vec::<(u32, ValType)>::decode, p_expr, parser::eof())),
+        tuple((Vec::<(u32, ValType)>::decode, Expr::decode, parser::eof())),
         |(locals, body, _)| {
             let locals = locals
                 .into_iter()
