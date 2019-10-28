@@ -465,9 +465,6 @@ impl Decoder for VariableInstr {
                 VariableInstr::LocalGet(x)
             }),
             map(tuple((parser::token(0x21), p_localidx)), |(_, x)| {
-                VariableInstr::LocalGet(x)
-            }),
-            map(tuple((parser::token(0x20), p_localidx)), |(_, x)| {
                 VariableInstr::LocalSet(x)
             }),
             map(tuple((parser::token(0x22), p_localidx)), |(_, x)| {
@@ -828,4 +825,19 @@ impl Decoder for Memarg {
             Memarg { align, offset }
         })(input)
     }
+}
+
+#[test]
+fn tests() {
+    use super::test_helper;
+
+    // test_helper::identity_encode_decode::<Expr>();
+    // stackoverflowが発生する
+    // test_helper::identity_encode_decode::<NumericInstr>();
+    test_helper::identity_encode_decode::<ParametricInstr>();
+    test_helper::identity_encode_decode::<VariableInstr>();
+    test_helper::identity_encode_decode::<MemoryInstr>();
+    // test_helper::identity_encode_decode::<ControlInstr>();
+    // test_helper::identity_encode_decode::<Instr>();
+    test_helper::identity_encode_decode::<Memarg>();
 }
