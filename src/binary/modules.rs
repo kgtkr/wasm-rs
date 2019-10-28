@@ -586,6 +586,7 @@ fn test_add() {
                     Instr::LocalGet(LocalIdx(0)),
                     Instr::LocalGet(LocalIdx(1)),
                     Instr::I32Add,
+                    Instr::End
                 ]),
             }],
             tables: vec![],

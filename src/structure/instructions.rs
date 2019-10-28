@@ -167,15 +167,17 @@ pub enum Instr {
     MemoryGrow,
     Nop,
     Unreachable,
-    Block(ResultType, Vec<Instr>),
-    Loop(ResultType, Vec<Instr>),
-    If(ResultType, Vec<Instr>, Vec<Instr>),
+    Block(ResultType),
+    Loop(ResultType),
+    If(ResultType),
+    Else,
     Br(LabelIdx),
     BrIf(LabelIdx),
     BrTable(Vec<LabelIdx>, LabelIdx),
     Return,
     Call(FuncIdx),
     CallIndirect(TypeIdx),
+    End,
 }
 
 #[derive(Debug, Clone, PartialEq)]

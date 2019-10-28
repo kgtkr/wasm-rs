@@ -110,16 +110,25 @@ macro_rules! alt_m {
 impl Encoder for Expr {
     fn encode(&self, bytes: &mut Vec<u8>) {
         loop_encode(&self.0, bytes);
-        bytes.push(0x0b);
     }
 }
 
 impl Decoder for Expr {
     fn decode(input: &[u8]) -> IResult<&[u8], Expr> {
-        map(
-            tuple((many0(Instr::decode), parser::token(0x0b))),
-            |(is, _)| Expr(is),
-        )(input)
+        let mut deep = 0;
+        let mut input = input;
+        let mut instrs = Vec::new();
+        while deep >= 0 {
+            let (input2, instr) = Instr::decode(input)?;
+            input = input2;
+            deep += match instr {
+                Instr::End => -1,
+                Instr::Block(_) | Instr::Loop(_) | Instr::If(_) => 1,
+                _ => 0,
+            };
+            instrs.push(instr);
+        }
+        Ok((input, Expr(instrs)))
     }
 }
 
@@ -128,27 +137,20 @@ impl Encoder for Instr {
         match &self {
             Instr::Unreachable => bytes.push(0x00),
             Instr::Nop => bytes.push(0x01),
-            Instr::Block(rt, is) => {
+            Instr::Block(rt) => {
                 bytes.push(0x02);
                 rt.encode(bytes);
-                loop_encode(is, bytes);
-                bytes.push(0x0b);
             }
-            Instr::Loop(rt, is) => {
+            Instr::Loop(rt) => {
                 bytes.push(0x03);
                 rt.encode(bytes);
-                loop_encode(is, bytes);
-                bytes.push(0x0b);
             }
-            Instr::If(rt, is1, is2) => {
+            Instr::If(rt) => {
                 bytes.push(0x04);
                 rt.encode(bytes);
-                loop_encode(is1, bytes);
-                if !is2.is_empty() {
-                    bytes.push(0x05);
-                    loop_encode(is2, bytes);
-                }
-                bytes.push(0x0b);
+            }
+            Instr::Else => {
+                bytes.push(0x05);
             }
             Instr::Br(l) => {
                 bytes.push(0x0c);
@@ -434,6 +436,7 @@ impl Encoder for Instr {
             Instr::I64ReinteretF64 => bytes.push(0xbd),
             Instr::F32ReinteretI32 => bytes.push(0xbe),
             Instr::F64ReinteretI64 => bytes.push(0xbf),
+            Instr::End => bytes.push(0x0b),
         }
     }
 }
@@ -444,36 +447,18 @@ impl Decoder for Instr {
             map(parser::token(0x00), |_| Instr::Unreachable),
             map(parser::token(0x01), |_| Instr::Nop),
             map(
-                tuple((
-                    parser::token(0x02),
-                    ResultType::decode,
-                    many0(Instr::decode),
-                    parser::token(0x0b),
-                )),
-                |(_, rt, is, _)| Instr::Block(rt, is),
+                tuple((parser::token(0x02), ResultType::decode,)),
+                |(_, rt)| Instr::Block(rt),
             ),
             map(
-                tuple((
-                    parser::token(0x03),
-                    ResultType::decode,
-                    many0(Instr::decode),
-                    parser::token(0x0b),
-                )),
-                |(_, rt, is, _)| Instr::Loop(rt, is),
+                tuple((parser::token(0x03), ResultType::decode,)),
+                |(_, rt)| Instr::Loop(rt),
             ),
             map(
-                tuple((
-                    parser::token(0x04),
-                    ResultType::decode,
-                    many0(Instr::decode),
-                    opt(map(
-                        tuple((parser::token(0x05), many0(Instr::decode))),
-                        |(_, is2)| is2,
-                    )),
-                    parser::token(0x0b),
-                )),
-                |(_, rt, is1, is2, _)| Instr::If(rt, is1, is2.unwrap_or_else(Vec::new)),
+                tuple((parser::token(0x04), ResultType::decode,)),
+                |(_, rt)| Instr::If(rt),
             ),
+            map(parser::token(0x05), |_| Instr::Else,),
             map(tuple((parser::token(0x0c), LabelIdx::decode)), |(_, l)| {
                 Instr::Br(l)
             }),
@@ -726,6 +711,7 @@ impl Decoder for Instr {
             map(parser::token(0xbd), |_| Instr::I64ReinteretF64),
             map(parser::token(0xbe), |_| Instr::F32ReinteretI32),
             map(parser::token(0xbf), |_| Instr::F64ReinteretI64),
+            map(parser::token(0x0b), |_| Instr::End),
         )(input)
     }
 }
