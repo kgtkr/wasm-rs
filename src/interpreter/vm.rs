@@ -1,9 +1,11 @@
 use crate::structure::instructions::{Expr, Instr};
-use crate::structure::modules::{Data, Elem, Export, Func, FuncIdx, GlobalIdx, Mem, Module, Table};
+use crate::structure::modules::{
+    Data, Elem, Export, ExportDesc, Func, FuncIdx, GlobalIdx, Mem, Module, Table,
+};
 use crate::structure::types::{Limits, MemType, TableType};
 
 #[derive(Debug, Clone, PartialEq)]
-enum Val {
+pub enum Val {
     I32(i32),
     I64(i64),
     F32(f32),
@@ -170,5 +172,21 @@ impl VM {
 
     fn call_func(&mut self, idx: FuncIdx) -> Val {
         unimplemented!();
+    }
+
+    pub fn export_call_func(&mut self, name: &str) -> Val {
+        if let ExportDesc::Func(idx) = self.find_export(name).desc {
+            self.call_func(idx)
+        } else {
+            panic!();
+        }
+    }
+
+    fn find_export(&self, name: &str) -> Export {
+        self.exports
+            .iter()
+            .find(|x| &x.name.0 == name)
+            .unwrap()
+            .clone()
     }
 }
