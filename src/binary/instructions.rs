@@ -2,14 +2,13 @@ use super::modules::{
     p_funcidx, p_globalidx, p_labelidx, p_localidx, p_memidx, p_tableidx, p_typeidx,
 };
 use super::parser;
-use super::types::{
-    p_elemtype, p_functype, p_globaltype, p_limits, p_memtype, p_mut, p_resulttype, p_tabletype,
-    p_valtype,
-};
 use super::util::loop_encode;
 use super::values::{p_f32, p_f64, p_i32, p_i64, p_u32, p_vec};
 use super::Encoder;
 use crate::structure::instructions::{Expr, Instr, Memarg};
+use crate::structure::types::{
+    ElemType, FuncType, GlobalType, Limits, MemType, Mut, ResultType, TableType, ValType,
+};
 use nom::{
     branch::alt,
     bytes::complete::{tag, take, take_while_m_n},
@@ -18,6 +17,8 @@ use nom::{
     sequence::tuple,
     IResult,
 };
+
+use super::Decoder;
 
 impl Encoder for Expr {
     fn encode(&self, bytes: &mut Vec<u8>) {
@@ -387,7 +388,7 @@ pub fn p_inser(input: &[u8]) -> IResult<&[u8], Instr> {
         map(
             tuple((
                 parser::token(0x02),
-                p_resulttype,
+                ResultType::decode,
                 many0(p_inser),
                 parser::token(0x0b),
             )),
@@ -396,7 +397,7 @@ pub fn p_inser(input: &[u8]) -> IResult<&[u8], Instr> {
         map(
             tuple((
                 parser::token(0x03),
-                p_resulttype,
+                ResultType::decode,
                 many0(p_inser),
                 parser::token(0x0b),
             )),
@@ -405,7 +406,7 @@ pub fn p_inser(input: &[u8]) -> IResult<&[u8], Instr> {
         map(
             tuple((
                 parser::token(0x04),
-                p_resulttype,
+                ResultType::decode,
                 many0(p_inser),
                 opt(map(
                     tuple((parser::token(0x05), many0(p_inser))),

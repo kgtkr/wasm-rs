@@ -7,4 +7,7 @@ mod types;
 mod util;
 mod values;
 
+use decoder::Decoder;
 use encoder::Encoder;
+#[cfg(test)]
+mod test_helper;

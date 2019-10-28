@@ -1,5 +1,6 @@
 use super::parser;
 use super::values::{p_u32, p_vec};
+use super::Decoder;
 use super::Encoder;
 use crate::structure::types::{
     ElemType, FuncType, GlobalType, Limits, MemType, Mut, ResultType, TableType, ValType,
@@ -24,13 +25,15 @@ impl Encoder for ValType {
     }
 }
 
-pub fn p_valtype(input: &[u8]) -> IResult<&[u8], ValType> {
-    alt((
-        map(parser::token(0x7f), |_| ValType::I32),
-        map(parser::token(0x7e), |_| ValType::I64),
-        map(parser::token(0x7d), |_| ValType::F32),
-        map(parser::token(0x7c), |_| ValType::F64),
-    ))(input)
+impl Decoder for ValType {
+    fn decode(input: &[u8]) -> IResult<&[u8], ValType> {
+        alt((
+            map(parser::token(0x7f), |_| ValType::I32),
+            map(parser::token(0x7e), |_| ValType::I64),
+            map(parser::token(0x7d), |_| ValType::F32),
+            map(parser::token(0x7c), |_| ValType::F64),
+        ))(input)
+    }
 }
 
 impl Encoder for ResultType {
@@ -46,14 +49,16 @@ impl Encoder for ResultType {
     }
 }
 
-pub fn p_resulttype(input: &[u8]) -> IResult<&[u8], ResultType> {
-    map(
-        alt((
-            map(p_valtype, |vt| Some(vt)),
-            map(parser::token(0x40), |_| (None)),
-        )),
-        ResultType,
-    )(input)
+impl Decoder for ResultType {
+    fn decode(input: &[u8]) -> IResult<&[u8], ResultType> {
+        map(
+            alt((
+                map(ValType::decode, |vt| Some(vt)),
+                map(parser::token(0x40), |_| (None)),
+            )),
+            ResultType,
+        )(input)
+    }
 }
 
 impl Encoder for FuncType {
@@ -64,11 +69,17 @@ impl Encoder for FuncType {
     }
 }
 
-pub fn p_functype(input: &[u8]) -> IResult<&[u8], FuncType> {
-    map(
-        tuple((parser::token(0x60), p_vec(p_valtype), p_vec(p_valtype))),
-        |(_, a, b)| FuncType(a, b),
-    )(input)
+impl Decoder for FuncType {
+    fn decode(input: &[u8]) -> IResult<&[u8], FuncType> {
+        map(
+            tuple((
+                parser::token(0x60),
+                p_vec(ValType::decode),
+                p_vec(ValType::decode),
+            )),
+            |(_, a, b)| FuncType(a, b),
+        )(input)
+    }
 }
 
 impl Encoder for Limits {
@@ -87,20 +98,22 @@ impl Encoder for Limits {
     }
 }
 
-pub fn p_limits(input: &[u8]) -> IResult<&[u8], Limits> {
-    alt((
-        map(tuple((parser::token(0x00), p_u32)), |(_, min)| Limits {
-            min,
-            max: None,
-        }),
-        map(
-            tuple((parser::token(0x01), p_u32, p_u32)),
-            |(_, min, max)| Limits {
+impl Decoder for Limits {
+    fn decode(input: &[u8]) -> IResult<&[u8], Limits> {
+        alt((
+            map(tuple((parser::token(0x00), p_u32)), |(_, min)| Limits {
                 min,
-                max: Some(max),
-            },
-        ),
-    ))(input)
+                max: None,
+            }),
+            map(
+                tuple((parser::token(0x01), p_u32, p_u32)),
+                |(_, min, max)| Limits {
+                    min,
+                    max: Some(max),
+                },
+            ),
+        ))(input)
+    }
 }
 
 impl Encoder for MemType {
@@ -109,8 +122,10 @@ impl Encoder for MemType {
     }
 }
 
-pub fn p_memtype(input: &[u8]) -> IResult<&[u8], MemType> {
-    map(p_limits, MemType)(input)
+impl Decoder for MemType {
+    fn decode(input: &[u8]) -> IResult<&[u8], MemType> {
+        map(Limits::decode, MemType)(input)
+    }
 }
 
 impl Encoder for TableType {
@@ -120,8 +135,12 @@ impl Encoder for TableType {
     }
 }
 
-pub fn p_tabletype(input: &[u8]) -> IResult<&[u8], TableType> {
-    map(tuple((p_elemtype, p_limits)), |(et, lt)| TableType(lt, et))(input)
+impl Decoder for TableType {
+    fn decode(input: &[u8]) -> IResult<&[u8], TableType> {
+        map(tuple((ElemType::decode, Limits::decode)), |(et, lt)| {
+            TableType(lt, et)
+        })(input)
+    }
 }
 
 impl Encoder for ElemType {
@@ -134,8 +153,10 @@ impl Encoder for ElemType {
     }
 }
 
-pub fn p_elemtype(input: &[u8]) -> IResult<&[u8], ElemType> {
-    map(parser::token(0x70), |_| ElemType::FuncRef)(input)
+impl Decoder for ElemType {
+    fn decode(input: &[u8]) -> IResult<&[u8], ElemType> {
+        map(parser::token(0x70), |_| ElemType::FuncRef)(input)
+    }
 }
 
 impl Encoder for GlobalType {
@@ -145,8 +166,12 @@ impl Encoder for GlobalType {
     }
 }
 
-pub fn p_globaltype(input: &[u8]) -> IResult<&[u8], GlobalType> {
-    map(tuple((p_valtype, p_mut)), |(gt, m)| GlobalType(m, gt))(input)
+impl Decoder for GlobalType {
+    fn decode(input: &[u8]) -> IResult<&[u8], GlobalType> {
+        map(tuple((ValType::decode, Mut::decode)), |(gt, m)| {
+            GlobalType(m, gt)
+        })(input)
+    }
 }
 
 impl Encoder for Mut {
@@ -158,78 +183,26 @@ impl Encoder for Mut {
     }
 }
 
-pub fn p_mut(input: &[u8]) -> IResult<&[u8], Mut> {
-    alt((
-        map(parser::token(0x00), |_| Mut::Const),
-        map(parser::token(0x01), |_| Mut::Var),
-    ))(input)
+impl Decoder for Mut {
+    fn decode(input: &[u8]) -> IResult<&[u8], Mut> {
+        alt((
+            map(parser::token(0x00), |_| Mut::Const),
+            map(parser::token(0x01), |_| Mut::Var),
+        ))(input)
+    }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use proptest::prelude::*;
+#[test]
+fn tests() {
+    use super::test_helper;
 
-    #[test]
-    fn test_valtype() {
-        proptest!(|(x: ValType)| {
-            assert_eq!(p_valtype(&x.encode_to_vec()), Ok((vec![].as_ref(),x)));
-        });
-    }
-
-    #[test]
-    fn test_resulttype() {
-        proptest!(|(x: ResultType)| {
-            assert_eq!(p_resulttype(&x.encode_to_vec()), Ok((vec![].as_ref(),x)));
-        });
-    }
-
-    #[test]
-    fn test_functype() {
-        proptest!(|(x: FuncType)| {
-            assert_eq!(p_functype(&x.encode_to_vec()), Ok((vec![].as_ref(),x)));
-        });
-    }
-
-    #[test]
-    fn test_limits() {
-        proptest!(|(x: Limits)| {
-            assert_eq!(p_limits(&x.encode_to_vec()), Ok((vec![].as_ref(),x)));
-        });
-    }
-
-    #[test]
-    fn test_memtype() {
-        proptest!(|(x: MemType)| {
-            assert_eq!(p_memtype(&x.encode_to_vec()), Ok((vec![].as_ref(),x)));
-        });
-    }
-
-    #[test]
-    fn test_tabletype() {
-        proptest!(|(x: TableType)| {
-            assert_eq!(p_tabletype(&x.encode_to_vec()), Ok((vec![].as_ref(),x)));
-        });
-    }
-
-    #[test]
-    fn test_elemtype() {
-        proptest!(|(x: ElemType)| {
-            assert_eq!(p_elemtype(&x.encode_to_vec()), Ok((vec![].as_ref(),x)));
-        });
-    }
-
-    #[test]
-    fn test_globaltype() {
-        proptest!(|(x: GlobalType)| {
-            assert_eq!(p_globaltype(&x.encode_to_vec()), Ok((vec![].as_ref(),x)));
-        });
-    }
-
-    #[test]
-    fn test_mut() {
-        proptest!(|(x: Mut)| {
-            assert_eq!(p_mut(&x.encode_to_vec()), Ok((vec![].as_ref(),x)));
-        });
-    }
+    test_helper::identity_encode_decode::<ValType>();
+    test_helper::identity_encode_decode::<ResultType>();
+    test_helper::identity_encode_decode::<FuncType>();
+    test_helper::identity_encode_decode::<Limits>();
+    test_helper::identity_encode_decode::<MemType>();
+    test_helper::identity_encode_decode::<TableType>();
+    test_helper::identity_encode_decode::<ElemType>();
+    test_helper::identity_encode_decode::<GlobalType>();
+    test_helper::identity_encode_decode::<Mut>();
 }

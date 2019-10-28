@@ -1,17 +1,16 @@
 use super::instructions::p_expr;
 use super::parser;
-use super::types::{
-    p_elemtype, p_functype, p_globaltype, p_limits, p_memtype, p_mut, p_resulttype, p_tabletype,
-    p_valtype,
-};
 use super::values::{p_byte, p_name, p_u32, p_vec};
+use super::Decoder;
 use super::Encoder;
 use crate::structure::instructions::Expr;
 use crate::structure::modules::{
     Data, Elem, Export, ExportDesc, Func, FuncIdx, Global, GlobalIdx, Import, ImportDesc, LabelIdx,
     LocalIdx, Mem, MemIdx, Module, Start, Table, TableIdx, TypeIdx,
 };
-use crate::structure::types::ValType;
+use crate::structure::types::{
+    ElemType, FuncType, GlobalType, Limits, MemType, Mut, ResultType, TableType, ValType,
+};
 use crate::structure::values::Byte;
 
 use nom::{
@@ -196,15 +195,16 @@ pub fn p_import_desc(input: &[u8]) -> IResult<&[u8], ImportDesc> {
         map(tuple((parser::token(0x00), p_typeidx)), |(_, x)| {
             ImportDesc::Func(x)
         }),
-        map(tuple((parser::token(0x01), p_tabletype)), |(_, x)| {
+        map(tuple((parser::token(0x01), TableType::decode)), |(_, x)| {
             ImportDesc::Table(x)
         }),
-        map(tuple((parser::token(0x02), p_memtype)), |(_, x)| {
+        map(tuple((parser::token(0x02), MemType::decode)), |(_, x)| {
             ImportDesc::Mem(x)
         }),
-        map(tuple((parser::token(0x03), p_globaltype)), |(_, x)| {
-            ImportDesc::Global(x)
-        }),
+        map(
+            tuple((parser::token(0x03), GlobalType::decode)),
+            |(_, x)| ImportDesc::Global(x),
+        ),
     ))(input)
 }
 
@@ -215,7 +215,7 @@ impl Encoder for Table {
 }
 
 pub fn p_table(input: &[u8]) -> IResult<&[u8], Table> {
-    map(p_tabletype, |type_| Table { type_ })(input)
+    map(TableType::decode, |type_| Table { type_ })(input)
 }
 
 impl Encoder for Mem {
@@ -225,7 +225,7 @@ impl Encoder for Mem {
 }
 
 pub fn p_mem(input: &[u8]) -> IResult<&[u8], Mem> {
-    map(p_memtype, |type_| Mem { type_ })(input)
+    map(MemType::decode, |type_| Mem { type_ })(input)
 }
 
 impl Encoder for Global {
@@ -236,9 +236,8 @@ impl Encoder for Global {
 }
 
 pub fn p_global(input: &[u8]) -> IResult<&[u8], Global> {
-    map(tuple((p_globaltype, p_expr)), |(type_, init)| Global {
-        type_,
-        init,
+    map(tuple((GlobalType::decode, p_expr)), |(type_, init)| {
+        Global { type_, init }
     })(input)
 }
 
@@ -383,7 +382,11 @@ pub fn p_code(input: &[u8]) -> IResult<&[u8], (Vec<ValType>, Expr)> {
     let size = size as usize;
     let (code_input, input) = input.split_at(size);
     let (_, result) = map(
-        tuple((p_vec(tuple((p_u32, p_valtype))), p_expr, parser::eof())),
+        tuple((
+            p_vec(tuple((p_u32, ValType::decode))),
+            p_expr,
+            parser::eof(),
+        )),
         |(locals, body, _)| {
             let locals = locals
                 .into_iter()
@@ -485,7 +488,7 @@ pub fn p_module(input: &[u8]) -> IResult<&[u8], Module> {
                 parser::token(0x00),
                 parser::token(0x00),
             )),
-            tuple((p_costoms, p_section(Byte(1), p_vec(p_functype)))),
+            tuple((p_costoms, p_section(Byte(1), p_vec(FuncType::decode)))),
             tuple((p_costoms, p_section(Byte(2), p_vec(p_import)))),
             tuple((p_costoms, p_section(Byte(3), p_vec(p_typeidx)))),
             tuple((p_costoms, p_section(Byte(4), p_vec(p_table)))),
