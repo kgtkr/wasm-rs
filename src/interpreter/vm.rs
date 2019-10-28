@@ -15,6 +15,7 @@ pub enum Val {
 #[derive(Debug, Clone, PartialEq, Copy)]
 enum StackVal {
     Val(Val),
+    Func(FuncIdx, usize),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -74,6 +75,10 @@ impl VMMem {
 #[derive(Debug, Clone, PartialEq)]
 pub struct VM {
     funcs: Vec<Func>,
+    // 現在実行中の関数のフレームポインタ(旧フレームポインタが入ってるスタックのアドレス。最初のローカル変数の一個前のアドレス)
+    fp: usize,
+    // 次に実行する命令のアドレス
+    pc: (FuncIdx, usize),
     globals: Vec<Val>,
     stack: Vec<StackVal>,
     sp: usize,
@@ -112,6 +117,8 @@ impl VM {
             sp: 0,
             table: None,
             exports: Vec::new(),
+            fp: 0,
+            pc: (FuncIdx(0), 0),
         };
 
         vm.funcs = module.funcs;
