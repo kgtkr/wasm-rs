@@ -5,7 +5,7 @@ use super::types::ResultType;
 pub struct Expr(pub Vec<Instr>);
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Instr {
+pub enum NumericInstr {
     I32Const(i32),
     I64Const(i64),
     F32Const(f32),
@@ -133,13 +133,25 @@ pub enum Instr {
     I64ReinteretF64,
     F32ReinteretI32,
     F64ReinteretI64,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ParametricInstr {
     Drop,
     Select,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum VariableInstr {
     LocalGet(LocalIdx),
     LocalSet(LocalIdx),
     LocalTee(LocalIdx),
     GlobalGet(GlobalIdx),
     GlobalSet(GlobalIdx),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum MemoryInstr {
     I32Load(Memarg),
     I64Load(Memarg),
     F32Load(Memarg),
@@ -165,6 +177,10 @@ pub enum Instr {
     I64Store32(Memarg),
     MemorySize,
     MemoryGrow,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ControlInstr {
     Nop,
     Unreachable,
     Block(ResultType, Vec<Instr>),
@@ -176,6 +192,15 @@ pub enum Instr {
     Return,
     Call(FuncIdx),
     CallIndirect(TypeIdx),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Instr {
+    Numeric(NumericInstr),
+    Parametric(ParametricInstr),
+    Variable(VariableInstr),
+    Memory(MemoryInstr),
+    Control(ControlInstr),
 }
 
 #[derive(Debug, Clone, PartialEq)]
