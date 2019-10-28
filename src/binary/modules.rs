@@ -450,7 +450,7 @@ fn p_section<'a, R>(
     move |input| match Byte::decode(input) {
         Ok((_, id_)) if id_ != id => Ok((input, None)),
         Err(_) => Ok((input, None)),
-        Ok((input, _)) => {
+        Ok((input, id)) => {
             let (input, size) = u32::decode(input)?;
             let size = size as usize;
             let (body_input, input) = input.split_at(size);
@@ -497,8 +497,8 @@ impl Encoder for Module {
 fn p_costoms(input: &[u8]) -> IResult<&[u8], ()> {
     map(
         many0(flat_map(
-            tuple((parser::token(0x00), Name::decode, u32::decode)),
-            |(_, _, size)| many_m_n(size as usize, size as usize, Byte::decode),
+            tuple((parser::token(0x00), u32::decode)),
+            |(_, size)| many_m_n(size as usize, size as usize, Byte::decode),
         )),
         |_| (),
     )(input)
@@ -601,11 +601,11 @@ fn test_add() {
             }],
         }
     );
+}
 
-    assert_eq!(
-        Module::decode_end(&std::fs::read("./example/md5.wasm").unwrap()).is_ok(),
-        true
-    );
+#[test]
+fn test_md5() {
+    assert!(Module::decode_end(&std::fs::read("./example/md5.wasm").unwrap()).is_ok(),);
 }
 
 #[test]
