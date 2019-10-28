@@ -1,7 +1,7 @@
 use super::parser;
 use super::Decoder;
 use super::Encoder;
-use crate::structure::instructions::Expr;
+use crate::structure::instructions::{Expr, Instr, MemoryInstr, NumericInstr, VariableInstr};
 use crate::structure::modules::{
     Data, Elem, Export, ExportDesc, Func, FuncIdx, Global, GlobalIdx, Import, ImportDesc, LabelIdx,
     LocalIdx, Mem, MemIdx, Module, Start, Table, TableIdx, TypeIdx,
@@ -427,7 +427,7 @@ pub fn p_code(input: &[u8]) -> IResult<&[u8], (Vec<ValType>, Expr)> {
                 .concat();
             (locals, body)
         },
-    )(input)?;
+    )(code_input)?;
     Ok((input, result))
 }
 
@@ -496,9 +496,10 @@ impl Encoder for Module {
 
 fn p_costoms(input: &[u8]) -> IResult<&[u8], ()> {
     map(
-        many0(flat_map(tuple((Name::decode, u32::decode)), |(_, size)| {
-            many_m_n(size as usize, size as usize, Byte::decode)
-        })),
+        many0(flat_map(
+            tuple((parser::token(0x00), Name::decode, u32::decode)),
+            |(_, _, size)| many_m_n(size as usize, size as usize, Byte::decode),
+        )),
         |_| (),
     )(input)
 }
@@ -567,6 +568,39 @@ impl Decoder for Module {
             },
         )(input)
     }
+}
+
+#[test]
+fn test_add() {
+    assert_eq!(
+        Module::decode_end(&std::fs::read("./example/add.wasm").unwrap()).unwrap(),
+        Module {
+            types: vec![FuncType(
+                vec![ValType::I32, ValType::I32],
+                vec![ValType::I32],
+            )],
+            funcs: vec![Func {
+                type_: TypeIdx(0),
+                locals: vec![],
+                body: Expr(vec![
+                    Instr::Variable(VariableInstr::LocalGet(LocalIdx(0))),
+                    Instr::Variable(VariableInstr::LocalGet(LocalIdx(1))),
+                    Instr::Numeric(NumericInstr::I32Add),
+                ]),
+            }],
+            tables: vec![],
+            mems: vec![],
+            globals: vec![],
+            elem: vec![],
+            data: vec![],
+            start: None,
+            imports: vec![],
+            exports: vec![Export {
+                name: Name("add".to_string()),
+                desc: ExportDesc::Func(FuncIdx(0)),
+            }],
+        }
+    )
 }
 
 #[test]
