@@ -568,3 +568,27 @@ impl Decoder for Module {
         )(input)
     }
 }
+
+#[test]
+fn tests() {
+    use super::test_helper;
+
+    // test_helper::identity_encode_decode::<Module>();
+    test_helper::identity_encode_decode::<TypeIdx>();
+    test_helper::identity_encode_decode::<FuncIdx>();
+    test_helper::identity_encode_decode::<TableIdx>();
+    test_helper::identity_encode_decode::<MemIdx>();
+    test_helper::identity_encode_decode::<GlobalIdx>();
+    test_helper::identity_encode_decode::<LocalIdx>();
+    test_helper::identity_encode_decode::<LabelIdx>();
+    // test_helper::identity_encode_decode::<Func>();
+    test_helper::identity_encode_decode::<Table>();
+    test_helper::identity_encode_decode::<Mem>();
+    // test_helper::identity_encode_decode::<Elem>();
+    // test_helper::identity_encode_decode::<Data>();
+    test_helper::identity_encode_decode::<Start>();
+    test_helper::identity_encode_decode::<Export>();
+    test_helper::identity_encode_decode::<ExportDesc>();
+    test_helper::identity_encode_decode::<Import>();
+    test_helper::identity_encode_decode::<ImportDesc>();
+}
