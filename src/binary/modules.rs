@@ -1,7 +1,7 @@
 use super::parser;
 use super::Decoder;
 use super::Encoder;
-use crate::structure::instructions::{Expr, Instr, MemoryInstr, NumericInstr, VariableInstr};
+use crate::structure::instructions::{Expr, Instr};
 use crate::structure::modules::{
     Data, Elem, Export, ExportDesc, Func, FuncIdx, Global, GlobalIdx, Import, ImportDesc, LabelIdx,
     LocalIdx, Mem, MemIdx, Module, Start, Table, TableIdx, TypeIdx,
@@ -583,9 +583,9 @@ fn test_add() {
                 type_: TypeIdx(0),
                 locals: vec![],
                 body: Expr(vec![
-                    Instr::Variable(VariableInstr::LocalGet(LocalIdx(0))),
-                    Instr::Variable(VariableInstr::LocalGet(LocalIdx(1))),
-                    Instr::Numeric(NumericInstr::I32Add),
+                    Instr::LocalGet(LocalIdx(0)),
+                    Instr::LocalGet(LocalIdx(1)),
+                    Instr::I32Add,
                 ]),
             }],
             tables: vec![],
