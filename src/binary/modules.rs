@@ -86,8 +86,10 @@ impl Encoder for TypeIdx {
     }
 }
 
-pub fn p_typeidx(input: &[u8]) -> IResult<&[u8], TypeIdx> {
-    map(u32::decode, TypeIdx)(input)
+impl Decoder for TypeIdx {
+    fn decode(input: &[u8]) -> IResult<&[u8], TypeIdx> {
+        map(u32::decode, TypeIdx)(input)
+    }
 }
 
 impl Encoder for FuncIdx {
@@ -96,8 +98,10 @@ impl Encoder for FuncIdx {
     }
 }
 
-pub fn p_funcidx(input: &[u8]) -> IResult<&[u8], FuncIdx> {
-    map(u32::decode, FuncIdx)(input)
+impl Decoder for FuncIdx {
+    fn decode(input: &[u8]) -> IResult<&[u8], FuncIdx> {
+        map(u32::decode, FuncIdx)(input)
+    }
 }
 
 impl Encoder for GlobalIdx {
@@ -106,8 +110,10 @@ impl Encoder for GlobalIdx {
     }
 }
 
-pub fn p_globalidx(input: &[u8]) -> IResult<&[u8], GlobalIdx> {
-    map(u32::decode, GlobalIdx)(input)
+impl Decoder for GlobalIdx {
+    fn decode(input: &[u8]) -> IResult<&[u8], GlobalIdx> {
+        map(u32::decode, GlobalIdx)(input)
+    }
 }
 
 impl Encoder for LocalIdx {
@@ -116,8 +122,10 @@ impl Encoder for LocalIdx {
     }
 }
 
-pub fn p_localidx(input: &[u8]) -> IResult<&[u8], LocalIdx> {
-    map(u32::decode, LocalIdx)(input)
+impl Decoder for LocalIdx {
+    fn decode(input: &[u8]) -> IResult<&[u8], LocalIdx> {
+        map(u32::decode, LocalIdx)(input)
+    }
 }
 
 impl Encoder for LabelIdx {
@@ -126,8 +134,10 @@ impl Encoder for LabelIdx {
     }
 }
 
-pub fn p_labelidx(input: &[u8]) -> IResult<&[u8], LabelIdx> {
-    map(u32::decode, LabelIdx)(input)
+impl Decoder for LabelIdx {
+    fn decode(input: &[u8]) -> IResult<&[u8], LabelIdx> {
+        map(u32::decode, LabelIdx)(input)
+    }
 }
 
 impl Encoder for MemIdx {
@@ -136,8 +146,10 @@ impl Encoder for MemIdx {
     }
 }
 
-pub fn p_memidx(input: &[u8]) -> IResult<&[u8], MemIdx> {
-    map(u32::decode, MemIdx)(input)
+impl Decoder for MemIdx {
+    fn decode(input: &[u8]) -> IResult<&[u8], MemIdx> {
+        map(u32::decode, MemIdx)(input)
+    }
 }
 
 impl Encoder for TableIdx {
@@ -146,8 +158,10 @@ impl Encoder for TableIdx {
     }
 }
 
-pub fn p_tableidx(input: &[u8]) -> IResult<&[u8], TableIdx> {
-    map(u32::decode, TableIdx)(input)
+impl Decoder for TableIdx {
+    fn decode(input: &[u8]) -> IResult<&[u8], TableIdx> {
+        map(u32::decode, TableIdx)(input)
+    }
 }
 
 impl Encoder for Import {
@@ -158,11 +172,13 @@ impl Encoder for Import {
     }
 }
 
-pub fn p_import(input: &[u8]) -> IResult<&[u8], Import> {
-    map(
-        tuple((Name::decode, Name::decode, p_import_desc)),
-        |(module, name, desc)| Import { module, name, desc },
-    )(input)
+impl Decoder for Import {
+    fn decode(input: &[u8]) -> IResult<&[u8], Import> {
+        map(
+            tuple((Name::decode, Name::decode, ImportDesc::decode)),
+            |(module, name, desc)| Import { module, name, desc },
+        )(input)
+    }
 }
 
 impl Encoder for ImportDesc {
@@ -188,32 +204,35 @@ impl Encoder for ImportDesc {
     }
 }
 
-pub fn p_import_desc(input: &[u8]) -> IResult<&[u8], ImportDesc> {
-    alt((
-        map(tuple((parser::token(0x00), p_typeidx)), |(_, x)| {
-            ImportDesc::Func(x)
-        }),
-        map(tuple((parser::token(0x01), TableType::decode)), |(_, x)| {
-            ImportDesc::Table(x)
-        }),
-        map(tuple((parser::token(0x02), MemType::decode)), |(_, x)| {
-            ImportDesc::Mem(x)
-        }),
-        map(
-            tuple((parser::token(0x03), GlobalType::decode)),
-            |(_, x)| ImportDesc::Global(x),
-        ),
-    ))(input)
+impl Decoder for ImportDesc {
+    fn decode(input: &[u8]) -> IResult<&[u8], ImportDesc> {
+        alt((
+            map(tuple((parser::token(0x00), TypeIdx::decode)), |(_, x)| {
+                ImportDesc::Func(x)
+            }),
+            map(tuple((parser::token(0x01), TableType::decode)), |(_, x)| {
+                ImportDesc::Table(x)
+            }),
+            map(tuple((parser::token(0x02), MemType::decode)), |(_, x)| {
+                ImportDesc::Mem(x)
+            }),
+            map(
+                tuple((parser::token(0x03), GlobalType::decode)),
+                |(_, x)| ImportDesc::Global(x),
+            ),
+        ))(input)
+    }
 }
-
 impl Encoder for Table {
     fn encode(&self, bytes: &mut Vec<u8>) {
         self.type_.encode(bytes);
     }
 }
 
-pub fn p_table(input: &[u8]) -> IResult<&[u8], Table> {
-    map(TableType::decode, |type_| Table { type_ })(input)
+impl Decoder for Table {
+    fn decode(input: &[u8]) -> IResult<&[u8], Table> {
+        map(TableType::decode, |type_| Table { type_ })(input)
+    }
 }
 
 impl Encoder for Mem {
@@ -222,8 +241,10 @@ impl Encoder for Mem {
     }
 }
 
-pub fn p_mem(input: &[u8]) -> IResult<&[u8], Mem> {
-    map(MemType::decode, |type_| Mem { type_ })(input)
+impl Decoder for Mem {
+    fn decode(input: &[u8]) -> IResult<&[u8], Mem> {
+        map(MemType::decode, |type_| Mem { type_ })(input)
+    }
 }
 
 impl Encoder for Global {
@@ -233,11 +254,13 @@ impl Encoder for Global {
     }
 }
 
-pub fn p_global(input: &[u8]) -> IResult<&[u8], Global> {
-    map(
-        tuple((GlobalType::decode, Expr::decode)),
-        |(type_, init)| Global { type_, init },
-    )(input)
+impl Decoder for Global {
+    fn decode(input: &[u8]) -> IResult<&[u8], Global> {
+        map(
+            tuple((GlobalType::decode, Expr::decode)),
+            |(type_, init)| Global { type_, init },
+        )(input)
+    }
 }
 
 impl Encoder for Export {
@@ -247,10 +270,12 @@ impl Encoder for Export {
     }
 }
 
-pub fn p_export(input: &[u8]) -> IResult<&[u8], Export> {
-    map(tuple((Name::decode, p_export_desc)), |(name, desc)| {
-        Export { name, desc }
-    })(input)
+impl Decoder for Export {
+    fn decode(input: &[u8]) -> IResult<&[u8], Export> {
+        map(tuple((Name::decode, ExportDesc::decode)), |(name, desc)| {
+            Export { name, desc }
+        })(input)
+    }
 }
 
 impl Encoder for ExportDesc {
@@ -276,21 +301,23 @@ impl Encoder for ExportDesc {
     }
 }
 
-pub fn p_export_desc(input: &[u8]) -> IResult<&[u8], ExportDesc> {
-    alt((
-        map(tuple((parser::token(0x00), p_funcidx)), |(_, x)| {
-            ExportDesc::Func(x)
-        }),
-        map(tuple((parser::token(0x01), p_tableidx)), |(_, x)| {
-            ExportDesc::Table(x)
-        }),
-        map(tuple((parser::token(0x02), p_memidx)), |(_, x)| {
-            ExportDesc::Mem(x)
-        }),
-        map(tuple((parser::token(0x03), p_globalidx)), |(_, x)| {
-            ExportDesc::Global(x)
-        }),
-    ))(input)
+impl Decoder for ExportDesc {
+    fn decode(input: &[u8]) -> IResult<&[u8], ExportDesc> {
+        alt((
+            map(tuple((parser::token(0x00), FuncIdx::decode)), |(_, x)| {
+                ExportDesc::Func(x)
+            }),
+            map(tuple((parser::token(0x01), TableIdx::decode)), |(_, x)| {
+                ExportDesc::Table(x)
+            }),
+            map(tuple((parser::token(0x02), MemIdx::decode)), |(_, x)| {
+                ExportDesc::Mem(x)
+            }),
+            map(tuple((parser::token(0x03), GlobalIdx::decode)), |(_, x)| {
+                ExportDesc::Global(x)
+            }),
+        ))(input)
+    }
 }
 
 impl Encoder for Start {
@@ -299,8 +326,10 @@ impl Encoder for Start {
     }
 }
 
-pub fn p_start(input: &[u8]) -> IResult<&[u8], Start> {
-    map(p_funcidx, |func| Start { func })(input)
+impl Decoder for Start {
+    fn decode(input: &[u8]) -> IResult<&[u8], Start> {
+        map(FuncIdx::decode, |func| Start { func })(input)
+    }
 }
 
 impl Encoder for Elem {
@@ -311,15 +340,17 @@ impl Encoder for Elem {
     }
 }
 
-pub fn p_elem(input: &[u8]) -> IResult<&[u8], Elem> {
-    map(
-        tuple((p_tableidx, Expr::decode, super::values::p_vec(p_funcidx))),
-        |(table, offset, init)| Elem {
-            table,
-            offset,
-            init,
-        },
-    )(input)
+impl Decoder for Elem {
+    fn decode(input: &[u8]) -> IResult<&[u8], Elem> {
+        map(
+            tuple((TableIdx::decode, Expr::decode, Vec::<FuncIdx>::decode)),
+            |(table, offset, init)| Elem {
+                table,
+                offset,
+                init,
+            },
+        )(input)
+    }
 }
 
 impl Encoder for Data {
@@ -330,11 +361,13 @@ impl Encoder for Data {
     }
 }
 
-pub fn p_data(input: &[u8]) -> IResult<&[u8], Data> {
-    map(
-        tuple((p_memidx, Expr::decode, Vec::<Byte>::decode)),
-        |(data, offset, init)| Data { data, offset, init },
-    )(input)
+impl Decoder for Data {
+    fn decode(input: &[u8]) -> IResult<&[u8], Data> {
+        map(
+            tuple((MemIdx::decode, Expr::decode, Vec::<Byte>::decode)),
+            |(data, offset, init)| Data { data, offset, init },
+        )(input)
+    }
 }
 
 fn group_by_count<T: PartialEq>(xs: &Vec<T>) -> Vec<(u32, &T)> {
@@ -469,78 +502,69 @@ fn p_costoms(input: &[u8]) -> IResult<&[u8], ()> {
         |_| (),
     )(input)
 }
-pub fn p_module(input: &[u8]) -> IResult<&[u8], Module> {
-    map(
-        tuple((
+
+impl Decoder for Module {
+    fn decode(input: &[u8]) -> IResult<&[u8], Module> {
+        map(
             tuple((
-                parser::token(0x00),
-                parser::token(0x61),
-                parser::token(0x73),
-                parser::token(0x6d),
-                parser::token(0x01),
-                parser::token(0x00),
-                parser::token(0x00),
-                parser::token(0x00),
-            )),
-            tuple((p_costoms, p_section(Byte(1), Vec::<FuncType>::decode))),
-            tuple((
+                tuple((
+                    parser::token(0x00),
+                    parser::token(0x61),
+                    parser::token(0x73),
+                    parser::token(0x6d),
+                    parser::token(0x01),
+                    parser::token(0x00),
+                    parser::token(0x00),
+                    parser::token(0x00),
+                )),
+                tuple((p_costoms, p_section(Byte(1), Vec::<FuncType>::decode))),
+                tuple((p_costoms, p_section(Byte(2), Vec::<Import>::decode))),
+                tuple((p_costoms, p_section(Byte(3), Vec::<TypeIdx>::decode))),
+                tuple((p_costoms, p_section(Byte(4), Vec::<Table>::decode))),
+                tuple((p_costoms, p_section(Byte(5), Vec::<Mem>::decode))),
+                tuple((p_costoms, p_section(Byte(6), Vec::<Global>::decode))),
+                tuple((p_costoms, p_section(Byte(7), Vec::<Export>::decode))),
+                tuple((p_costoms, p_section(Byte(8), Start::decode))),
+                tuple((p_costoms, p_section(Byte(9), Vec::<Elem>::decode))),
+                tuple((p_costoms, p_section(Byte(10), super::values::p_vec(p_code)))),
+                tuple((p_costoms, p_section(Byte(11), Vec::<Data>::decode))),
                 p_costoms,
-                p_section(Byte(2), super::values::p_vec(p_import)),
             )),
-            tuple((
-                p_costoms,
-                p_section(Byte(3), super::values::p_vec(p_typeidx)),
-            )),
-            tuple((p_costoms, p_section(Byte(4), super::values::p_vec(p_table)))),
-            tuple((p_costoms, p_section(Byte(5), super::values::p_vec(p_mem)))),
-            tuple((
-                p_costoms,
-                p_section(Byte(6), super::values::p_vec(p_global)),
-            )),
-            tuple((
-                p_costoms,
-                p_section(Byte(7), super::values::p_vec(p_export)),
-            )),
-            tuple((p_costoms, p_section(Byte(8), p_start))),
-            tuple((p_costoms, p_section(Byte(9), super::values::p_vec(p_elem)))),
-            tuple((p_costoms, p_section(Byte(10), super::values::p_vec(p_code)))),
-            tuple((p_costoms, p_section(Byte(11), super::values::p_vec(p_data)))),
-            p_costoms,
-        )),
-        |(
-            _,
-            (_, types),
-            (_, imports),
-            (_, funcs),
-            (_, tables),
-            (_, mems),
-            (_, globals),
-            (_, exports),
-            (_, start),
-            (_, elem),
-            (_, code),
-            (_, data),
-            _,
-        )| Module {
-            types: types.unwrap_or_else(Vec::new),
-            funcs: funcs
-                .unwrap_or_else(Vec::new)
-                .into_iter()
-                .zip(code.unwrap_or_else(Vec::new))
-                .map(|(type_, ((locals, body)))| Func {
-                    type_,
-                    locals,
-                    body,
-                })
-                .collect::<Vec<_>>(),
-            imports: imports.unwrap_or_else(Vec::new),
-            tables: tables.unwrap_or_else(Vec::new),
-            mems: mems.unwrap_or_else(Vec::new),
-            globals: globals.unwrap_or_else(Vec::new),
-            exports: exports.unwrap_or_else(Vec::new),
-            start,
-            elem: elem.unwrap_or_else(Vec::new),
-            data: data.unwrap_or_else(Vec::new),
-        },
-    )(input)
+            |(
+                _,
+                (_, types),
+                (_, imports),
+                (_, funcs),
+                (_, tables),
+                (_, mems),
+                (_, globals),
+                (_, exports),
+                (_, start),
+                (_, elem),
+                (_, code),
+                (_, data),
+                _,
+            )| Module {
+                types: types.unwrap_or_else(Vec::new),
+                funcs: funcs
+                    .unwrap_or_else(Vec::new)
+                    .into_iter()
+                    .zip(code.unwrap_or_else(Vec::new))
+                    .map(|(type_, ((locals, body)))| Func {
+                        type_,
+                        locals,
+                        body,
+                    })
+                    .collect::<Vec<_>>(),
+                imports: imports.unwrap_or_else(Vec::new),
+                tables: tables.unwrap_or_else(Vec::new),
+                mems: mems.unwrap_or_else(Vec::new),
+                globals: globals.unwrap_or_else(Vec::new),
+                exports: exports.unwrap_or_else(Vec::new),
+                start,
+                elem: elem.unwrap_or_else(Vec::new),
+                data: data.unwrap_or_else(Vec::new),
+            },
+        )(input)
+    }
 }

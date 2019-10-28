@@ -1,11 +1,11 @@
-use super::modules::{
-    p_funcidx, p_globalidx, p_labelidx, p_localidx, p_memidx, p_tableidx, p_typeidx,
-};
 use super::parser;
 use super::util::loop_encode;
 use super::Encoder;
 use crate::structure::instructions::{
     ControlInstr, Expr, Instr, Memarg, MemoryInstr, NumericInstr, ParametricInstr, VariableInstr,
+};
+use crate::structure::modules::{
+    FuncIdx, GlobalIdx, LabelIdx, LocalIdx, MemIdx, TableIdx, TypeIdx,
 };
 use crate::structure::types::{
     ElemType, FuncType, GlobalType, Limits, MemType, Mut, ResultType, TableType, ValType,
@@ -461,19 +461,19 @@ impl Encoder for VariableInstr {
 impl Decoder for VariableInstr {
     fn decode(input: &[u8]) -> IResult<&[u8], VariableInstr> {
         alt_m!(
-            map(tuple((parser::token(0x20), p_localidx)), |(_, x)| {
+            map(tuple((parser::token(0x20), LocalIdx::decode)), |(_, x)| {
                 VariableInstr::LocalGet(x)
             }),
-            map(tuple((parser::token(0x21), p_localidx)), |(_, x)| {
+            map(tuple((parser::token(0x21), LocalIdx::decode)), |(_, x)| {
                 VariableInstr::LocalSet(x)
             }),
-            map(tuple((parser::token(0x22), p_localidx)), |(_, x)| {
+            map(tuple((parser::token(0x22), LocalIdx::decode)), |(_, x)| {
                 VariableInstr::LocalTee(x)
             }),
-            map(tuple((parser::token(0x23), p_globalidx)), |(_, x)| {
+            map(tuple((parser::token(0x23), GlobalIdx::decode)), |(_, x)| {
                 VariableInstr::GlobalGet(x)
             }),
-            map(tuple((parser::token(0x24), p_globalidx)), |(_, x)| {
+            map(tuple((parser::token(0x24), GlobalIdx::decode)), |(_, x)| {
                 VariableInstr::GlobalSet(x)
             }),
         )(input)
@@ -762,26 +762,26 @@ impl Decoder for ControlInstr {
                 )),
                 |(_, rt, is1, is2, _)| ControlInstr::If(rt, is1, is2.unwrap_or_else(Vec::new)),
             ),
-            map(tuple((parser::token(0x0c), p_labelidx)), |(_, l)| {
+            map(tuple((parser::token(0x0c), LabelIdx::decode)), |(_, l)| {
                 ControlInstr::Br(l)
             }),
-            map(tuple((parser::token(0x0d), p_labelidx)), |(_, l)| {
+            map(tuple((parser::token(0x0d), LabelIdx::decode)), |(_, l)| {
                 ControlInstr::BrIf(l)
             }),
             map(
                 tuple((
                     parser::token(0x0e),
-                    super::values::p_vec(p_labelidx),
-                    p_labelidx
+                    Vec::<LabelIdx>::decode,
+                    LabelIdx::decode
                 )),
                 |(_, ls, l)| ControlInstr::BrTable(ls, l),
             ),
             map(parser::token(0x0f), |_| ControlInstr::Return),
-            map(tuple((parser::token(0x10), p_funcidx)), |(_, f)| {
+            map(tuple((parser::token(0x10), FuncIdx::decode)), |(_, f)| {
                 ControlInstr::Call(f)
             }),
             map(
-                tuple((parser::token(0x11), p_typeidx, parser::token(0x00))),
+                tuple((parser::token(0x11), TypeIdx::decode, parser::token(0x00))),
                 |(_, t, _)| ControlInstr::CallIndirect(t),
             ),
         )(input)
