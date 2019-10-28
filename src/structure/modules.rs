@@ -16,31 +16,31 @@ pub struct Module {
     pub exports: Vec<Export>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct TypeIdx(pub u32);
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct FuncIdx(pub u32);
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct TableIdx(pub u32);
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct MemIdx(pub u32);
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct GlobalIdx(pub u32);
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct LocalIdx(pub u32);
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct LabelIdx(pub u32);
 
