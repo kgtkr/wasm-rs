@@ -270,6 +270,7 @@ impl VM {
                 self.pc.1 += 1;
             }
             Instr::End => {
+                // TODO: loopとかのendと区別
                 self.cmd_ret();
             }
             x => unimplemented!("{:?}", x),
