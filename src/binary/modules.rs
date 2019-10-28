@@ -600,7 +600,9 @@ fn test_add() {
                 desc: ExportDesc::Func(FuncIdx(0)),
             }],
         }
-    )
+    );
+
+    Module::decode_end(&std::fs::read("./example/md5.wasm").unwrap()).unwrap();
 }
 
 #[test]
