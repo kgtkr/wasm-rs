@@ -3,5 +3,6 @@
 pub mod binary;
 pub mod structure;
 
+#[cfg(test)]
 #[macro_use]
 extern crate proptest_derive;

@@ -8,7 +8,7 @@ edition = "2018"
 byteorder = "1"
 leb128 = "0.2"
 nom = "5.0.1"
-proptest-derive = "0.1"
-proptest = "0.9.4"
 
 [dev-dependencies]
+proptest-derive = "0.1"
+proptest = "0.9.4"
