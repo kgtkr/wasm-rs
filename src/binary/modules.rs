@@ -602,7 +602,10 @@ fn test_add() {
         }
     );
 
-    Module::decode_end(&std::fs::read("./example/md5.wasm").unwrap()).unwrap();
+    assert_eq!(
+        Module::decode_end(&std::fs::read("./example/md5.wasm").unwrap()).is_ok(),
+        true
+    );
 }
 
 #[test]
