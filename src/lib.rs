@@ -2,6 +2,7 @@
 #![type_length_limit = "2097152"]
 
 pub mod binary;
+pub mod interpreter;
 pub mod structure;
 
 #[cfg(test)]
