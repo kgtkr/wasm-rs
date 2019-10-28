@@ -5,6 +5,7 @@ use super::types::ResultType;
 pub struct Expr(pub Vec<Instr>);
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub enum NumericInstr {
     I32Const(i32),
     I64Const(i64),
@@ -136,12 +137,14 @@ pub enum NumericInstr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub enum ParametricInstr {
     Drop,
     Select,
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub enum VariableInstr {
     LocalGet(LocalIdx),
     LocalSet(LocalIdx),
