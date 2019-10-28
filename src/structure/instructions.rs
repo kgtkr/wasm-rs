@@ -154,6 +154,7 @@ pub enum VariableInstr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub enum MemoryInstr {
     I32Load(Memarg),
     I64Load(Memarg),
