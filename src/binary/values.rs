@@ -149,3 +149,18 @@ pub fn p_vec<'a, T, P: Fn(&'a [u8]) -> IResult<&'a [u8], T>>(
         many_m_n(size, size, &p)(input)
     }
 }
+
+#[test]
+fn tests() {
+    use super::test_helper;
+
+    test_helper::identity_encode_decode::<Byte>();
+    test_helper::identity_encode_decode::<i32>();
+    test_helper::identity_encode_decode::<i64>();
+    test_helper::identity_encode_decode::<u32>();
+    test_helper::identity_encode_decode::<u64>();
+    test_helper::identity_encode_decode::<f32>();
+    test_helper::identity_encode_decode::<f64>();
+    test_helper::identity_encode_decode::<Name>();
+    test_helper::identity_encode_decode::<Vec<Byte>>();
+}
