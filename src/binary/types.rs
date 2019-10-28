@@ -164,3 +164,72 @@ pub fn p_mut(input: &[u8]) -> IResult<&[u8], Mut> {
         map(parser::token(0x01), |_| Mut::Var),
     ))(input)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    #[test]
+    fn test_valtype() {
+        proptest!(|(x: ValType)| {
+            assert_eq!(p_valtype(&x.encode_to_vec()), Ok((vec![].as_ref(),x)));
+        });
+    }
+
+    #[test]
+    fn test_resulttype() {
+        proptest!(|(x: ResultType)| {
+            assert_eq!(p_resulttype(&x.encode_to_vec()), Ok((vec![].as_ref(),x)));
+        });
+    }
+
+    #[test]
+    fn test_functype() {
+        proptest!(|(x: FuncType)| {
+            assert_eq!(p_functype(&x.encode_to_vec()), Ok((vec![].as_ref(),x)));
+        });
+    }
+
+    #[test]
+    fn test_limits() {
+        proptest!(|(x: Limits)| {
+            assert_eq!(p_limits(&x.encode_to_vec()), Ok((vec![].as_ref(),x)));
+        });
+    }
+
+    #[test]
+    fn test_memtype() {
+        proptest!(|(x: MemType)| {
+            assert_eq!(p_memtype(&x.encode_to_vec()), Ok((vec![].as_ref(),x)));
+        });
+    }
+
+    #[test]
+    fn test_tabletype() {
+        proptest!(|(x: TableType)| {
+            assert_eq!(p_tabletype(&x.encode_to_vec()), Ok((vec![].as_ref(),x)));
+        });
+    }
+
+    #[test]
+    fn test_elemtype() {
+        proptest!(|(x: ElemType)| {
+            assert_eq!(p_elemtype(&x.encode_to_vec()), Ok((vec![].as_ref(),x)));
+        });
+    }
+
+    #[test]
+    fn test_globaltype() {
+        proptest!(|(x: GlobalType)| {
+            assert_eq!(p_globaltype(&x.encode_to_vec()), Ok((vec![].as_ref(),x)));
+        });
+    }
+
+    #[test]
+    fn test_mut() {
+        proptest!(|(x: Mut)| {
+            assert_eq!(p_mut(&x.encode_to_vec()), Ok((vec![].as_ref(),x)));
+        });
+    }
+}

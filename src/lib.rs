@@ -2,3 +2,6 @@
 
 pub mod binary;
 pub mod structure;
+
+#[macro_use]
+extern crate proptest_derive;
