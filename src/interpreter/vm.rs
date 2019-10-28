@@ -12,6 +12,11 @@ pub enum Val {
     F64(f64),
 }
 
+#[derive(Debug, Clone, PartialEq, Copy)]
+enum StackVal {
+    Val(Val),
+}
+
 #[derive(Debug, Clone, PartialEq)]
 struct VMTable {
     max: Option<usize>,
@@ -70,19 +75,41 @@ impl VMMem {
 pub struct VM {
     funcs: Vec<Func>,
     globals: Vec<Val>,
-    stack: Vec<Val>,
+    stack: Vec<StackVal>,
+    sp: usize,
     table: Option<VMTable>,
     mem: Option<VMMem>,
     exports: Vec<Export>,
 }
 
 impl VM {
+    fn push(&mut self, x: StackVal) {
+        self.stack[self.sp] = x;
+        self.sp += 1;
+    }
+
+    fn peak(&self) -> StackVal {
+        self.stack[self.sp - 1]
+    }
+
+    fn pop(&mut self) -> StackVal {
+        let x = self.peak();
+        self.sp -= 1;
+        x
+    }
+
     pub fn new(module: Module) -> VM {
         let mut vm = VM {
             funcs: Vec::new(),
             globals: Vec::new(),
             mem: None,
-            stack: Vec::new(),
+            stack: {
+                let stack_size = 100000;
+                let mut vec = Vec::with_capacity(stack_size);
+                vec.resize(stack_size, StackVal::Val(Val::I32(0)));
+                vec
+            },
+            sp: 0,
             table: None,
             exports: Vec::new(),
         };
