@@ -3,7 +3,6 @@ use super::modules::{
 };
 use super::parser;
 use super::util::loop_encode;
-use super::values::{p_f32, p_f64, p_i32, p_i64, p_u32, p_vec};
 use super::Encoder;
 use crate::structure::instructions::{Expr, Instr, Memarg};
 use crate::structure::types::{
@@ -423,7 +422,11 @@ pub fn p_inser(input: &[u8]) -> IResult<&[u8], Instr> {
             Instr::BrIf(l)
         }),
         map(
-            tuple((parser::token(0x0e), p_vec(p_labelidx), p_labelidx)),
+            tuple((
+                parser::token(0x0e),
+                super::values::p_vec(p_labelidx),
+                p_labelidx
+            )),
             |(_, ls, l)| Instr::BrTable(ls, l),
         ),
         map(parser::token(0x0f), |_| Instr::Return),
@@ -532,16 +535,16 @@ pub fn p_inser(input: &[u8]) -> IResult<&[u8], Instr> {
         map(tuple((parser::token(0x40), parser::token(0x00))), |_| {
             Instr::MemoryGrow
         }),
-        map(tuple((parser::token(0x41), p_i32)), |(_, n)| {
+        map(tuple((parser::token(0x41), i32::decode)), |(_, n)| {
             Instr::I32Const(n)
         }),
-        map(tuple((parser::token(0x42), p_i64)), |(_, n)| {
+        map(tuple((parser::token(0x42), i64::decode)), |(_, n)| {
             Instr::I64Const(n)
         }),
-        map(tuple((parser::token(0x43), p_f32)), |(_, z)| {
+        map(tuple((parser::token(0x43), f32::decode)), |(_, z)| {
             Instr::F32Const(z)
         }),
-        map(tuple((parser::token(0x44), p_f64)), |(_, z)| {
+        map(tuple((parser::token(0x44), f64::decode)), |(_, z)| {
             Instr::F64Const(z)
         }),
         map(parser::token(0x45), |_| Instr::I32Eqz),
@@ -678,8 +681,7 @@ impl Encoder for Memarg {
 }
 
 pub fn p_memarg(input: &[u8]) -> IResult<&[u8], Memarg> {
-    map(tuple((p_u32, p_u32)), |(align, offset)| Memarg {
-        align,
-        offset,
+    map(tuple((u32::decode, u32::decode)), |(align, offset)| {
+        Memarg { align, offset }
     })(input)
 }

@@ -1,5 +1,4 @@
 use super::parser;
-use super::values::{p_u32, p_vec};
 use super::Decoder;
 use super::Encoder;
 use crate::structure::types::{
@@ -74,8 +73,8 @@ impl Decoder for FuncType {
         map(
             tuple((
                 parser::token(0x60),
-                p_vec(ValType::decode),
-                p_vec(ValType::decode),
+                Vec::<ValType>::decode,
+                Vec::<ValType>::decode,
             )),
             |(_, a, b)| FuncType(a, b),
         )(input)
@@ -101,12 +100,11 @@ impl Encoder for Limits {
 impl Decoder for Limits {
     fn decode(input: &[u8]) -> IResult<&[u8], Limits> {
         alt((
-            map(tuple((parser::token(0x00), p_u32)), |(_, min)| Limits {
-                min,
-                max: None,
+            map(tuple((parser::token(0x00), u32::decode)), |(_, min)| {
+                Limits { min, max: None }
             }),
             map(
-                tuple((parser::token(0x01), p_u32, p_u32)),
+                tuple((parser::token(0x01), u32::decode, u32::decode)),
                 |(_, min, max)| Limits {
                     min,
                     max: Some(max),

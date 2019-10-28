@@ -1,6 +1,5 @@
 use super::instructions::p_expr;
 use super::parser;
-use super::values::{p_byte, p_name, p_u32, p_vec};
 use super::Decoder;
 use super::Encoder;
 use crate::structure::instructions::Expr;
@@ -11,7 +10,7 @@ use crate::structure::modules::{
 use crate::structure::types::{
     ElemType, FuncType, GlobalType, Limits, MemType, Mut, ResultType, TableType, ValType,
 };
-use crate::structure::values::Byte;
+use crate::structure::values::{Byte, Name};
 
 use nom::{
     branch::alt,
@@ -89,7 +88,7 @@ impl Encoder for TypeIdx {
 }
 
 pub fn p_typeidx(input: &[u8]) -> IResult<&[u8], TypeIdx> {
-    map(p_u32, TypeIdx)(input)
+    map(u32::decode, TypeIdx)(input)
 }
 
 impl Encoder for FuncIdx {
@@ -99,7 +98,7 @@ impl Encoder for FuncIdx {
 }
 
 pub fn p_funcidx(input: &[u8]) -> IResult<&[u8], FuncIdx> {
-    map(p_u32, FuncIdx)(input)
+    map(u32::decode, FuncIdx)(input)
 }
 
 impl Encoder for GlobalIdx {
@@ -109,7 +108,7 @@ impl Encoder for GlobalIdx {
 }
 
 pub fn p_globalidx(input: &[u8]) -> IResult<&[u8], GlobalIdx> {
-    map(p_u32, GlobalIdx)(input)
+    map(u32::decode, GlobalIdx)(input)
 }
 
 impl Encoder for LocalIdx {
@@ -119,7 +118,7 @@ impl Encoder for LocalIdx {
 }
 
 pub fn p_localidx(input: &[u8]) -> IResult<&[u8], LocalIdx> {
-    map(p_u32, LocalIdx)(input)
+    map(u32::decode, LocalIdx)(input)
 }
 
 impl Encoder for LabelIdx {
@@ -129,7 +128,7 @@ impl Encoder for LabelIdx {
 }
 
 pub fn p_labelidx(input: &[u8]) -> IResult<&[u8], LabelIdx> {
-    map(p_u32, LabelIdx)(input)
+    map(u32::decode, LabelIdx)(input)
 }
 
 impl Encoder for MemIdx {
@@ -139,7 +138,7 @@ impl Encoder for MemIdx {
 }
 
 pub fn p_memidx(input: &[u8]) -> IResult<&[u8], MemIdx> {
-    map(p_u32, MemIdx)(input)
+    map(u32::decode, MemIdx)(input)
 }
 
 impl Encoder for TableIdx {
@@ -149,7 +148,7 @@ impl Encoder for TableIdx {
 }
 
 pub fn p_tableidx(input: &[u8]) -> IResult<&[u8], TableIdx> {
-    map(p_u32, TableIdx)(input)
+    map(u32::decode, TableIdx)(input)
 }
 
 impl Encoder for Import {
@@ -162,7 +161,7 @@ impl Encoder for Import {
 
 pub fn p_import(input: &[u8]) -> IResult<&[u8], Import> {
     map(
-        tuple((p_name, p_name, p_import_desc)),
+        tuple((Name::decode, Name::decode, p_import_desc)),
         |(module, name, desc)| Import { module, name, desc },
     )(input)
 }
@@ -249,9 +248,8 @@ impl Encoder for Export {
 }
 
 pub fn p_export(input: &[u8]) -> IResult<&[u8], Export> {
-    map(tuple((p_name, p_export_desc)), |(name, desc)| Export {
-        name,
-        desc,
+    map(tuple((Name::decode, p_export_desc)), |(name, desc)| {
+        Export { name, desc }
     })(input)
 }
 
@@ -315,7 +313,7 @@ impl Encoder for Elem {
 
 pub fn p_elem(input: &[u8]) -> IResult<&[u8], Elem> {
     map(
-        tuple((p_tableidx, p_expr, p_vec(p_funcidx))),
+        tuple((p_tableidx, p_expr, super::values::p_vec(p_funcidx))),
         |(table, offset, init)| Elem {
             table,
             offset,
@@ -334,7 +332,7 @@ impl Encoder for Data {
 
 pub fn p_data(input: &[u8]) -> IResult<&[u8], Data> {
     map(
-        tuple((p_memidx, p_expr, p_vec(p_byte))),
+        tuple((p_memidx, p_expr, Vec::<Byte>::decode)),
         |(data, offset, init)| Data { data, offset, init },
     )(input)
 }
@@ -378,15 +376,11 @@ impl<'a> Encoder for Code<'a> {
 }
 
 pub fn p_code(input: &[u8]) -> IResult<&[u8], (Vec<ValType>, Expr)> {
-    let (input, size) = p_u32(input)?;
+    let (input, size) = u32::decode(input)?;
     let size = size as usize;
     let (code_input, input) = input.split_at(size);
     let (_, result) = map(
-        tuple((
-            p_vec(tuple((p_u32, ValType::decode))),
-            p_expr,
-            parser::eof(),
-        )),
+        tuple((Vec::<(u32, ValType)>::decode, p_expr, parser::eof())),
         |(locals, body, _)| {
             let locals = locals
                 .into_iter()
@@ -420,11 +414,11 @@ fn p_section<'a, R>(
     id: Byte,
     p: impl Fn(&'a [u8]) -> IResult<&'a [u8], R>,
 ) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], Option<R>> {
-    move |input| match p_byte(input) {
+    move |input| match Byte::decode(input) {
         Ok((_, id_)) if id_ != id => Ok((input, None)),
         Err(_) => Ok((input, None)),
         Ok((input, _)) => {
-            let (input, size) = p_u32(input)?;
+            let (input, size) = u32::decode(input)?;
             let size = size as usize;
             let (body_input, input) = input.split_at(size);
             let (_, result) = map(tuple((&p, parser::eof())), |(x, _)| x)(body_input)?;
@@ -469,8 +463,8 @@ impl Encoder for Module {
 
 fn p_costoms(input: &[u8]) -> IResult<&[u8], ()> {
     map(
-        many0(flat_map(tuple((p_name, p_u32)), |(_, size)| {
-            many_m_n(size as usize, size as usize, p_byte)
+        many0(flat_map(tuple((Name::decode, u32::decode)), |(_, size)| {
+            many_m_n(size as usize, size as usize, Byte::decode)
         })),
         |_| (),
     )(input)
@@ -488,17 +482,29 @@ pub fn p_module(input: &[u8]) -> IResult<&[u8], Module> {
                 parser::token(0x00),
                 parser::token(0x00),
             )),
-            tuple((p_costoms, p_section(Byte(1), p_vec(FuncType::decode)))),
-            tuple((p_costoms, p_section(Byte(2), p_vec(p_import)))),
-            tuple((p_costoms, p_section(Byte(3), p_vec(p_typeidx)))),
-            tuple((p_costoms, p_section(Byte(4), p_vec(p_table)))),
-            tuple((p_costoms, p_section(Byte(5), p_vec(p_mem)))),
-            tuple((p_costoms, p_section(Byte(6), p_vec(p_global)))),
-            tuple((p_costoms, p_section(Byte(7), p_vec(p_export)))),
+            tuple((p_costoms, p_section(Byte(1), Vec::<FuncType>::decode))),
+            tuple((
+                p_costoms,
+                p_section(Byte(2), super::values::p_vec(p_import)),
+            )),
+            tuple((
+                p_costoms,
+                p_section(Byte(3), super::values::p_vec(p_typeidx)),
+            )),
+            tuple((p_costoms, p_section(Byte(4), super::values::p_vec(p_table)))),
+            tuple((p_costoms, p_section(Byte(5), super::values::p_vec(p_mem)))),
+            tuple((
+                p_costoms,
+                p_section(Byte(6), super::values::p_vec(p_global)),
+            )),
+            tuple((
+                p_costoms,
+                p_section(Byte(7), super::values::p_vec(p_export)),
+            )),
             tuple((p_costoms, p_section(Byte(8), p_start))),
-            tuple((p_costoms, p_section(Byte(9), p_vec(p_elem)))),
-            tuple((p_costoms, p_section(Byte(10), p_vec(p_code)))),
-            tuple((p_costoms, p_section(Byte(11), p_vec(p_data)))),
+            tuple((p_costoms, p_section(Byte(9), super::values::p_vec(p_elem)))),
+            tuple((p_costoms, p_section(Byte(10), super::values::p_vec(p_code)))),
+            tuple((p_costoms, p_section(Byte(11), super::values::p_vec(p_data)))),
             p_costoms,
         )),
         |(
