@@ -181,7 +181,7 @@ pub enum Instr {
 }
 
 impl Instr {
-    // ネストが深くなる場合は深くなる分の正値を、浅くなる場合は負値を、変わらない場合は0を返す
+    // ネストが深くなる場合は1を、浅くなる場合は-1を、変わらない場合は0を返す
     pub fn nest_value(&self) -> i32 {
         match self {
             Instr::End => -1,
