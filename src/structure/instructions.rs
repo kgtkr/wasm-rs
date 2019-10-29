@@ -180,6 +180,17 @@ pub enum Instr {
     End,
 }
 
+impl Instr {
+    // ネストが深くなる場合は深くなる分の正値を、浅くなる場合は負値を、変わらない場合は0を返す
+    pub fn nest_value(&self) -> i32 {
+        match self {
+            Instr::End => -1,
+            Instr::Block(_) | Instr::Loop(_) | Instr::If(_) => 1,
+            _ => 0,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct Memarg {

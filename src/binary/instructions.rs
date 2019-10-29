@@ -121,11 +121,7 @@ impl Decoder for Expr {
         while deep >= 0 {
             let (input2, instr) = Instr::decode(input)?;
             input = input2;
-            deep += match instr {
-                Instr::End => -1,
-                Instr::Block(_) | Instr::Loop(_) | Instr::If(_) => 1,
-                _ => 0,
-            };
+            deep += instr.nest_value();
             instrs.push(instr);
         }
         Ok((input, Expr(instrs)))
