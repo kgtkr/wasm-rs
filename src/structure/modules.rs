@@ -20,29 +20,71 @@ pub struct Module {
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct TypeIdx(pub u32);
 
+impl Into<u32> for TypeIdx {
+    fn into(self) -> u32 {
+        self.0
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct FuncIdx(pub u32);
+
+impl Into<u32> for FuncIdx {
+    fn into(self) -> u32 {
+        self.0
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct TableIdx(pub u32);
 
+impl Into<u32> for TableIdx {
+    fn into(self) -> u32 {
+        self.0
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct MemIdx(pub u32);
+
+impl Into<u32> for MemIdx {
+    fn into(self) -> u32 {
+        self.0
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct GlobalIdx(pub u32);
 
+impl Into<u32> for GlobalIdx {
+    fn into(self) -> u32 {
+        self.0
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct LocalIdx(pub u32);
 
+impl Into<u32> for LocalIdx {
+    fn into(self) -> u32 {
+        self.0
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct LabelIdx(pub u32);
+
+impl Into<u32> for LabelIdx {
+    fn into(self) -> u32 {
+        self.0
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Func {
