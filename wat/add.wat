@@ -3,4 +3,5 @@
     local.get 0
     local.get 1
     i32.add)
+  (export "add" (func 0))
 )

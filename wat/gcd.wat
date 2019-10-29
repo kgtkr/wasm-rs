@@ -12,4 +12,5 @@
       call 0
     end
   )
+  (export "gcd" (func 0))
 )

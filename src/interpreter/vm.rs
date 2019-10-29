@@ -29,7 +29,6 @@ fn block_nest_info(expr: &Vec<Instr>) -> Vec<(usize, usize)> {
             _ => panic!(),
         }
     }
-    println!("{:?} {:?}", result_begin, end_map);
     result_begin
         .into_iter()
         .map(|x| (x, *end_map.get(&x).unwrap()))
@@ -221,6 +220,7 @@ pub struct VM {
     mem: Option<VMMem>,
     exports: Vec<Export>,
     types: Vec<FuncType>,
+    nest_infos: Vec<Vec<(usize, usize)>>,
 }
 
 impl VM {
@@ -256,9 +256,15 @@ impl VM {
             fp: 0,
             pc: (FuncIdx(0), 0),
             types: module.types,
+            nest_infos: Vec::new(),
         };
 
         vm.funcs = module.funcs;
+        vm.nest_infos = vm
+            .funcs
+            .iter()
+            .map(|x| block_nest_info(&x.body.0))
+            .collect::<Vec<_>>();
         vm.table = module
             .tables
             .get(0)
@@ -384,9 +390,68 @@ impl VM {
                 self.push(StackVal::Val(Val::I32(a + b)));
                 self.pc.1 += 1;
             }
-            Instr::End => {
-                // TODO: loopとかのendと区別
+            Instr::I32RemS => {
+                let b = self.pop().unwrap_val().unwrap_i32();
+                let a = self.pop().unwrap_val().unwrap_i32();
+                self.push(StackVal::Val(Val::I32(a % b)));
+                self.pc.1 += 1;
+            }
+            Instr::I32Eqz => {
+                let a = self.pop().unwrap_val().unwrap_i32();
+                self.push(StackVal::Val(Val::I32(if a == 0 { 1 } else { 0 })));
+                self.pc.1 += 1;
+            }
+            Instr::Call(x) => {
+                self.push(StackVal::PC((self.pc.0, self.pc.1 + 1)));
+                self.cmd_frame(x);
+            }
+            Instr::If(_) => {
+                let x = self.pop().unwrap_val().unwrap_i32();
+                if x != 0 {
+                    self.pc.1 += 1;
+                } else {
+                    let is = &self.get_cur_func().body.0;
+                    let nest_infos = &self.nest_infos[self.pc.0.to_idx()];
+                    let cur_info = nest_infos[self.pc.1 + 1];
+                    for i in self.pc.1 + 1..is.len() {
+                        if cur_info == nest_infos[i] {
+                            match is[i] {
+                                Instr::Else => {
+                                    self.pc.1 = i;
+                                    break;
+                                }
+                                Instr::End => {
+                                    self.pc.1 = i;
+                                    break;
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                    self.pc.1 += 1;
+                }
+            }
+            Instr::Else => {
+                self.pc.1 = self.nest_infos[self.pc.0.to_idx()][self.pc.1].1;
+            }
+            Instr::Return => {
                 self.cmd_ret();
+            }
+            Instr::End if self.get_cur_func().body.0.len() - 1 == self.pc.1 => {
+                // 関数のend
+                self.cmd_ret();
+            }
+            Instr::End
+                if if let Instr::If(_) = self.get_cur_func().body.0
+                    [self.nest_infos[self.pc.0.to_idx()][self.pc.1 - 1].0 - 1]
+                {
+                    true
+                } else {
+                    false
+                } =>
+            {
+                // ifのend
+                self.pc.1 += 1;
             }
             x => unimplemented!("{:?}", x),
         }
@@ -452,5 +517,16 @@ fn test_add() {
     assert_eq!(
         vm.export_call_func("add", &vec![Val::I32(3), Val::I32(5)]),
         Some(Val::I32(8))
+    );
+}
+
+#[test]
+fn test_gcd() {
+    let module = Module::decode_end(&std::fs::read("./example/gcd.wasm").unwrap()).unwrap();
+    let mut vm = VM::new(module);
+
+    assert_eq!(
+        vm.export_call_func("gcd", &vec![Val::I32(182), Val::I32(1029)]),
+        Some(Val::I32(7))
     );
 }
