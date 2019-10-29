@@ -16,6 +16,15 @@ pub struct Module {
     pub exports: Vec<Export>,
 }
 
+pub trait TypedIdx
+where
+    Self: Into<u32>,
+{
+    fn to_idx(self) -> usize {
+        self.into() as usize
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct TypeIdx(pub u32);
@@ -36,6 +45,8 @@ impl Into<u32> for FuncIdx {
     }
 }
 
+impl TypedIdx for FuncIdx {}
+
 #[derive(Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct TableIdx(pub u32);
@@ -45,6 +56,8 @@ impl Into<u32> for TableIdx {
         self.0
     }
 }
+
+impl TypedIdx for TableIdx {}
 
 #[derive(Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
@@ -56,6 +69,8 @@ impl Into<u32> for MemIdx {
     }
 }
 
+impl TypedIdx for MemIdx {}
+
 #[derive(Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct GlobalIdx(pub u32);
@@ -65,6 +80,8 @@ impl Into<u32> for GlobalIdx {
         self.0
     }
 }
+
+impl TypedIdx for GlobalIdx {}
 
 #[derive(Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
@@ -76,6 +93,8 @@ impl Into<u32> for LocalIdx {
     }
 }
 
+impl TypedIdx for LocalIdx {}
+
 #[derive(Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct LabelIdx(pub u32);
@@ -85,6 +104,8 @@ impl Into<u32> for LabelIdx {
         self.0
     }
 }
+
+impl TypedIdx for LabelIdx {}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Func {
