@@ -2,6 +2,7 @@ use crate::binary::Decoder;
 use crate::structure::instructions::{Expr, Instr};
 use crate::structure::modules::{
     Data, Elem, Export, ExportDesc, Func, FuncIdx, GlobalIdx, LocalIdx, Mem, Module, Table,
+    TypeIdx, TypedIdx,
 };
 use crate::structure::types::{FuncType, Limits, MemType, TableType, ValType};
 
@@ -13,11 +14,84 @@ pub enum Val {
     F64(f64),
 }
 
+impl Val {
+    fn unwrap_i32(&self) -> i32 {
+        if let Val::I32(x) = self {
+            *x
+        } else {
+            panic!();
+        }
+    }
+
+    fn unwrap_i64(&self) -> i64 {
+        if let Val::I64(x) = self {
+            *x
+        } else {
+            panic!();
+        }
+    }
+
+    fn unwrap_f32(&self) -> f32 {
+        if let Val::F32(x) = self {
+            *x
+        } else {
+            panic!();
+        }
+    }
+
+    fn unwrap_f64(&self) -> f64 {
+        if let Val::F64(x) = self {
+            *x
+        } else {
+            panic!();
+        }
+    }
+}
+
+trait TypedIdxAccess<Idx>
+where
+    Idx: TypedIdx,
+    Self: std::ops::Index<usize>,
+{
+    fn get_idx(&self, idx: Idx) -> &Self::Output {
+        &self[idx.to_idx()]
+    }
+}
+
+impl TypedIdxAccess<FuncIdx> for Vec<Func> {}
+impl TypedIdxAccess<TypeIdx> for Vec<FuncType> {}
+
 #[derive(Debug, Clone, PartialEq, Copy)]
 enum StackVal {
     Val(Val),
     PC((FuncIdx, usize)),
     Stack(usize),
+}
+
+impl StackVal {
+    fn unwrap_val(&self) -> Val {
+        if let StackVal::Val(x) = self {
+            *x
+        } else {
+            panic!();
+        }
+    }
+
+    fn unwrap_pc(&self) -> (FuncIdx, usize) {
+        if let StackVal::PC(x) = self {
+            *x
+        } else {
+            panic!();
+        }
+    }
+
+    fn unwrap_stack(&self) -> usize {
+        if let StackVal::Stack(x) = self {
+            *x
+        } else {
+            panic!();
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -159,29 +233,19 @@ impl VM {
         }
 
         for elem in &module.elem {
-            let offset = if let Val::I32(x) = vm.eval_const_expr(&elem.offset) {
-                x as usize
-            } else {
-                panic!()
-            };
-            if let Some(table) = &mut vm.table {
-                table.set_elem(offset, elem.init.clone());
-            } else {
-                panic!();
-            }
+            let offset = vm.eval_const_expr(&elem.offset).unwrap_i32() as usize;
+            vm.table
+                .as_mut()
+                .unwrap()
+                .set_elem(offset, elem.init.clone());
         }
 
         for d in &module.data {
-            let offset = if let Val::I32(x) = vm.eval_const_expr(&d.offset) {
-                x as usize
-            } else {
-                panic!()
-            };
-            if let Some(mem) = &mut vm.mem {
-                mem.set_data(offset, d.init.clone().into_iter().map(|x| x.0).collect());
-            } else {
-                panic!();
-            }
+            let offset = vm.eval_const_expr(&d.offset).unwrap_i32() as usize;
+            vm.mem
+                .as_mut()
+                .unwrap()
+                .set_data(offset, d.init.clone().into_iter().map(|x| x.0).collect());
         }
 
         if let Some(start) = &module.start {
@@ -189,7 +253,7 @@ impl VM {
         }
 
         if module.imports.len() != 0 {
-            panic!();
+            unimplemented!("");
         }
 
         vm.exports = module.exports.clone();
@@ -203,14 +267,14 @@ impl VM {
             &[Instr::I64Const(x), Instr::End] => Val::I64(x),
             &[Instr::F32Const(x), Instr::End] => Val::F32(x),
             &[Instr::F64Const(x), Instr::End] => Val::F64(x),
-            &[Instr::GlobalGet(GlobalIdx(i)), Instr::End] => self.globals[i as usize].clone(),
+            &[Instr::GlobalGet(i), Instr::End] => self.globals[i.to_idx()].clone(),
             _ => panic!(),
         }
     }
 
     fn call_func(&mut self, idx: FuncIdx, params: &Vec<Val>) -> Option<Val> {
-        let func = &self.funcs[idx.0 as usize];
-        let is_rets = self.types[func.type_.0 as usize].1.len() != 0;
+        let func = self.funcs.get_idx(idx);
+        let is_rets = self.types.get_idx(func.type_).1.len() != 0;
 
         self.sp = 0;
 
@@ -225,26 +289,26 @@ impl VM {
         }
 
         if is_rets {
-            Some(if let StackVal::Val(x) = self.pop() {
-                x
-            } else {
-                panic!()
-            })
+            Some(self.pop().unwrap_val())
         } else {
             None
         }
     }
 
+    fn get_cur_func(&self) -> &Func {
+        self.funcs.get_idx(self.pc.0)
+    }
+
     fn get_local_idx(&self, idx: LocalIdx) -> usize {
-        let func = &self.funcs[(self.pc.0).0 as usize];
-        let func_type = &self.types[func.type_.0 as usize];
+        let func = self.get_cur_func();
+        let func_type = self.types.get_idx(func.type_);
         let params_len = func_type.0.len();
         let locals_len = func.locals.len();
         self.fp - params_len - locals_len + idx.0 as usize - 1
     }
 
     fn run_cmd(&mut self) {
-        let istr = self.funcs[(self.pc.0).0 as usize].body.0[self.pc.1].clone();
+        let istr = self.get_cur_func().body.0[self.pc.1].clone();
 
         match istr {
             Instr::I32Const(x) => {
@@ -256,16 +320,8 @@ impl VM {
                 self.pc.1 += 1;
             }
             Instr::I32Add => {
-                let b = if let StackVal::Val(Val::I32(x)) = self.pop() {
-                    x
-                } else {
-                    panic!()
-                };
-                let a = if let StackVal::Val(Val::I32(x)) = self.pop() {
-                    x
-                } else {
-                    panic!()
-                };
+                let b = self.pop().unwrap_val().unwrap_i32();
+                let a = self.pop().unwrap_val().unwrap_i32();
                 self.push(StackVal::Val(Val::I32(a + b)));
                 self.pc.1 += 1;
             }
@@ -281,8 +337,8 @@ impl VM {
     fn cmd_frame(&mut self, idx: FuncIdx) {
         self.push(StackVal::Stack(self.fp));
         self.fp = self.sp - 1;
-        let func = &self.funcs[idx.0 as usize];
-        let func_type = &self.types[func.type_.0 as usize];
+        let func = self.funcs.get_idx(idx);
+        let func_type = self.types.get_idx(func.type_);
         let params_len = func_type.0.len();
         let locals = func.locals.clone();
         for i in 0..params_len {
@@ -301,23 +357,15 @@ impl VM {
 
     // ret + fopr
     fn cmd_ret(&mut self) {
-        let func = &self.funcs[(self.pc.0).0 as usize];
+        let func = self.get_cur_func();
         let locals_count = func.locals.len();
-        let params_count = self.types[func.type_.0 as usize].0.len();
-        let is_rets = self.types[func.type_.0 as usize].1.len() != 0;
+        let params_count = self.types.get_idx(func.type_).0.len();
+        let is_rets = self.types.get_idx(func.type_).1.len() != 0;
 
         let ret = if is_rets { Some(self.peak()) } else { None };
         self.sp = self.fp + 1;
-        self.fp = if let StackVal::Stack(x) = self.pop() {
-            x
-        } else {
-            panic!()
-        };
-        self.pc = if let StackVal::PC(x) = self.pop() {
-            x
-        } else {
-            panic!()
-        };
+        self.fp = self.pop().unwrap_stack();
+        self.pc = self.pop().unwrap_pc();
         self.sp -= locals_count + params_count;
 
         if let Some(ret) = ret {
@@ -326,11 +374,7 @@ impl VM {
     }
 
     pub fn export_call_func(&mut self, name: &str, params: &Vec<Val>) -> Option<Val> {
-        if let ExportDesc::Func(idx) = self.find_export(name).desc {
-            self.call_func(idx, params)
-        } else {
-            panic!();
-        }
+        self.call_func(self.find_export(name).desc.unwrap_func(), params)
     }
 
     fn find_export(&self, name: &str) -> Export {

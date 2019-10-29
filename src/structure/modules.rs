@@ -35,6 +35,8 @@ impl Into<u32> for TypeIdx {
     }
 }
 
+impl TypedIdx for TypeIdx {}
+
 #[derive(Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct FuncIdx(pub u32);
@@ -169,6 +171,40 @@ pub enum ExportDesc {
     Table(TableIdx),
     Mem(MemIdx),
     Global(GlobalIdx),
+}
+
+impl ExportDesc {
+    pub fn unwrap_func(&self) -> FuncIdx {
+        if let ExportDesc::Func(x) = self {
+            *x
+        } else {
+            panic!();
+        }
+    }
+
+    pub fn unwrap_table(&self) -> TableIdx {
+        if let ExportDesc::Table(x) = self {
+            *x
+        } else {
+            panic!();
+        }
+    }
+
+    pub fn unwrap_mem(&self) -> MemIdx {
+        if let ExportDesc::Mem(x) = self {
+            *x
+        } else {
+            panic!();
+        }
+    }
+
+    pub fn unwrap_global(&self) -> GlobalIdx {
+        if let ExportDesc::Global(x) = self {
+            *x
+        } else {
+            panic!();
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
