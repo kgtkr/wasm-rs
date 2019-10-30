@@ -119,11 +119,17 @@ where
 impl TypedIdxAccess<FuncIdx> for Vec<Func> {}
 impl TypedIdxAccess<TypeIdx> for Vec<FuncType> {}
 
-#[derive(Debug, Clone, PartialEq, Copy)]
+#[derive(Debug, Clone, PartialEq)]
+struct Frame {
+    locals: Vec<Val>,
+    ret: (FuncIdx, usize),
+    old_fp: usize,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 enum StackVal {
     Val(Val),
-    PC((FuncIdx, usize)),
-    Stack(usize),
+    Frame(Frame),
 }
 
 impl StackVal {
@@ -135,17 +141,17 @@ impl StackVal {
         }
     }
 
-    fn unwrap_pc(&self) -> (FuncIdx, usize) {
-        if let StackVal::PC(x) = self {
-            *x
+    fn unwrap_frame(&self) -> Frame {
+        if let StackVal::Frame(x) = self {
+            x.clone()
         } else {
             panic!();
         }
     }
 
-    fn unwrap_stack(&self) -> usize {
-        if let StackVal::Stack(x) = self {
-            *x
+    fn unwrap_frame_mut(&mut self) -> &mut Frame {
+        if let StackVal::Frame(x) = self {
+            x
         } else {
             panic!();
         }
@@ -229,14 +235,13 @@ impl VM {
         self.sp += 1;
     }
 
-    fn peak(&self) -> StackVal {
-        self.stack[self.sp - 1]
+    fn peak(&self) -> &StackVal {
+        &self.stack[self.sp - 1]
     }
 
-    fn pop(&mut self) -> StackVal {
-        let x = self.peak();
+    fn pop(&mut self) -> &StackVal {
         self.sp -= 1;
-        x
+        &self.stack[self.sp]
     }
 
     pub fn new(module: Module) -> VM {
@@ -346,10 +351,9 @@ impl VM {
         for p in params {
             self.push(StackVal::Val(p.clone()));
         }
-        self.push(StackVal::PC((FuncIdx(0), 0)));
-        self.cmd_frame(idx);
-        self.run_cmd();
-        while self.sp != if is_rets { 1 } else { 0 } {
+        let ret = (FuncIdx(self.funcs.len() as u32), 0);
+        self.cmd_frame(idx, ret);
+        while self.pc != ret {
             self.run_cmd();
         }
 
@@ -364,14 +368,6 @@ impl VM {
         self.funcs.get_idx(self.pc.0)
     }
 
-    fn get_local_idx(&self, idx: LocalIdx) -> usize {
-        let func = self.get_cur_func();
-        let func_type = self.types.get_idx(func.type_);
-        let params_len = func_type.0.len();
-        let locals_len = func.locals.len();
-        self.fp - params_len - locals_len + idx.0 as usize - 1
-    }
-
     fn run_cmd(&mut self) {
         let istr = self.get_cur_func().body.0[self.pc.1].clone();
 
@@ -381,7 +377,9 @@ impl VM {
                 self.pc.1 += 1;
             }
             Instr::LocalGet(idx) => {
-                self.push(self.stack[self.get_local_idx(idx)]);
+                self.push(StackVal::Val(
+                    self.stack[self.fp].unwrap_frame().locals[idx.to_idx()].clone(),
+                ));
                 self.pc.1 += 1;
             }
             Instr::I32Add => {
@@ -402,8 +400,7 @@ impl VM {
                 self.pc.1 += 1;
             }
             Instr::Call(x) => {
-                self.push(StackVal::PC((self.pc.0, self.pc.1 + 1)));
-                self.cmd_frame(x);
+                self.cmd_frame(x, (self.pc.0, self.pc.1 + 1));
             }
             Instr::If(_) => {
                 let x = self.pop().unwrap_val().unwrap_i32();
@@ -458,42 +455,56 @@ impl VM {
     }
 
     // frame命令
-    fn cmd_frame(&mut self, idx: FuncIdx) {
-        self.push(StackVal::Stack(self.fp));
-        self.fp = self.sp - 1;
+    fn cmd_frame(&mut self, idx: FuncIdx, ret: (FuncIdx, usize)) {
         let func = self.funcs.get_idx(idx);
         let func_type = self.types.get_idx(func.type_);
         let params_len = func_type.0.len();
-        let locals = func.locals.clone();
-        for i in 0..params_len {
-            self.push(self.stack[self.fp - 1 - params_len + i].clone());
+        let local_types = func.locals.clone();
+
+        let mut locals = Vec::new();
+        for i in 1..=params_len {
+            locals.push(
+                self.stack[self.sp - params_len + i - 1]
+                    .unwrap_val()
+                    .clone(),
+            );
         }
-        for l in locals {
-            self.push(StackVal::Val(match l {
+        self.sp -= params_len;
+        for l in local_types {
+            locals.push(match l {
                 ValType::I32 => Val::I32(0),
                 ValType::I64 => Val::I64(0),
                 ValType::F32 => Val::F32(0.0),
                 ValType::F64 => Val::F64(0.0),
-            }));
+            });
         }
+
+        self.push(StackVal::Frame(Frame {
+            ret,
+            old_fp: self.fp,
+            locals,
+        }));
+
+        self.fp = self.sp - 1;
         self.pc = (idx, 0);
     }
 
     // ret + fopr
     fn cmd_ret(&mut self) {
         let func = self.get_cur_func();
-        let locals_count = func.locals.len();
-        let params_count = self.types.get_idx(func.type_).0.len();
         let is_rets = self.types.get_idx(func.type_).1.len() != 0;
 
-        let ret = if is_rets { Some(self.peak()) } else { None };
-        self.sp = self.fp + 1;
-        self.fp = self.pop().unwrap_stack();
-        self.pc = self.pop().unwrap_pc();
-        self.sp -= locals_count + params_count;
+        let ret = if is_rets {
+            Some(self.pop().clone())
+        } else {
+            None
+        };
+        let frame = self.pop().unwrap_frame();
+        self.fp = frame.old_fp;
+        self.pc = frame.ret;
 
         if let Some(ret) = ret {
-            self.push(ret);
+            self.push(ret.clone());
         }
     }
 
