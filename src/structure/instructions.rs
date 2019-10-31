@@ -167,28 +167,15 @@ pub enum Instr {
     MemoryGrow,
     Nop,
     Unreachable,
-    Block(ResultType),
-    Loop(ResultType),
-    If(ResultType),
-    Else,
+    Block(ResultType, Vec<Instr>),
+    Loop(ResultType, Vec<Instr>),
+    If(ResultType, Vec<Instr>, Vec<Instr>),
     Br(LabelIdx),
     BrIf(LabelIdx),
     BrTable(Vec<LabelIdx>, LabelIdx),
     Return,
     Call(FuncIdx),
     CallIndirect(TypeIdx),
-    End,
-}
-
-impl Instr {
-    // ネストが深くなる場合は1を、浅くなる場合は-1を、変わらない場合は0を返す
-    pub fn nest_value(&self) -> i32 {
-        match self {
-            Instr::End => -1,
-            Instr::Block(_) | Instr::Loop(_) | Instr::If(_) => 1,
-            _ => 0,
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -6,64 +6,7 @@ use crate::structure::modules::{
 };
 use crate::structure::types::{FuncType, Limits, MemType, ResultType, TableType, ValType};
 
-fn block_nest_info(expr: &Vec<Instr>) -> Vec<(usize, usize)> {
-    // (現在実行中の命令のブロックの始まりの次, 現在実行中のブロックの終わり)
-    let mut stack = Vec::new();
-    stack.push(0usize);
-    let mut end_map = std::collections::HashMap::new();
-    end_map.insert(0, expr.len() - 1);
-    let mut result_begin = Vec::with_capacity(expr.len());
-    for (i, x) in expr.iter().take(expr.len() - 1).enumerate() {
-        match x.nest_value() {
-            0 => {
-                result_begin.push(*stack.last().unwrap());
-            }
-            -1 => {
-                end_map.insert(stack.pop().unwrap(), i);
-                result_begin.push(*stack.last().unwrap());
-            }
-            1 => {
-                result_begin.push(*stack.last().unwrap());
-                stack.push(i + 1);
-            }
-            _ => panic!(),
-        }
-    }
-    result_begin
-        .into_iter()
-        .map(|x| (x, *end_map.get(&x).unwrap()))
-        .collect()
-}
-
-#[test]
-fn test_block_nest_info() {
-    assert_eq!(
-        block_nest_info(&vec![
-            Instr::I32Add,                  // 0
-            Instr::I32Add,                  // 1
-            Instr::I32Add,                  // 2
-            Instr::Block(ResultType(None)), // 3
-            Instr::Block(ResultType(None)), // 4
-            Instr::End,                     // 5
-            Instr::I32Add,                  // 6
-            Instr::End,                     // 7
-            Instr::I32Add,                  // 8
-            Instr::End                      // 9
-        ]),
-        vec![
-            (0, 9),
-            (0, 9),
-            (0, 9),
-            (0, 9),
-            (4, 7),
-            (4, 7),
-            (4, 7),
-            (0, 9),
-            (0, 9)
-        ]
-    );
-}
-
+/*
 #[derive(Debug, Clone, PartialEq, Copy)]
 pub enum Val {
     I32(i32),
@@ -541,3 +484,4 @@ fn test_gcd() {
         Some(Val::I32(7))
     );
 }
+*/
