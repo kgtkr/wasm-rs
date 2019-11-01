@@ -1,5 +1,5 @@
 use super::parser::eof;
-use nom::{bytes::complete, combinator, sequence::tuple, IResult};
+use nom::{sequence::tuple, IResult};
 
 pub trait Decoder
 where

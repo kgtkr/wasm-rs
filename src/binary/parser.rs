@@ -1,5 +1,5 @@
 use nom::{
-    bytes::complete::{tag, take},
+    bytes::complete::{take},
     combinator::map,
     error::ParseError,
     IResult, InputIter, InputTake,

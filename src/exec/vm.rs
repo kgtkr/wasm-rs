@@ -1,5 +1,5 @@
-use crate::binary::Decoder;
-use crate::structure::instructions::{Expr, Instr};
+
+use crate::structure::instructions::{Instr};
 use crate::structure::modules::{
     Data, Elem, Export, ExportDesc, Func, FuncIdx, GlobalIdx, LocalIdx, Mem, Module, Table,
     TypeIdx, TypedIdx,

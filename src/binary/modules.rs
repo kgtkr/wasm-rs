@@ -450,7 +450,7 @@ fn p_section<'a, R>(
     move |input| match Byte::decode(input) {
         Ok((_, id_)) if id_ != id => Ok((input, None)),
         Err(_) => Ok((input, None)),
-        Ok((input, id)) => {
+        Ok((input, _id)) => {
             let (input, size) = u32::decode(input)?;
             let size = size as usize;
             let (body_input, input) = input.split_at(size);
@@ -551,7 +551,7 @@ impl Decoder for Module {
                     .unwrap_or_else(Vec::new)
                     .into_iter()
                     .zip(code.unwrap_or_else(Vec::new))
-                    .map(|(type_, ((locals, body)))| Func {
+                    .map(|(type_, (locals, body))| Func {
                         type_,
                         locals,
                         body,

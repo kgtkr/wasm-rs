@@ -3,7 +3,7 @@ use super::util::loop_encode;
 use super::Encoder;
 use crate::structure::instructions::{Expr, Instr, Memarg};
 use crate::structure::modules::{
-    FuncIdx, GlobalIdx, LabelIdx, LocalIdx, MemIdx, TableIdx, TypeIdx,
+    FuncIdx, GlobalIdx, LabelIdx, LocalIdx, TypeIdx,
 };
 use crate::structure::types::{
     ElemType, FuncType, GlobalType, Limits, MemType, Mut, ResultType, TableType, ValType,
