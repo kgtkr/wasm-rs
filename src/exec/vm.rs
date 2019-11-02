@@ -225,7 +225,11 @@ pub struct VM<'a> {
 }
 
 impl<'a> VM<'a> {
-    fn step(&mut self) {}
+    fn step(&mut self) {
+        match self.code.pop() {
+            _ => unimplemented!(),
+        }
+    }
 }
 
 struct VMModule {
