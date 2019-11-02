@@ -1,9 +1,24 @@
 use crate::structure::instructions::{Expr, Instr};
 use crate::structure::modules::{
-    Data, Elem, Export, ExportDesc, Func, FuncIdx, Global, GlobalIdx, LocalIdx, Mem, Module, Table,
-    TypeIdx, TypedIdx,
+    Data, Elem, Export, ExportDesc, Func, FuncIdx, Global, GlobalIdx, LabelIdx, LocalIdx, Mem,
+    Module, Table, TypeIdx, TypedIdx,
 };
 use crate::structure::types::{FuncType, Limits, MemType, Mut, ResultType, TableType, ValType};
+
+#[derive(Debug, Clone, PartialEq)]
+enum FrameLevelInstr {
+    Label(Label, /* 前から */ Vec<Instr>),
+    Br(LabelIdx),
+    LabelEnd,
+    Invoke(FuncIdx),
+    Return,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+enum ModuleLevelInstr {
+    Invoke(FuncIdx),
+    Return,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 struct FuncInst {
@@ -145,7 +160,7 @@ where
     }
 }
 
-impl TypedIdxAccess<FuncIdx> for Vec<TableInst> {}
+impl TypedIdxAccess<FuncIdx> for Vec<FuncInst> {}
 impl TypedIdxAccess<GlobalIdx> for Vec<GlobalInst> {}
 impl TypedIdxAccess<TypeIdx> for Vec<FuncType> {}
 
@@ -153,13 +168,18 @@ impl TypedIdxAccess<TypeIdx> for Vec<FuncType> {}
 enum AdminInstr {
     Instr(Instr),
     Invoke(FuncIdx),
-    Frame(bool, Frame),
-    Label(bool, Vec<Instr>, Vec<Instr>),
+    Label(Label, Vec<Instr>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
 struct Frame {
     locals: Vec<Val>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct Label {
+    // 前から実行
+    instrs: Vec<Instr>,
 }
 
 impl Store {
@@ -216,22 +236,208 @@ impl Store {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub struct VM<'a> {
-    store: &'a mut Store,
-    stack: Vec<Val>,
-    code: Vec<AdminInstr>,
-    frame: Vec<Frame>,
+#[derive(Debug, PartialEq, Clone)]
+struct FrameStack {
+    frame: Frame,
+    // not empty
+    // stack[0]の継続は空
+    stack: Vec<LabelStack>,
 }
 
-impl<'a> VM<'a> {
-    fn step(&mut self) {
-        match self.code.pop() {
-            _ => unimplemented!(),
+impl FrameStack {
+    fn step(&mut self, store: &mut Store) -> Option<ModuleLevelInstr> {
+        let cur_lavel = self.stack.last_mut().unwrap();
+        if let Some(instr) = cur_lavel.step(store, &mut self.frame) {
+            match instr {
+                FrameLevelInstr::Invoke(idx) => Some(ModuleLevelInstr::Invoke(idx)),
+                FrameLevelInstr::Return => Some(ModuleLevelInstr::Return),
+                FrameLevelInstr::Br(idx) => {
+                    let mut add_stack = self.stack.last().unwrap().stack.clone();
+                    let idx = idx.to_idx();
+                    for _ in 0..idx {
+                        self.stack.pop().unwrap();
+                    }
+                    let mut k = self
+                        .stack
+                        .pop()
+                        .unwrap()
+                        .label
+                        .instrs
+                        .clone()
+                        .into_iter()
+                        .map(AdminInstr::Instr)
+                        .rev()
+                        .collect::<Vec<_>>();
+
+                    if let Some(last_label) = self.stack.last_mut() {
+                        last_label.instrs.append(&mut k);
+                        last_label.stack.append(&mut add_stack);
+                        None
+                    } else {
+                        self.stack.push(LabelStack {
+                            label: Label { instrs: vec![] },
+                            instrs: vec![],
+                            stack: add_stack,
+                        });
+                        Some(ModuleLevelInstr::Return)
+                    }
+                }
+                FrameLevelInstr::Label(label, instrs) => {
+                    self.stack.push(LabelStack {
+                        label,
+                        instrs: instrs.into_iter().map(AdminInstr::Instr).rev().collect(),
+                        stack: vec![],
+                    });
+                    None
+                }
+                FrameLevelInstr::LabelEnd => {
+                    let mut cur_lavel = self.stack.pop().unwrap();
+                    if let Some(last_label) = self.stack.last_mut() {
+                        last_label.stack.append(&mut cur_lavel.stack);
+                        None
+                    } else {
+                        self.stack.push(cur_lavel);
+                        Some(ModuleLevelInstr::Return)
+                    }
+                }
+            }
+        } else {
+            None
         }
     }
 }
 
+#[derive(Debug, PartialEq, Clone)]
+struct LabelStack {
+    label: Label,
+    // 後ろから実行
+    instrs: Vec<AdminInstr>,
+    stack: Vec<Val>,
+}
+
+impl LabelStack {
+    fn step(&mut self, store: &mut Store, frame: &mut Frame) -> Option<FrameLevelInstr> {
+        match self.instrs.pop() {
+            Some(instr) => match instr {
+                AdminInstr::Instr(instr) => match instr {
+                    Instr::I32Const(x) => {
+                        self.stack.push(Val::I32(x));
+                        None
+                    }
+                    Instr::LocalGet(idx) => {
+                        self.stack.push(frame.locals[idx.to_idx()]);
+                        None
+                    }
+                    Instr::I32Add => {
+                        let y = self.stack.pop().unwrap().unwrap_i32();
+                        let x = self.stack.pop().unwrap().unwrap_i32();
+                        self.stack.push(Val::I32(x + y));
+                        None
+                    }
+                    Instr::I32RemS => {
+                        let y = self.stack.pop().unwrap().unwrap_i32();
+                        let x = self.stack.pop().unwrap().unwrap_i32();
+                        self.stack.push(Val::I32(x % y));
+                        None
+                    }
+                    Instr::I32Eqz => {
+                        let x = self.stack.pop().unwrap().unwrap_i32();
+                        self.stack.push(Val::I32(if x == 0 { 1 } else { 0 }));
+                        None
+                    }
+                    Instr::If(rt, is1, is2) => {
+                        let x = self.stack.pop().unwrap().unwrap_i32();
+                        Some(FrameLevelInstr::Label(
+                            Label { instrs: vec![] },
+                            if x != 0 { is1 } else { is2 },
+                        ))
+                    }
+                    Instr::Call(idx) => Some(FrameLevelInstr::Invoke(idx)),
+                    _ => unimplemented!(),
+                },
+                AdminInstr::Invoke(x) => Some(FrameLevelInstr::Invoke(x)),
+                AdminInstr::Label(l, is) => Some(FrameLevelInstr::Label(l, is)),
+            },
+            None => Some(FrameLevelInstr::LabelEnd),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Stack {
+    // not empty
+    stack: Vec<FrameStack>,
+}
+
+impl Stack {
+    fn step(&mut self, store: &mut Store) {
+        let cur_frame = self.stack.last_mut().unwrap();
+        if let Some(instr) = cur_frame.step(store) {
+            let cur_label = cur_frame.stack.last_mut().unwrap();
+            match instr {
+                ModuleLevelInstr::Invoke(idx) => {
+                    let func = store.funcs.get_idx(idx);
+                    let fs = FrameStack {
+                        frame: Frame {
+                            locals: {
+                                let mut locals = Vec::new();
+                                locals.append(&mut pop_n(
+                                    &mut cur_label.stack,
+                                    func.type_.params().len(),
+                                ));
+                                locals.append(
+                                    &mut func
+                                        .code
+                                        .locals
+                                        .iter()
+                                        .map(|vt| match vt {
+                                            ValType::I32 => Val::I32(0),
+                                            ValType::I64 => Val::I64(0),
+                                            ValType::F32 => Val::F32(0.0),
+                                            ValType::F64 => Val::F64(0.0),
+                                        })
+                                        .collect(),
+                                );
+
+                                locals
+                            },
+                        },
+                        stack: vec![LabelStack {
+                            stack: vec![],
+                            label: Label { instrs: vec![] },
+                            instrs: func
+                                .code
+                                .body
+                                .0
+                                .clone()
+                                .into_iter()
+                                .map(AdminInstr::Instr)
+                                .rev()
+                                .collect(),
+                        }],
+                    };
+                    self.stack.push(fs);
+                }
+                ModuleLevelInstr::Return => {
+                    let ret = cur_label.stack.pop();
+                    self.stack.pop();
+                    if let Some(ret) = ret {
+                        self.stack
+                            .last_mut()
+                            .unwrap()
+                            .stack
+                            .last_mut()
+                            .unwrap()
+                            .stack
+                            .push(ret);
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
 struct VMModule {
     store: Store,
     module: Module,
@@ -248,21 +454,36 @@ impl VMModule {
     }
 
     fn call_func(&mut self, idx: FuncIdx, params: Vec<Val>) -> Option<Val> {
-        let mut vm = VM {
-            store: &mut self.store,
-            stack: params,
-            code: vec![AdminInstr::Invoke(idx)],
-            frame: vec![Frame { locals: Vec::new() }],
+        let mut stack = Stack {
+            stack: vec![FrameStack {
+                frame: Frame { locals: Vec::new() },
+                stack: vec![LabelStack {
+                    label: Label { instrs: vec![] },
+                    instrs: vec![AdminInstr::Invoke(idx)],
+                    stack: params,
+                }],
+            }],
         };
 
         loop {
-            vm.step();
-            if vm.frame.len() == 1 && vm.code.is_empty() {
+            stack.step(&mut self.store);
+            if stack.stack.len() == 1
+                && stack.stack.first().unwrap().stack.len() == 1
+                && stack
+                    .stack
+                    .first()
+                    .unwrap()
+                    .stack
+                    .first()
+                    .unwrap()
+                    .instrs
+                    .is_empty()
+            {
                 break;
             }
         }
 
-        vm.stack.pop()
+        stack.stack.pop().unwrap().stack.pop().unwrap().stack.pop()
     }
 
     pub fn export_call_func(&mut self, name: &str, params: Vec<Val>) -> Option<Val> {
@@ -300,4 +521,14 @@ fn test_gcd() {
         vm.export_call_func("gcd", vec![Val::I32(182), Val::I32(1029)]),
         Some(Val::I32(7))
     );
+}
+
+fn pop_n<T>(vec: &mut Vec<T>, n: usize) -> Vec<T> {
+    vec.split_off(vec.len() - n)
+}
+
+#[test]
+fn test_pop_n() {
+    assert_eq!(pop_n::<i32>(&mut vec![], 0), vec![]);
+    assert_eq!(pop_n::<i32>(&mut vec![1, 2, 3, 4, 5], 2), vec![4, 5]);
 }

@@ -3,11 +3,11 @@
 pub struct FuncType(pub Vec<ValType>, pub Vec<ValType>);
 
 impl FuncType {
-    fn params(&self) -> &Vec<ValType> {
+    pub fn params(&self) -> &Vec<ValType> {
         &self.0
     }
 
-    fn ret(&self) -> Option<&ValType> {
+    pub fn ret(&self) -> Option<&ValType> {
         self.1.first()
     }
 }
