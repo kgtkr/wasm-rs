@@ -169,6 +169,8 @@ enum AdminInstr {
     Instr(Instr),
     Invoke(FuncIdx),
     Label(Label, Vec<Instr>),
+    Br(LabelIdx),
+    Return,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -319,44 +321,69 @@ impl LabelStack {
     fn step(&mut self, store: &mut Store, frame: &mut Frame) -> Option<FrameLevelInstr> {
         match self.instrs.pop() {
             Some(instr) => match instr {
-                AdminInstr::Instr(instr) => match instr {
-                    Instr::I32Const(x) => {
-                        self.stack.push(Val::I32(x));
-                        None
+                AdminInstr::Instr(instr) => {
+                    match instr {
+                        Instr::I32Const(x) => {
+                            self.stack.push(Val::I32(x));
+                        }
+                        Instr::LocalGet(idx) => {
+                            self.stack.push(frame.locals[idx.to_idx()]);
+                        }
+                        Instr::I32Add => {
+                            let y = self.stack.pop().unwrap().unwrap_i32();
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(x + y));
+                        }
+                        Instr::I32RemS => {
+                            let y = self.stack.pop().unwrap().unwrap_i32();
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(x % y));
+                        }
+                        Instr::I32Eqz => {
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(if x == 0 { 1 } else { 0 }));
+                        }
+                        Instr::Block(rt, is) => {
+                            self.instrs
+                                .push(AdminInstr::Label(Label { instrs: vec![] }, is));
+                        }
+                        Instr::If(rt, is1, is2) => {
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.instrs.push(AdminInstr::Label(
+                                Label { instrs: vec![] },
+                                if x != 0 { is1 } else { is2 },
+                            ));
+                        }
+                        Instr::Br(l) => self.instrs.push(AdminInstr::Br(l)),
+                        Instr::BrIf(l) => self.instrs.push(AdminInstr::Br(l)),
+                        Instr::BrTable(ls, l) => {
+                            let i = self.stack.pop().unwrap().unwrap_i32() as usize;
+                            self.instrs
+                                .push(AdminInstr::Br(ls.get(i).cloned().unwrap_or(l)));
+                        }
+                        Instr::Return => {
+                            self.instrs.push(AdminInstr::Return);
+                        }
+                        Instr::Call(idx) => {
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            if x != 0 {
+                                self.instrs.push(AdminInstr::Invoke(idx));
+                            }
+                        }
+                        Instr::CallIndirect(t) => {
+                            let i = self.stack.pop().unwrap().unwrap_i32() as usize;
+                            self.instrs.push(AdminInstr::Invoke(
+                                store.table.as_ref().unwrap().elem[i].unwrap(),
+                            ));
+                        }
+                        _ => unimplemented!(),
                     }
-                    Instr::LocalGet(idx) => {
-                        self.stack.push(frame.locals[idx.to_idx()]);
-                        None
-                    }
-                    Instr::I32Add => {
-                        let y = self.stack.pop().unwrap().unwrap_i32();
-                        let x = self.stack.pop().unwrap().unwrap_i32();
-                        self.stack.push(Val::I32(x + y));
-                        None
-                    }
-                    Instr::I32RemS => {
-                        let y = self.stack.pop().unwrap().unwrap_i32();
-                        let x = self.stack.pop().unwrap().unwrap_i32();
-                        self.stack.push(Val::I32(x % y));
-                        None
-                    }
-                    Instr::I32Eqz => {
-                        let x = self.stack.pop().unwrap().unwrap_i32();
-                        self.stack.push(Val::I32(if x == 0 { 1 } else { 0 }));
-                        None
-                    }
-                    Instr::If(rt, is1, is2) => {
-                        let x = self.stack.pop().unwrap().unwrap_i32();
-                        Some(FrameLevelInstr::Label(
-                            Label { instrs: vec![] },
-                            if x != 0 { is1 } else { is2 },
-                        ))
-                    }
-                    Instr::Call(idx) => Some(FrameLevelInstr::Invoke(idx)),
-                    _ => unimplemented!(),
-                },
+                    None
+                }
                 AdminInstr::Invoke(x) => Some(FrameLevelInstr::Invoke(x)),
                 AdminInstr::Label(l, is) => Some(FrameLevelInstr::Label(l, is)),
+                AdminInstr::Br(l) => Some(FrameLevelInstr::Br(l)),
+                AdminInstr::Return => Some(FrameLevelInstr::Return),
             },
             None => Some(FrameLevelInstr::LabelEnd),
         }
