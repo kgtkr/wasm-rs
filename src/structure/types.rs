@@ -2,6 +2,16 @@
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct FuncType(pub Vec<ValType>, pub Vec<ValType>);
 
+impl FuncType {
+    fn params(&self) -> &Vec<ValType> {
+        &self.0
+    }
+
+    fn ret(&self) -> Option<&ValType> {
+        self.1.first()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub enum ValType {
