@@ -36,7 +36,7 @@ pub enum ElemType {
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct GlobalType(pub Mut, pub ValType);
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub enum Mut {
     Const,
