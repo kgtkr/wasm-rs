@@ -1147,6 +1147,21 @@ fn test_pow() {
     );
 }
 
+#[test]
+fn test_br_table() {
+    let module = Module::decode_end(&std::fs::read("./example/br_table.wasm").unwrap()).unwrap();
+    let mut vm = VMModule::new(module);
+
+    assert_eq!(
+        vm.export_call_func("br_table", vec![Val::I32(0)]),
+        Some(Val::I32(10))
+    );
+    assert_eq!(
+        vm.export_call_func("br_table", vec![Val::I32(10)]),
+        Some(Val::I32(30))
+    );
+}
+
 fn pop_n<T>(vec: &mut Vec<T>, n: usize) -> Vec<T> {
     vec.split_off(vec.len() - n)
 }
