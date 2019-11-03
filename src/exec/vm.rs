@@ -907,7 +907,12 @@ impl LabelStack {
                             ));
                         }
                         Instr::Br(l) => self.instrs.push(AdminInstr::Br(l)),
-                        Instr::BrIf(l) => self.instrs.push(AdminInstr::Br(l)),
+                        Instr::BrIf(l) => {
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            if x != 0 {
+                                self.instrs.push(AdminInstr::Br(l));
+                            }
+                        }
                         Instr::BrTable(ls, l) => {
                             let i = self.stack.pop().unwrap().unwrap_i32() as usize;
                             self.instrs
