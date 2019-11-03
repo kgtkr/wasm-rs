@@ -839,8 +839,32 @@ impl LabelStack {
                             let x = self.stack.pop().unwrap().unwrap_f64();
                             self.stack.push(Val::I32(if x >= y { 1 } else { 0 }));
                         }
+                        Instr::Drop => {
+                            self.stack.pop().unwrap();
+                        }
+                        Instr::Select => {
+                            let c = self.stack.pop().unwrap().unwrap_i32();
+                            let y = self.stack.pop().unwrap();
+                            let x = self.stack.pop().unwrap();
+                            self.stack.push(if c != 0 { x } else { y });
+                        }
                         Instr::LocalGet(idx) => {
                             self.stack.push(frame.locals[idx.to_idx()]);
+                        }
+                        Instr::LocalSet(idx) => {
+                            let x = self.stack.pop().unwrap();
+                            frame.locals[idx.to_idx()] = x;
+                        }
+                        Instr::LocalTee(idx) => {
+                            let x = *self.stack.last().unwrap();
+                            frame.locals[idx.to_idx()] = x;
+                        }
+                        Instr::GlobalGet(idx) => {
+                            self.stack.push(store.globals[idx.to_idx()].value);
+                        }
+                        Instr::GlobalSet(idx) => {
+                            let x = self.stack.pop().unwrap();
+                            store.globals[idx.to_idx()].value = x;
                         }
                         Instr::Block(rt, is) => {
                             self.instrs
