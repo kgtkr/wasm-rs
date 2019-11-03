@@ -4,6 +4,8 @@ use crate::structure::modules::{
     Module, Table, TypeIdx, TypedIdx,
 };
 use crate::structure::types::{FuncType, Limits, MemType, Mut, ResultType, TableType, ValType};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use std::io::Cursor;
 
 #[derive(Debug, Clone, PartialEq)]
 enum FrameLevelInstr {
@@ -319,7 +321,6 @@ struct LabelStack {
 
 impl LabelStack {
     fn step(&mut self, store: &mut Store, frame: &mut Frame) -> Option<FrameLevelInstr> {
-        println!("{:?}", self.instrs.last());
         match self.instrs.pop() {
             Some(instr) => match instr {
                 AdminInstr::Instr(instr) => {
@@ -867,6 +868,21 @@ impl LabelStack {
                             let x = self.stack.pop().unwrap();
                             store.globals[idx.to_idx()].value = x;
                         }
+                        Instr::I32Load(m) => {
+                            let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
+                            let mut cur = Cursor::new(&store.mem.as_mut().unwrap().data);
+                            cur.set_position((ptr + m.offset as usize) as u64);
+                            let x = cur.read_i32::<LittleEndian>().unwrap();
+                            self.stack.push(Val::I32(x));
+                        }
+                        Instr::I32Store(m) => {
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
+
+                            let mut cur = Cursor::new(&mut store.mem.as_mut().unwrap().data);
+                            cur.set_position((ptr + m.offset as usize) as u64);
+                            cur.write_i32::<LittleEndian>(x).unwrap();
+                        }
                         Instr::MemorySize => {
                             self.stack.push(Val::I32(
                                 (store.mem.as_ref().unwrap().data.len() / mem_page_size) as i32,
@@ -930,7 +946,7 @@ impl LabelStack {
                                 store.table.as_ref().unwrap().elem[i].unwrap(),
                             ));
                         }
-                        _ => unimplemented!(),
+                        x => unimplemented!("{:?}", x),
                     }
                     None
                 }
@@ -1047,7 +1063,6 @@ impl VMModule {
         };
 
         loop {
-            println!("{:?}\n{:?}", stack, self.store);
             stack.step(&mut self.store);
             if stack.stack.len() == 1
                 && stack.stack.first().unwrap().stack.len() == 1
@@ -1081,9 +1096,6 @@ impl VMModule {
         )
     }
 }
-
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use std::io::Cursor;
 
 fn i32_convert_u32(x: i32) -> u32 {
     let mut wtr = vec![];
