@@ -319,6 +319,7 @@ struct LabelStack {
 
 impl LabelStack {
     fn step(&mut self, store: &mut Store, frame: &mut Frame) -> Option<FrameLevelInstr> {
+        println!("{:?}", self.instrs.last());
         match self.instrs.pop() {
             Some(instr) => match instr {
                 AdminInstr::Instr(instr) => {
@@ -916,10 +917,7 @@ impl LabelStack {
                             self.instrs.push(AdminInstr::Return);
                         }
                         Instr::Call(idx) => {
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            if x != 0 {
-                                self.instrs.push(AdminInstr::Invoke(idx));
-                            }
+                            self.instrs.push(AdminInstr::Invoke(idx));
                         }
                         Instr::CallIndirect(t) => {
                             let i = self.stack.pop().unwrap().unwrap_i32() as usize;
@@ -1044,6 +1042,7 @@ impl VMModule {
         };
 
         loop {
+            println!("{:?}\n{:?}", stack, self.store);
             stack.step(&mut self.store);
             if stack.stack.len() == 1
                 && stack.stack.first().unwrap().stack.len() == 1
@@ -1138,7 +1137,7 @@ fn test_pow() {
     let mut vm = VMModule::new(module);
 
     assert_eq!(
-        vm.export_call_func("gcd", vec![Val::I32(2), Val::I32(10)]),
+        vm.export_call_func("pow", vec![Val::I32(2), Val::I32(10)]),
         Some(Val::I32(1024))
     );
 }
