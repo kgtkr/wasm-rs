@@ -400,7 +400,7 @@ impl LabelStack {
                         Instr::I32Add => {
                             let y = self.stack.pop().unwrap().unwrap_i32();
                             let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(x + y));
+                            self.stack.push(Val::I32(x.overflowing_add(y).0));
                         }
                         Instr::I32Sub => {
                             let y = self.stack.pop().unwrap().unwrap_i32();
@@ -841,6 +841,18 @@ impl LabelStack {
                             let x = self.stack.pop().unwrap().unwrap_f64();
                             self.stack.push(Val::I32(if x >= y { 1 } else { 0 }));
                         }
+                        Instr::I32WrapI64 => {
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I32(x as i32));
+                        }
+                        Instr::I64ExtendI32S => {
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I64(x as i64));
+                        }
+                        Instr::I64ExtendI32U => {
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I64(i32_convert_u32(x) as i64));
+                        }
                         Instr::Drop => {
                             self.stack.pop().unwrap();
                         }
@@ -927,6 +939,20 @@ impl LabelStack {
                             let mut cur = Cursor::new(&mut store.mem.as_mut().unwrap().data);
                             cur.set_position((ptr + m.offset as usize) as u64);
                             cur.write_f64::<LittleEndian>(x).unwrap();
+                        }
+                        Instr::I32Load8S(m) => {
+                            let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
+                            let mut cur = Cursor::new(&store.mem.as_mut().unwrap().data);
+                            cur.set_position((ptr + m.offset as usize) as u64);
+                            let x = cur.read_i8().unwrap();
+                            self.stack.push(Val::I32(x as i32));
+                        }
+                        Instr::I32Load8U(m) => {
+                            let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
+                            let mut cur = Cursor::new(&store.mem.as_mut().unwrap().data);
+                            cur.set_position((ptr + m.offset as usize) as u64);
+                            let x = cur.read_u8().unwrap();
+                            self.stack.push(Val::I32(x as i32));
                         }
                         Instr::I32Store8(m) => {
                             let x = self.stack.pop().unwrap().unwrap_i32();
