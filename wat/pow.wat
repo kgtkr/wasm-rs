@@ -3,13 +3,13 @@
     (local $i i32)
     (local $res i32)
 
-    (local.set $res (i32.const 1))
+    (set_local $res (i32.const 1))
     (loop $loop
-      (local.set $res (i32.mul (local.get $res) (local.get $x)))
-      (local.set $i (i32.sub (local.get $i) (i32.const 1)))
-      (br_if $loop (i32.ne (local.get $i) (local.get $y)))
+      (set_local $res (i32.mul (get_local $res) (get_local $x)))
+      (set_local $i (i32.add (get_local $i) (i32.const 1)))
+      (br_if $loop (i32.ne (get_local $i) (get_local $y)))
     )
-    (local.get $res)
+    (get_local $res)
   )
   (export "pow" (func 0))
 )
