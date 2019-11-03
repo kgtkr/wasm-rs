@@ -866,6 +866,26 @@ impl LabelStack {
                             let x = self.stack.pop().unwrap();
                             store.globals[idx.to_idx()].value = x;
                         }
+                        Instr::MemorySize => {
+                            self.stack.push(Val::I32(
+                                (store.mem.as_ref().unwrap().data.len() / mem_page_size) as i32,
+                            ));
+                        }
+                        Instr::MemoryGrow => {
+                            let cur_size = store.mem.as_ref().unwrap().data.len() / mem_page_size;
+                            let x = self.stack.pop().unwrap().unwrap_i32() as usize;
+                            store
+                                .mem
+                                .as_mut()
+                                .unwrap()
+                                .data
+                                .resize((cur_size + x) * mem_page_size, 0);
+                            self.stack.push(Val::I32(cur_size as i32));
+                        }
+                        Instr::Nop => {}
+                        Instr::Unreachable => {
+                            panic!("unreachable");
+                        }
                         Instr::Block(rt, is) => {
                             self.instrs
                                 .push(AdminInstr::Label(Label { instrs: vec![] }, is));
