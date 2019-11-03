@@ -1162,6 +1162,45 @@ fn test_br_table() {
     );
 }
 
+#[test]
+fn test_md5() {
+    use std::ffi::CString;
+
+    let module = Module::decode_end(&std::fs::read("./example/md5.wasm").unwrap()).unwrap();
+    let mut vm = VMModule::new(module);
+
+    let input_bytes = CString::new("abc").unwrap().into_bytes();
+    let input_ptr = vm
+        .export_call_func("alloc", vec![Val::I32(input_bytes.len() as i32)])
+        .unwrap()
+        .unwrap_i32() as usize;
+    for i in 0..input_bytes.len() {
+        vm.store.mem.as_mut().unwrap().data[input_ptr + i] = input_bytes[i];
+    }
+
+    let output_ptr = vm
+        .export_call_func("md5", vec![Val::I32(input_ptr as i32)])
+        .unwrap()
+        .unwrap_i32() as usize;
+
+    assert_eq!(
+        CString::new(
+            vm.store
+                .mem
+                .unwrap()
+                .data
+                .into_iter()
+                .skip(output_ptr)
+                .take_while(|x| *x != 0)
+                .collect::<Vec<_>>(),
+        )
+        .unwrap()
+        .into_string()
+        .unwrap(),
+        "900150983cd24fb0d6963f7d28e17f72".to_string()
+    );
+}
+
 fn pop_n<T>(vec: &mut Vec<T>, n: usize) -> Vec<T> {
     vec.split_off(vec.len() - n)
 }
