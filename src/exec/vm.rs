@@ -1273,7 +1273,6 @@ fn test_md5() {
         .export_call_func("md5", vec![Val::I32(input_ptr as i32)])
         .unwrap()
         .unwrap_i32() as usize;
-
     assert_eq!(
         CString::new(
             vm.store
