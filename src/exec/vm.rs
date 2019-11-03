@@ -870,6 +870,14 @@ impl LabelStack {
                             self.instrs
                                 .push(AdminInstr::Label(Label { instrs: vec![] }, is));
                         }
+                        Instr::Loop(rt, is) => {
+                            self.instrs.push(AdminInstr::Label(
+                                Label {
+                                    instrs: vec![Instr::Loop(rt, is.clone())],
+                                },
+                                is,
+                            ));
+                        }
                         Instr::If(rt, is1, is2) => {
                             let x = self.stack.pop().unwrap().unwrap_i32();
                             self.instrs.push(AdminInstr::Label(
