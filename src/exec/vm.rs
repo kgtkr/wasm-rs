@@ -1132,6 +1132,17 @@ fn test_gcd() {
     );
 }
 
+#[test]
+fn test_pow() {
+    let module = Module::decode_end(&std::fs::read("./example/pow.wasm").unwrap()).unwrap();
+    let mut vm = VMModule::new(module);
+
+    assert_eq!(
+        vm.export_call_func("gcd", vec![Val::I32(2), Val::I32(10)]),
+        Some(Val::I32(1024))
+    );
+}
+
 fn pop_n<T>(vec: &mut Vec<T>, n: usize) -> Vec<T> {
     vec.split_off(vec.len() - n)
 }
