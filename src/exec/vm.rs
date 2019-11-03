@@ -326,22 +326,521 @@ impl LabelStack {
                         Instr::I32Const(x) => {
                             self.stack.push(Val::I32(x));
                         }
-                        Instr::LocalGet(idx) => {
-                            self.stack.push(frame.locals[idx.to_idx()]);
+                        Instr::I64Const(x) => {
+                            self.stack.push(Val::I64(x));
+                        }
+                        Instr::F32Const(x) => {
+                            self.stack.push(Val::F32(x));
+                        }
+                        Instr::F64Const(x) => {
+                            self.stack.push(Val::F64(x));
+                        }
+                        Instr::I32Clz => unimplemented!(),
+                        Instr::I32Ctz => unimplemented!(),
+                        Instr::I32Popcnt => unimplemented!(),
+                        Instr::I64Clz => unimplemented!(),
+                        Instr::I64Ctz => unimplemented!(),
+                        Instr::I64Popcnt => unimplemented!(),
+                        Instr::F32Abs => {
+                            let x = self.stack.pop().unwrap().unwrap_f32();
+                            self.stack.push(Val::F32(x.abs()));
+                        }
+                        Instr::F32Neg => {
+                            let x = self.stack.pop().unwrap().unwrap_f32();
+                            self.stack.push(Val::F32(-x));
+                        }
+                        Instr::F32Sqrt => {
+                            let x = self.stack.pop().unwrap().unwrap_f32();
+                            self.stack.push(Val::F32(x.sqrt()));
+                        }
+                        Instr::F32Ceil => {
+                            let x = self.stack.pop().unwrap().unwrap_f32();
+                            self.stack.push(Val::F32(x.ceil()));
+                        }
+                        Instr::F32Floor => {
+                            let x = self.stack.pop().unwrap().unwrap_f32();
+                            self.stack.push(Val::F32(x.floor()));
+                        }
+                        Instr::F32Trunc => {
+                            let x = self.stack.pop().unwrap().unwrap_f32();
+                            self.stack.push(Val::F32(x.trunc()));
+                        }
+                        Instr::F32Nearest => {
+                            unimplemented!();
+                        }
+                        Instr::F64Abs => {
+                            let x = self.stack.pop().unwrap().unwrap_f64();
+                            self.stack.push(Val::F64(x.abs()));
+                        }
+                        Instr::F64Neg => {
+                            let x = self.stack.pop().unwrap().unwrap_f64();
+                            self.stack.push(Val::F64(-x));
+                        }
+                        Instr::F64Sqrt => {
+                            let x = self.stack.pop().unwrap().unwrap_f64();
+                            self.stack.push(Val::F64(x.sqrt()));
+                        }
+                        Instr::F64Ceil => {
+                            let x = self.stack.pop().unwrap().unwrap_f64();
+                            self.stack.push(Val::F64(x.ceil()));
+                        }
+                        Instr::F64Floor => {
+                            let x = self.stack.pop().unwrap().unwrap_f64();
+                            self.stack.push(Val::F64(x.floor()));
+                        }
+                        Instr::F64Trunc => {
+                            let x = self.stack.pop().unwrap().unwrap_f64();
+                            self.stack.push(Val::F64(x.trunc()));
+                        }
+                        Instr::F64Nearest => {
+                            unimplemented!();
                         }
                         Instr::I32Add => {
                             let y = self.stack.pop().unwrap().unwrap_i32();
                             let x = self.stack.pop().unwrap().unwrap_i32();
                             self.stack.push(Val::I32(x + y));
                         }
+                        Instr::I32Sub => {
+                            let y = self.stack.pop().unwrap().unwrap_i32();
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(x - y));
+                        }
+                        Instr::I32Mul => {
+                            let y = self.stack.pop().unwrap().unwrap_i32();
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(x * y));
+                        }
+                        Instr::I32DivS => {
+                            let y = self.stack.pop().unwrap().unwrap_i32();
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(x / y));
+                        }
+                        Instr::I32DivU => {
+                            let y = self.stack.pop().unwrap().unwrap_i32();
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(u32_convert_i32(
+                                i32_convert_u32(x) / i32_convert_u32(y),
+                            )));
+                        }
                         Instr::I32RemS => {
                             let y = self.stack.pop().unwrap().unwrap_i32();
                             let x = self.stack.pop().unwrap().unwrap_i32();
                             self.stack.push(Val::I32(x % y));
                         }
+                        Instr::I32RemU => {
+                            let y = self.stack.pop().unwrap().unwrap_i32();
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(u32_convert_i32(
+                                i32_convert_u32(x) % i32_convert_u32(y),
+                            )));
+                        }
+                        Instr::I32And => {
+                            let y = self.stack.pop().unwrap().unwrap_i32();
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(x & y));
+                        }
+                        Instr::I32Or => {
+                            let y = self.stack.pop().unwrap().unwrap_i32();
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(x | y));
+                        }
+                        Instr::I32Xor => {
+                            let y = self.stack.pop().unwrap().unwrap_i32();
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(x ^ y));
+                        }
+                        Instr::I32ShL => {
+                            let y = self.stack.pop().unwrap().unwrap_i32();
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(x << y));
+                        }
+                        Instr::I32ShrS => {
+                            let y = self.stack.pop().unwrap().unwrap_i32();
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(x >> y));
+                        }
+                        Instr::I32ShrU => {
+                            let y = self.stack.pop().unwrap().unwrap_i32();
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(u32_convert_i32(
+                                i32_convert_u32(x) >> i32_convert_u32(y),
+                            )));
+                        }
+                        Instr::I32Rotl => {
+                            let y = self.stack.pop().unwrap().unwrap_i32();
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(x.rotate_left(y as u32)));
+                        }
+                        Instr::I32Rotr => {
+                            let y = self.stack.pop().unwrap().unwrap_i32();
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(x.rotate_right(y as u32)));
+                        }
+                        Instr::I64Add => {
+                            let y = self.stack.pop().unwrap().unwrap_i64();
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I64(x + y));
+                        }
+                        Instr::I64Sub => {
+                            let y = self.stack.pop().unwrap().unwrap_i64();
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I64(x - y));
+                        }
+                        Instr::I64Mul => {
+                            let y = self.stack.pop().unwrap().unwrap_i64();
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I64(x * y));
+                        }
+                        Instr::I64DivS => {
+                            let y = self.stack.pop().unwrap().unwrap_i64();
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I64(x / y));
+                        }
+                        Instr::I64DivU => {
+                            let y = self.stack.pop().unwrap().unwrap_i64();
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I64(u64_convert_i64(
+                                i64_convert_u64(x) / i64_convert_u64(y),
+                            )));
+                        }
+                        Instr::I64RemS => {
+                            let y = self.stack.pop().unwrap().unwrap_i64();
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I64(x % y));
+                        }
+                        Instr::I64RemU => {
+                            let y = self.stack.pop().unwrap().unwrap_i64();
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I64(u64_convert_i64(
+                                i64_convert_u64(x) % i64_convert_u64(y),
+                            )));
+                        }
+                        Instr::I64And => {
+                            let y = self.stack.pop().unwrap().unwrap_i64();
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I64(x & y));
+                        }
+                        Instr::I64Or => {
+                            let y = self.stack.pop().unwrap().unwrap_i64();
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I64(x | y));
+                        }
+                        Instr::I64Xor => {
+                            let y = self.stack.pop().unwrap().unwrap_i64();
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I64(x ^ y));
+                        }
+                        Instr::I64ShL => {
+                            let y = self.stack.pop().unwrap().unwrap_i64();
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I64(x << y));
+                        }
+                        Instr::I64ShrS => {
+                            let y = self.stack.pop().unwrap().unwrap_i64();
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I64(x >> y));
+                        }
+                        Instr::I64ShrU => {
+                            let y = self.stack.pop().unwrap().unwrap_i64();
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I64(u64_convert_i64(
+                                i64_convert_u64(x) >> i64_convert_u64(y),
+                            )));
+                        }
+                        Instr::I64Rotl => {
+                            let y = self.stack.pop().unwrap().unwrap_i64();
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I64(x.rotate_left(y as u32)));
+                        }
+                        Instr::I64Rotr => {
+                            let y = self.stack.pop().unwrap().unwrap_i64();
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I64(x.rotate_right(y as u32)));
+                        }
+                        Instr::F32Add => {
+                            let y = self.stack.pop().unwrap().unwrap_f32();
+                            let x = self.stack.pop().unwrap().unwrap_f32();
+                            self.stack.push(Val::F32(x + y));
+                        }
+                        Instr::F32Sub => {
+                            let y = self.stack.pop().unwrap().unwrap_f32();
+                            let x = self.stack.pop().unwrap().unwrap_f32();
+                            self.stack.push(Val::F32(x - y));
+                        }
+                        Instr::F32Mul => {
+                            let y = self.stack.pop().unwrap().unwrap_f32();
+                            let x = self.stack.pop().unwrap().unwrap_f32();
+                            self.stack.push(Val::F32(x * y));
+                        }
+                        Instr::F32Div => {
+                            let y = self.stack.pop().unwrap().unwrap_f32();
+                            let x = self.stack.pop().unwrap().unwrap_f32();
+                            self.stack.push(Val::F32(x / y));
+                        }
+                        Instr::F32Min => {
+                            let y = self.stack.pop().unwrap().unwrap_f32();
+                            let x = self.stack.pop().unwrap().unwrap_f32();
+                            self.stack.push(Val::F32(x.min(y)));
+                        }
+                        Instr::F32Max => {
+                            let y = self.stack.pop().unwrap().unwrap_f32();
+                            let x = self.stack.pop().unwrap().unwrap_f32();
+                            self.stack.push(Val::F32(x.max(y)));
+                        }
+                        Instr::F32CopySign => {
+                            let y = self.stack.pop().unwrap().unwrap_f32();
+                            let x = self.stack.pop().unwrap().unwrap_f32();
+                            self.stack.push(Val::F32(x.copysign(y)));
+                        }
+                        Instr::F64Add => {
+                            let y = self.stack.pop().unwrap().unwrap_f64();
+                            let x = self.stack.pop().unwrap().unwrap_f64();
+                            self.stack.push(Val::F64(x + y));
+                        }
+                        Instr::F64Sub => {
+                            let y = self.stack.pop().unwrap().unwrap_f64();
+                            let x = self.stack.pop().unwrap().unwrap_f64();
+                            self.stack.push(Val::F64(x - y));
+                        }
+                        Instr::F64Mul => {
+                            let y = self.stack.pop().unwrap().unwrap_f64();
+                            let x = self.stack.pop().unwrap().unwrap_f64();
+                            self.stack.push(Val::F64(x * y));
+                        }
+                        Instr::F64Div => {
+                            let y = self.stack.pop().unwrap().unwrap_f64();
+                            let x = self.stack.pop().unwrap().unwrap_f64();
+                            self.stack.push(Val::F64(x / y));
+                        }
+                        Instr::F64Min => {
+                            let y = self.stack.pop().unwrap().unwrap_f64();
+                            let x = self.stack.pop().unwrap().unwrap_f64();
+                            self.stack.push(Val::F64(x.min(y)));
+                        }
+                        Instr::F64Max => {
+                            let y = self.stack.pop().unwrap().unwrap_f64();
+                            let x = self.stack.pop().unwrap().unwrap_f64();
+                            self.stack.push(Val::F64(x.max(y)));
+                        }
+                        Instr::F64CopySign => {
+                            let y = self.stack.pop().unwrap().unwrap_f64();
+                            let x = self.stack.pop().unwrap().unwrap_f64();
+                            self.stack.push(Val::F64(x.copysign(y)));
+                        }
                         Instr::I32Eqz => {
                             let x = self.stack.pop().unwrap().unwrap_i32();
                             self.stack.push(Val::I32(if x == 0 { 1 } else { 0 }));
+                        }
+                        Instr::I64Eqz => {
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I32(if x == 0 { 1 } else { 0 }));
+                        }
+                        Instr::I32Eq => {
+                            let y = self.stack.pop().unwrap().unwrap_i32();
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(if x == y { 1 } else { 0 }));
+                        }
+                        Instr::I32Ne => {
+                            let y = self.stack.pop().unwrap().unwrap_i32();
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(if x != y { 1 } else { 0 }));
+                        }
+                        Instr::I32LtS => {
+                            let y = self.stack.pop().unwrap().unwrap_i32();
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(if x < y { 1 } else { 0 }));
+                        }
+                        Instr::I32LtU => {
+                            let y = self.stack.pop().unwrap().unwrap_i32();
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack
+                                .push(Val::I32(if i32_convert_u32(x) < i32_convert_u32(y) {
+                                    1
+                                } else {
+                                    0
+                                }));
+                        }
+                        Instr::I32GtS => {
+                            let y = self.stack.pop().unwrap().unwrap_i32();
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(if x > y { 1 } else { 0 }));
+                        }
+                        Instr::I32GtU => {
+                            let y = self.stack.pop().unwrap().unwrap_i32();
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack
+                                .push(Val::I32(if i32_convert_u32(x) > i32_convert_u32(y) {
+                                    1
+                                } else {
+                                    0
+                                }));
+                        }
+                        Instr::I32LeS => {
+                            let y = self.stack.pop().unwrap().unwrap_i32();
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(if x <= y { 1 } else { 0 }));
+                        }
+                        Instr::I32LeU => {
+                            let y = self.stack.pop().unwrap().unwrap_i32();
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(
+                                if i32_convert_u32(x) <= i32_convert_u32(y) {
+                                    1
+                                } else {
+                                    0
+                                },
+                            ));
+                        }
+                        Instr::I32GeS => {
+                            let y = self.stack.pop().unwrap().unwrap_i32();
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(if x >= y { 1 } else { 0 }));
+                        }
+                        Instr::I32GeU => {
+                            let y = self.stack.pop().unwrap().unwrap_i32();
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(
+                                if i32_convert_u32(x) >= i32_convert_u32(y) {
+                                    1
+                                } else {
+                                    0
+                                },
+                            ));
+                        }
+                        Instr::I64Eq => {
+                            let y = self.stack.pop().unwrap().unwrap_i64();
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I32(if x == y { 1 } else { 0 }));
+                        }
+                        Instr::I64Ne => {
+                            let y = self.stack.pop().unwrap().unwrap_i64();
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I32(if x != y { 1 } else { 0 }));
+                        }
+                        Instr::I64LtS => {
+                            let y = self.stack.pop().unwrap().unwrap_i64();
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I32(if x < y { 1 } else { 0 }));
+                        }
+                        Instr::I64LtU => {
+                            let y = self.stack.pop().unwrap().unwrap_i64();
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack
+                                .push(Val::I32(if i64_convert_u64(x) < i64_convert_u64(y) {
+                                    1
+                                } else {
+                                    0
+                                }));
+                        }
+                        Instr::I64GtS => {
+                            let y = self.stack.pop().unwrap().unwrap_i64();
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I32(if x > y { 1 } else { 0 }));
+                        }
+                        Instr::I64GtU => {
+                            let y = self.stack.pop().unwrap().unwrap_i64();
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack
+                                .push(Val::I32(if i64_convert_u64(x) > i64_convert_u64(y) {
+                                    1
+                                } else {
+                                    0
+                                }));
+                        }
+                        Instr::I64LeS => {
+                            let y = self.stack.pop().unwrap().unwrap_i64();
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I32(if x <= y { 1 } else { 0 }));
+                        }
+                        Instr::I64LeU => {
+                            let y = self.stack.pop().unwrap().unwrap_i64();
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I32(
+                                if i64_convert_u64(x) <= i64_convert_u64(y) {
+                                    1
+                                } else {
+                                    0
+                                },
+                            ));
+                        }
+                        Instr::I64GeS => {
+                            let y = self.stack.pop().unwrap().unwrap_i64();
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I32(if x >= y { 1 } else { 0 }));
+                        }
+                        Instr::I64GeU => {
+                            let y = self.stack.pop().unwrap().unwrap_i64();
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I32(
+                                if i64_convert_u64(x) >= i64_convert_u64(y) {
+                                    1
+                                } else {
+                                    0
+                                },
+                            ));
+                        }
+                        Instr::F32Eq => {
+                            let y = self.stack.pop().unwrap().unwrap_f32();
+                            let x = self.stack.pop().unwrap().unwrap_f32();
+                            self.stack.push(Val::I32(if x == y { 1 } else { 0 }));
+                        }
+                        Instr::F32Ne => {
+                            let y = self.stack.pop().unwrap().unwrap_f32();
+                            let x = self.stack.pop().unwrap().unwrap_f32();
+                            self.stack.push(Val::I32(if x != y { 1 } else { 0 }));
+                        }
+                        Instr::F32Lt => {
+                            let y = self.stack.pop().unwrap().unwrap_f32();
+                            let x = self.stack.pop().unwrap().unwrap_f32();
+                            self.stack.push(Val::I32(if x < y { 1 } else { 0 }));
+                        }
+                        Instr::F32Gt => {
+                            let y = self.stack.pop().unwrap().unwrap_f32();
+                            let x = self.stack.pop().unwrap().unwrap_f32();
+                            self.stack.push(Val::I32(if x > y { 1 } else { 0 }));
+                        }
+                        Instr::F32Le => {
+                            let y = self.stack.pop().unwrap().unwrap_f32();
+                            let x = self.stack.pop().unwrap().unwrap_f32();
+                            self.stack.push(Val::I32(if x <= y { 1 } else { 0 }));
+                        }
+                        Instr::F32Ge => {
+                            let y = self.stack.pop().unwrap().unwrap_f32();
+                            let x = self.stack.pop().unwrap().unwrap_f32();
+                            self.stack.push(Val::I32(if x >= y { 1 } else { 0 }));
+                        }
+                        Instr::F64Eq => {
+                            let y = self.stack.pop().unwrap().unwrap_f64();
+                            let x = self.stack.pop().unwrap().unwrap_f64();
+                            self.stack.push(Val::I32(if x == y { 1 } else { 0 }));
+                        }
+                        Instr::F64Ne => {
+                            let y = self.stack.pop().unwrap().unwrap_f64();
+                            let x = self.stack.pop().unwrap().unwrap_f64();
+                            self.stack.push(Val::I32(if x != y { 1 } else { 0 }));
+                        }
+                        Instr::F64Lt => {
+                            let y = self.stack.pop().unwrap().unwrap_f64();
+                            let x = self.stack.pop().unwrap().unwrap_f64();
+                            self.stack.push(Val::I32(if x < y { 1 } else { 0 }));
+                        }
+                        Instr::F64Gt => {
+                            let y = self.stack.pop().unwrap().unwrap_f64();
+                            let x = self.stack.pop().unwrap().unwrap_f64();
+                            self.stack.push(Val::I32(if x > y { 1 } else { 0 }));
+                        }
+                        Instr::F64Le => {
+                            let y = self.stack.pop().unwrap().unwrap_f64();
+                            let x = self.stack.pop().unwrap().unwrap_f64();
+                            self.stack.push(Val::I32(if x <= y { 1 } else { 0 }));
+                        }
+                        Instr::F64Ge => {
+                            let y = self.stack.pop().unwrap().unwrap_f64();
+                            let x = self.stack.pop().unwrap().unwrap_f64();
+                            self.stack.push(Val::I32(if x >= y { 1 } else { 0 }));
+                        }
+                        Instr::LocalGet(idx) => {
+                            self.stack.push(frame.locals[idx.to_idx()]);
                         }
                         Instr::Block(rt, is) => {
                             self.instrs
@@ -525,6 +1024,37 @@ impl VMModule {
             params,
         )
     }
+}
+
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use std::io::Cursor;
+
+fn i32_convert_u32(x: i32) -> u32 {
+    let mut wtr = vec![];
+    wtr.write_i32::<LittleEndian>(x).unwrap();
+    let mut rdr = Cursor::new(wtr);
+    rdr.read_u32::<LittleEndian>().unwrap()
+}
+
+fn u32_convert_i32(x: u32) -> i32 {
+    let mut wtr = vec![];
+    wtr.write_u32::<LittleEndian>(x).unwrap();
+    let mut rdr = Cursor::new(wtr);
+    rdr.read_i32::<LittleEndian>().unwrap()
+}
+
+fn i64_convert_u64(x: i64) -> u64 {
+    let mut wtr = vec![];
+    wtr.write_i64::<LittleEndian>(x).unwrap();
+    let mut rdr = Cursor::new(wtr);
+    rdr.read_u64::<LittleEndian>().unwrap()
+}
+
+fn u64_convert_i64(x: u64) -> i64 {
+    let mut wtr = vec![];
+    wtr.write_u64::<LittleEndian>(x).unwrap();
+    let mut rdr = Cursor::new(wtr);
+    rdr.read_i64::<LittleEndian>().unwrap()
 }
 
 use crate::binary::Decoder;

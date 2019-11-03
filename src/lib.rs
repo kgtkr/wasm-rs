@@ -3,7 +3,6 @@
 
 pub mod binary;
 pub mod exec;
-pub mod interpreter;
 pub mod structure;
 
 #[cfg(test)]
