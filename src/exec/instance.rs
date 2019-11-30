@@ -6,7 +6,9 @@ use crate::structure::modules::{
 };
 use crate::structure::types::{FuncType, Limits, MemType, Mut, ResultType, TableType, ValType};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use std::cell::RefCell;
 use std::io::Cursor;
+use std::rc::Rc;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FuncInst {
@@ -141,14 +143,17 @@ where
 impl TypedIdxAccess<FuncIdx> for Vec<FuncInst> {}
 impl TypedIdxAccess<GlobalIdx> for Vec<GlobalInst> {}
 impl TypedIdxAccess<TypeIdx> for Vec<FuncType> {}
+impl TypedIdxAccess<FuncIdx> for Vec<Rc<RefCell<FuncInst>>> {}
+impl TypedIdxAccess<GlobalIdx> for Vec<Rc<RefCell<GlobalInst>>> {}
+impl TypedIdxAccess<TypeIdx> for Vec<Rc<RefCell<FuncType>>> {}
 
 #[derive(Debug, PartialEq)]
 pub struct ModuleInst {
     pub types: Vec<FuncType>,
-    pub funcs: Vec<FuncInst>,
-    pub table: Option<TableInst>,
-    pub mem: Option<MemInst>,
-    pub globals: Vec<GlobalInst>,
+    pub funcs: Vec<Rc<RefCell<FuncInst>>>,
+    pub table: Option<Rc<RefCell<TableInst>>>,
+    pub mem: Option<Rc<RefCell<MemInst>>>,
+    pub globals: Vec<Rc<RefCell<GlobalInst>>>,
     pub module: Module,
 }
 
@@ -160,26 +165,36 @@ impl ModuleInst {
                 .funcs
                 .clone()
                 .into_iter()
-                .map(|f| FuncInst::new(f, &module))
+                .map(|f| Rc::new(RefCell::new(FuncInst::new(f, &module))))
                 .collect(),
-            table: module.tables.iter().next().map(|t| TableInst::new(t)),
-            mem: module.mems.iter().next().map(|m| MemInst::new(m)),
+            table: module
+                .tables
+                .iter()
+                .next()
+                .map(|t| Rc::new(RefCell::new(TableInst::new(t)))),
+            mem: module
+                .mems
+                .iter()
+                .next()
+                .map(|m| Rc::new(RefCell::new(MemInst::new(m)))),
             globals: Vec::new(),
             module: module.clone(),
         };
 
         for global in &module.globals {
-            result.globals.push(GlobalInst {
+            result.globals.push(Rc::new(RefCell::new(GlobalInst {
                 value: result.eval_const_expr(&global.init),
                 mut_: global.type_.0,
-            });
+            })));
         }
         for elem in &module.elem {
             let offset = result.eval_const_expr(&elem.offset).unwrap_i32() as usize;
+            result.table.as_mut().unwrap();
             result
                 .table
                 .as_mut()
                 .unwrap()
+                .borrow_mut()
                 .init_elem(offset, elem.init.clone());
         }
         for data in &module.data {
@@ -188,6 +203,7 @@ impl ModuleInst {
                 .mem
                 .as_mut()
                 .unwrap()
+                .borrow_mut()
                 .init_data(offset, data.init.clone().into_iter().map(|x| x.0).collect());
         }
 
@@ -203,7 +219,7 @@ impl ModuleInst {
             &[Instr::I64Const(x)] => Val::I64(x),
             &[Instr::F32Const(x)] => Val::F32(x),
             &[Instr::F64Const(x)] => Val::F64(x),
-            &[Instr::GlobalGet(i)] => self.globals[i.to_idx()].value,
+            &[Instr::GlobalGet(i)] => self.globals[i.to_idx()].borrow().value,
             _ => panic!(),
         }
     }
@@ -317,21 +333,19 @@ fn test_md5() {
         .unwrap()
         .unwrap_i32() as usize;
     for i in 0..input_bytes.len() {
-        instance.mem.as_mut().unwrap().data[input_ptr + i] = input_bytes[i];
+        instance.mem.as_mut().unwrap().borrow_mut().data[input_ptr + i] = input_bytes[i];
     }
 
     let output_ptr = instance
         .export_call_func("md5", vec![Val::I32(input_ptr as i32)])
         .unwrap()
         .unwrap_i32() as usize;
+    let raw = &instance.mem.as_ref().unwrap().borrow_mut().data;
     assert_eq!(
         CString::new(
-            instance
-                .mem
-                .unwrap()
-                .data
-                .into_iter()
+            raw.into_iter()
                 .skip(output_ptr)
+                .cloned()
                 .take_while(|x| *x != 0)
                 .collect::<Vec<_>>(),
         )
