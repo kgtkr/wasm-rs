@@ -165,6 +165,41 @@ impl TypedIdxAccess<GlobalIdx> for Vec<GlobalAddr> {}
 #[derive(Clone, Debug, PartialEq)]
 pub struct FuncAddr(pub Rc<RefCell<FuncInst>>);
 
+impl FuncAddr {
+    fn call(&self, params: Vec<Val>) -> Option<Val> {
+        let mut stack = Stack {
+            stack: vec![FrameStack {
+                frame: Frame { locals: Vec::new() },
+                stack: vec![LabelStack {
+                    label: Label { instrs: vec![] },
+                    instrs: vec![AdminInstr::Invoke(self.clone())],
+                    stack: params,
+                }],
+            }],
+        };
+
+        loop {
+            stack.step(self.0.borrow().module.as_ref());
+            if stack.stack.len() == 1
+                && stack.stack.first().unwrap().stack.len() == 1
+                && stack
+                    .stack
+                    .first()
+                    .unwrap()
+                    .stack
+                    .first()
+                    .unwrap()
+                    .instrs
+                    .is_empty()
+            {
+                break;
+            }
+        }
+
+        stack.stack.pop().unwrap().stack.pop().unwrap().stack.pop()
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct TableAddr(pub Rc<RefCell<TableInst>>);
 
@@ -255,10 +290,6 @@ impl ModuleInst {
                 .init_data(offset, data.init.clone().into_iter().map(|x| x.0).collect());
         }
 
-        if let Some(start) = &module.start {
-            result.call_func(result.funcs.get_idx(start.func).clone(), vec![]);
-        }
-
         for export in &module.exports {
             result.exports.push(ExportInst {
                 name: export.name.0.clone(),
@@ -293,6 +324,10 @@ impl ModuleInst {
             *dummy = FuncInst::new(func.clone(), result.clone());
         }
 
+        if let Some(start) = &module.start {
+            result.funcs.get_idx(start.func).clone().call(vec![]);
+        }
+
         result
     }
 
@@ -307,39 +342,6 @@ impl ModuleInst {
         }
     }
 
-    fn call_func(&self, func: FuncAddr, params: Vec<Val>) -> Option<Val> {
-        let mut stack = Stack {
-            stack: vec![FrameStack {
-                frame: Frame { locals: Vec::new() },
-                stack: vec![LabelStack {
-                    label: Label { instrs: vec![] },
-                    instrs: vec![AdminInstr::Invoke(func)],
-                    stack: params,
-                }],
-            }],
-        };
-
-        loop {
-            stack.step(self);
-            if stack.stack.len() == 1
-                && stack.stack.first().unwrap().stack.len() == 1
-                && stack
-                    .stack
-                    .first()
-                    .unwrap()
-                    .stack
-                    .first()
-                    .unwrap()
-                    .instrs
-                    .is_empty()
-            {
-                break;
-            }
-        }
-
-        stack.stack.pop().unwrap().stack.pop().unwrap().stack.pop()
-    }
-
     pub fn export_call_func(&self, name: &str, params: Vec<Val>) -> Option<Val> {
         if let ExternalVal::Func(func) = &self
             .exports
@@ -348,7 +350,7 @@ impl ModuleInst {
             .unwrap()
             .value
         {
-            self.call_func(func.clone(), params)
+            func.call(params)
         } else {
             panic!()
         }
