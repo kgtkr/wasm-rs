@@ -1,4 +1,4 @@
-use super::instance::{FuncInst, ModuleInst, TypedIdxAccess, Val};
+use super::instance::{FuncAddr, FuncInst, ModuleInst, TypedIdxAccess, Val};
 use crate::structure::instructions::{Expr, Instr};
 use crate::structure::modules::{
     Data, Elem, Export, ExportDesc, Func, FuncIdx, Global, GlobalIdx, LabelIdx, LocalIdx, Mem,
@@ -17,20 +17,20 @@ pub enum FrameLevelInstr {
     Label(Label, /* 前から */ Vec<Instr>),
     Br(LabelIdx),
     LabelEnd,
-    Invoke(Rc<RefCell<FuncInst>>),
+    Invoke(FuncAddr),
     Return,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ModuleLevelInstr {
-    Invoke(Rc<RefCell<FuncInst>>),
+    Invoke(FuncAddr),
     Return,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AdminInstr {
     Instr(Instr),
-    Invoke(Rc<RefCell<FuncInst>>),
+    Invoke(FuncAddr),
     Label(Label, Vec<Instr>),
     Br(LabelIdx),
     Return,
@@ -700,16 +700,16 @@ impl LabelStack {
                         }
                         Instr::GlobalGet(idx) => {
                             self.stack
-                                .push(instance.globals[idx.to_idx()].borrow().value);
+                                .push(instance.globals[idx.to_idx()].0.borrow().value);
                         }
                         Instr::GlobalSet(idx) => {
                             let x = self.stack.pop().unwrap();
-                            let mut global = instance.globals[idx.to_idx()].borrow_mut();
+                            let mut global = instance.globals[idx.to_idx()].0.borrow_mut();
                             global.value = x;
                         }
                         Instr::I32Load(m) => {
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            let raw = &instance.mem.as_ref().unwrap().borrow().data;
+                            let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
                             cur.set_position((ptr + m.offset as usize) as u64);
                             let x = cur.read_i32::<LittleEndian>().unwrap();
@@ -717,7 +717,7 @@ impl LabelStack {
                         }
                         Instr::I64Load(m) => {
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            let raw = &instance.mem.as_ref().unwrap().borrow().data;
+                            let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
                             cur.set_position((ptr + m.offset as usize) as u64);
                             let x = cur.read_i64::<LittleEndian>().unwrap();
@@ -725,7 +725,7 @@ impl LabelStack {
                         }
                         Instr::F32Load(m) => {
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            let raw = &instance.mem.as_ref().unwrap().borrow().data;
+                            let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
                             cur.set_position((ptr + m.offset as usize) as u64);
                             let x = cur.read_f32::<LittleEndian>().unwrap();
@@ -733,7 +733,7 @@ impl LabelStack {
                         }
                         Instr::F64Load(m) => {
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            let raw = &instance.mem.as_ref().unwrap().borrow().data;
+                            let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
                             cur.set_position((ptr + m.offset as usize) as u64);
                             let x = cur.read_f64::<LittleEndian>().unwrap();
@@ -743,7 +743,7 @@ impl LabelStack {
                             let x = self.stack.pop().unwrap().unwrap_i32();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
 
-                            let raw = &mut instance.mem.as_ref().unwrap().borrow_mut().data;
+                            let raw = &mut instance.mem.as_ref().unwrap().0.borrow_mut().data;
                             let mut cur = Cursor::new(raw);
                             cur.set_position((ptr + m.offset as usize) as u64);
                             cur.write_i32::<LittleEndian>(x).unwrap();
@@ -751,7 +751,7 @@ impl LabelStack {
                         Instr::I64Store(m) => {
                             let x = self.stack.pop().unwrap().unwrap_i64();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            let raw = &mut instance.mem.as_ref().unwrap().borrow_mut().data;
+                            let raw = &mut instance.mem.as_ref().unwrap().0.borrow_mut().data;
                             let mut cur = Cursor::new(raw);
                             cur.set_position((ptr + m.offset as usize) as u64);
                             cur.write_i64::<LittleEndian>(x).unwrap();
@@ -759,7 +759,7 @@ impl LabelStack {
                         Instr::F32Store(m) => {
                             let x = self.stack.pop().unwrap().unwrap_f32();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            let raw = &mut instance.mem.as_ref().unwrap().borrow_mut().data;
+                            let raw = &mut instance.mem.as_ref().unwrap().0.borrow_mut().data;
                             let mut cur = Cursor::new(raw);
                             cur.set_position((ptr + m.offset as usize) as u64);
                             cur.write_f32::<LittleEndian>(x).unwrap();
@@ -767,14 +767,14 @@ impl LabelStack {
                         Instr::F64Store(m) => {
                             let x = self.stack.pop().unwrap().unwrap_f64();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            let raw = &mut instance.mem.as_ref().unwrap().borrow_mut().data;
+                            let raw = &mut instance.mem.as_ref().unwrap().0.borrow_mut().data;
                             let mut cur = Cursor::new(raw);
                             cur.set_position((ptr + m.offset as usize) as u64);
                             cur.write_f64::<LittleEndian>(x).unwrap();
                         }
                         Instr::I32Load8S(m) => {
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            let raw = &instance.mem.as_ref().unwrap().borrow().data;
+                            let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
                             cur.set_position((ptr + m.offset as usize) as u64);
                             let x = cur.read_i8().unwrap();
@@ -782,7 +782,7 @@ impl LabelStack {
                         }
                         Instr::I32Load8U(m) => {
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            let raw = &instance.mem.as_ref().unwrap().borrow().data;
+                            let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
                             cur.set_position((ptr + m.offset as usize) as u64);
                             let x = cur.read_u8().unwrap();
@@ -790,7 +790,7 @@ impl LabelStack {
                         }
                         Instr::I64Load8S(m) => {
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            let raw = &instance.mem.as_ref().unwrap().borrow().data;
+                            let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
                             cur.set_position((ptr + m.offset as usize) as u64);
                             let x = cur.read_i8().unwrap();
@@ -798,7 +798,7 @@ impl LabelStack {
                         }
                         Instr::I64Load8U(m) => {
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            let raw = &instance.mem.as_ref().unwrap().borrow().data;
+                            let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
                             cur.set_position((ptr + m.offset as usize) as u64);
                             let x = cur.read_u8().unwrap();
@@ -806,7 +806,7 @@ impl LabelStack {
                         }
                         Instr::I32Load16S(m) => {
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            let raw = &instance.mem.as_ref().unwrap().borrow().data;
+                            let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
                             cur.set_position((ptr + m.offset as usize) as u64);
                             let x = cur.read_i16::<LittleEndian>().unwrap();
@@ -814,7 +814,7 @@ impl LabelStack {
                         }
                         Instr::I32Load16U(m) => {
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            let raw = &instance.mem.as_ref().unwrap().borrow().data;
+                            let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
                             cur.set_position((ptr + m.offset as usize) as u64);
                             let x = cur.read_u16::<LittleEndian>().unwrap();
@@ -822,7 +822,7 @@ impl LabelStack {
                         }
                         Instr::I64Load16S(m) => {
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            let raw = &instance.mem.as_ref().unwrap().borrow().data;
+                            let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
                             cur.set_position((ptr + m.offset as usize) as u64);
                             let x = cur.read_i16::<LittleEndian>().unwrap();
@@ -830,7 +830,7 @@ impl LabelStack {
                         }
                         Instr::I64Load16U(m) => {
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            let raw = &instance.mem.as_ref().unwrap().borrow().data;
+                            let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
                             cur.set_position((ptr + m.offset as usize) as u64);
                             let x = cur.read_u16::<LittleEndian>().unwrap();
@@ -838,7 +838,7 @@ impl LabelStack {
                         }
                         Instr::I64Load32S(m) => {
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            let raw = &instance.mem.as_ref().unwrap().borrow().data;
+                            let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
                             cur.set_position((ptr + m.offset as usize) as u64);
                             let x = cur.read_i32::<LittleEndian>().unwrap();
@@ -846,7 +846,7 @@ impl LabelStack {
                         }
                         Instr::I64Load32U(m) => {
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            let raw = &instance.mem.as_ref().unwrap().borrow().data;
+                            let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
                             cur.set_position((ptr + m.offset as usize) as u64);
                             let x = cur.read_u32::<LittleEndian>().unwrap();
@@ -855,7 +855,7 @@ impl LabelStack {
                         Instr::I32Store8(m) => {
                             let x = self.stack.pop().unwrap().unwrap_i32();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            let raw = &mut instance.mem.as_ref().unwrap().borrow_mut().data;
+                            let raw = &mut instance.mem.as_ref().unwrap().0.borrow_mut().data;
                             let mut cur = Cursor::new(raw);
                             cur.set_position((ptr + m.offset as usize) as u64);
                             cur.write_i8(x as i8).unwrap();
@@ -863,7 +863,7 @@ impl LabelStack {
                         Instr::I64Store8(m) => {
                             let x = self.stack.pop().unwrap().unwrap_i64();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            let raw = &mut instance.mem.as_ref().unwrap().borrow_mut().data;
+                            let raw = &mut instance.mem.as_ref().unwrap().0.borrow_mut().data;
                             let mut cur = Cursor::new(raw);
                             cur.set_position((ptr + m.offset as usize) as u64);
                             cur.write_i8(x as i8).unwrap();
@@ -871,7 +871,7 @@ impl LabelStack {
                         Instr::I32Store16(m) => {
                             let x = self.stack.pop().unwrap().unwrap_i32();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            let raw = &mut instance.mem.as_ref().unwrap().borrow_mut().data;
+                            let raw = &mut instance.mem.as_ref().unwrap().0.borrow_mut().data;
                             let mut cur = Cursor::new(raw);
                             cur.set_position((ptr + m.offset as usize) as u64);
                             cur.write_i16::<LittleEndian>(x as i16).unwrap();
@@ -879,7 +879,7 @@ impl LabelStack {
                         Instr::I64Store16(m) => {
                             let x = self.stack.pop().unwrap().unwrap_i64();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            let raw = &mut instance.mem.as_ref().unwrap().borrow_mut().data;
+                            let raw = &mut instance.mem.as_ref().unwrap().0.borrow_mut().data;
                             let mut cur = Cursor::new(raw);
                             cur.set_position((ptr + m.offset as usize) as u64);
                             cur.write_i16::<LittleEndian>(x as i16).unwrap();
@@ -887,25 +887,26 @@ impl LabelStack {
                         Instr::I64Store32(m) => {
                             let x = self.stack.pop().unwrap().unwrap_i64();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            let raw = &mut instance.mem.as_ref().unwrap().borrow_mut().data;
+                            let raw = &mut instance.mem.as_ref().unwrap().0.borrow_mut().data;
                             let mut cur = Cursor::new(raw);
                             cur.set_position((ptr + m.offset as usize) as u64);
                             cur.write_i32::<LittleEndian>(x as i32).unwrap();
                         }
                         Instr::MemorySize => {
                             self.stack.push(Val::I32(
-                                (instance.mem.as_ref().unwrap().borrow().data.len() / mem_page_size)
-                                    as i32,
+                                (instance.mem.as_ref().unwrap().0.borrow().data.len()
+                                    / mem_page_size) as i32,
                             ));
                         }
                         Instr::MemoryGrow => {
-                            let cur_size =
-                                instance.mem.as_ref().unwrap().borrow().data.len() / mem_page_size;
+                            let cur_size = instance.mem.as_ref().unwrap().0.borrow().data.len()
+                                / mem_page_size;
                             let x = self.stack.pop().unwrap().unwrap_i32() as usize;
                             instance
                                 .mem
                                 .as_ref()
                                 .unwrap()
+                                .0
                                 .borrow_mut()
                                 .data
                                 .resize((cur_size + x) * mem_page_size, 0);
@@ -959,7 +960,8 @@ impl LabelStack {
                                 instance
                                     .funcs
                                     .get_idx(
-                                        instance.table.as_ref().unwrap().borrow().elem[i].unwrap(),
+                                        instance.table.as_ref().unwrap().0.borrow().elem[i]
+                                            .unwrap(),
                                     )
                                     .clone(),
                             ));
@@ -997,10 +999,11 @@ impl Stack {
                                 let mut locals = Vec::new();
                                 locals.append(&mut pop_n(
                                     &mut cur_label.stack,
-                                    func.borrow().type_.params().len(),
+                                    func.0.borrow().type_.params().len(),
                                 ));
                                 locals.append(
                                     &mut func
+                                        .0
                                         .borrow()
                                         .code
                                         .locals
@@ -1021,6 +1024,7 @@ impl Stack {
                             stack: vec![],
                             label: Label { instrs: vec![] },
                             instrs: func
+                                .0
                                 .borrow()
                                 .code
                                 .body

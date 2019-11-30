@@ -12,10 +12,10 @@ use std::rc::Rc;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExternalVal {
-    Func(Rc<RefCell<FuncInst>>),
-    Table(Rc<RefCell<TableInst>>),
-    Mem(Rc<RefCell<MemInst>>),
-    Global(Rc<RefCell<GlobalInst>>),
+    Func(FuncAddr),
+    Table(TableAddr),
+    Mem(MemAddr),
+    Global(GlobalAddr),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -159,16 +159,28 @@ where
 impl TypedIdxAccess<FuncIdx> for Vec<FuncInst> {}
 impl TypedIdxAccess<GlobalIdx> for Vec<GlobalInst> {}
 impl TypedIdxAccess<TypeIdx> for Vec<FuncType> {}
-impl TypedIdxAccess<FuncIdx> for Vec<Rc<RefCell<FuncInst>>> {}
-impl TypedIdxAccess<GlobalIdx> for Vec<Rc<RefCell<GlobalInst>>> {}
+impl TypedIdxAccess<FuncIdx> for Vec<FuncAddr> {}
+impl TypedIdxAccess<GlobalIdx> for Vec<GlobalAddr> {}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct FuncAddr(pub Rc<RefCell<FuncInst>>);
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct TableAddr(pub Rc<RefCell<TableInst>>);
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct MemAddr(pub Rc<RefCell<MemInst>>);
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct GlobalAddr(pub Rc<RefCell<GlobalInst>>);
 
 #[derive(Debug, PartialEq)]
 pub struct ModuleInst {
     pub types: Vec<FuncType>,
-    pub funcs: Vec<Rc<RefCell<FuncInst>>>,
-    pub table: Option<Rc<RefCell<TableInst>>>,
-    pub mem: Option<Rc<RefCell<MemInst>>>,
-    pub globals: Vec<Rc<RefCell<GlobalInst>>>,
+    pub funcs: Vec<FuncAddr>,
+    pub table: Option<TableAddr>,
+    pub mem: Option<MemAddr>,
+    pub globals: Vec<GlobalAddr>,
     pub exports: Vec<ExportInst>,
 }
 
@@ -181,12 +193,12 @@ impl ModuleInst {
                 .tables
                 .iter()
                 .next()
-                .map(|t| Rc::new(RefCell::new(TableInst::new(t)))),
+                .map(|t| TableAddr(Rc::new(RefCell::new(TableInst::new(t))))),
             mem: module
                 .mems
                 .iter()
                 .next()
-                .map(|m| Rc::new(RefCell::new(MemInst::new(m)))),
+                .map(|m| MemAddr(Rc::new(RefCell::new(MemInst::new(m))))),
             globals: Vec::new(),
             exports: Vec::new(),
         };
@@ -208,22 +220,27 @@ impl ModuleInst {
                     exports: Vec::new(),
                 }),
             };
-            result.funcs.push(Rc::new(RefCell::new(dummy_func.clone())));
+            result
+                .funcs
+                .push(FuncAddr(Rc::new(RefCell::new(dummy_func.clone()))));
         }
 
         for global in &module.globals {
-            result.globals.push(Rc::new(RefCell::new(GlobalInst {
-                value: result.eval_const_expr(&global.init),
-                mut_: global.type_.0,
-            })));
+            result
+                .globals
+                .push(GlobalAddr(Rc::new(RefCell::new(GlobalInst {
+                    value: result.eval_const_expr(&global.init),
+                    mut_: global.type_.0,
+                }))));
         }
         for elem in &module.elem {
             let offset = result.eval_const_expr(&elem.offset).unwrap_i32() as usize;
             result.table.as_mut().unwrap();
             result
                 .table
-                .as_mut()
+                .as_ref()
                 .unwrap()
+                .0
                 .borrow_mut()
                 .init_elem(offset, elem.init.clone());
         }
@@ -231,8 +248,9 @@ impl ModuleInst {
             let offset = result.eval_const_expr(&data.offset).unwrap_i32() as usize;
             result
                 .mem
-                .as_mut()
+                .as_ref()
                 .unwrap()
+                .0
                 .borrow_mut()
                 .init_data(offset, data.init.clone().into_iter().map(|x| x.0).collect());
         }
@@ -271,7 +289,7 @@ impl ModuleInst {
                     }
                 })
                 .sum::<usize>();
-            let mut dummy = result.funcs[idx].borrow_mut();
+            let mut dummy = result.funcs[idx].0.borrow_mut();
             *dummy = FuncInst::new(func.clone(), result.clone());
         }
 
@@ -284,12 +302,12 @@ impl ModuleInst {
             &[Instr::I64Const(x)] => Val::I64(x),
             &[Instr::F32Const(x)] => Val::F32(x),
             &[Instr::F64Const(x)] => Val::F64(x),
-            &[Instr::GlobalGet(i)] => self.globals[i.to_idx()].borrow().value,
+            &[Instr::GlobalGet(i)] => self.globals[i.to_idx()].0.borrow().value,
             _ => panic!(),
         }
     }
 
-    fn call_func(&self, func: Rc<RefCell<FuncInst>>, params: Vec<Val>) -> Option<Val> {
+    fn call_func(&self, func: FuncAddr, params: Vec<Val>) -> Option<Val> {
         let mut stack = Stack {
             stack: vec![FrameStack {
                 frame: Frame { locals: Vec::new() },
@@ -399,7 +417,7 @@ fn test_md5() {
         .unwrap()
         .unwrap_i32() as usize;
     for i in 0..input_bytes.len() {
-        let mut mem = instance.mem.as_ref().unwrap().borrow_mut();
+        let mut mem = instance.mem.as_ref().unwrap().0.borrow_mut();
         mem.data[input_ptr + i] = input_bytes[i];
     }
 
@@ -407,7 +425,7 @@ fn test_md5() {
         .export_call_func("md5", vec![Val::I32(input_ptr as i32)])
         .unwrap()
         .unwrap_i32() as usize;
-    let raw = &instance.mem.as_ref().unwrap().borrow_mut().data;
+    let raw = &instance.mem.as_ref().unwrap().0.borrow_mut().data;
     assert_eq!(
         CString::new(
             raw.into_iter()
