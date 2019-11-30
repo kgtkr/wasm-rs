@@ -5,7 +5,7 @@ use crate::structure::modules::{
     LocalIdx, Mem, Module, Table, TypeIdx, TypedIdx,
 };
 use crate::structure::types::{FuncType, Limits, MemType, Mut, ResultType, TableType, ValType};
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+
 use std::cell::RefCell;
 use std::io::Cursor;
 use std::rc::{Rc, Weak};
@@ -306,8 +306,8 @@ impl ModuleInst {
                     ExportDesc::Global(idx) => {
                         ExternalVal::Global(result.globals.get_idx(idx).clone())
                     }
-                    ExportDesc::Mem(idx) => ExternalVal::Mem(result.mem.as_ref().unwrap().clone()),
-                    ExportDesc::Table(idx) => {
+                    ExportDesc::Mem(_idx) => ExternalVal::Mem(result.mem.as_ref().unwrap().clone()),
+                    ExportDesc::Table(_idx) => {
                         ExternalVal::Table(result.table.as_ref().unwrap().clone())
                     }
                 },
@@ -376,87 +376,92 @@ impl ModuleInst {
     }
 }
 
-use crate::binary::Decoder;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::binary::Decoder;
 
-#[test]
-fn test_add() {
-    let module = Module::decode_end(&std::fs::read("./example/add.wasm").unwrap()).unwrap();
-    let mut instance = ModuleInst::new(&module);
-    assert_eq!(
-        instance.export_call_func("add", vec![Val::I32(3), Val::I32(5)]),
-        Some(Val::I32(8))
-    );
-}
-
-#[test]
-fn test_gcd() {
-    let module = Module::decode_end(&std::fs::read("./example/gcd.wasm").unwrap()).unwrap();
-    let mut instance = ModuleInst::new(&module);
-
-    assert_eq!(
-        instance.export_call_func("gcd", vec![Val::I32(182), Val::I32(1029)]),
-        Some(Val::I32(7))
-    );
-}
-
-#[test]
-fn test_pow() {
-    let module = Module::decode_end(&std::fs::read("./example/pow.wasm").unwrap()).unwrap();
-    let mut instance = ModuleInst::new(&module);
-    assert_eq!(
-        instance.export_call_func("pow", vec![Val::I32(2), Val::I32(10)]),
-        Some(Val::I32(1024))
-    );
-}
-
-#[test]
-fn test_br_table() {
-    let module = Module::decode_end(&std::fs::read("./example/br_table.wasm").unwrap()).unwrap();
-    let mut instance = ModuleInst::new(&module);
-
-    assert_eq!(
-        instance.export_call_func("br_table", vec![Val::I32(0)]),
-        Some(Val::I32(10))
-    );
-    assert_eq!(
-        instance.export_call_func("br_table", vec![Val::I32(10)]),
-        Some(Val::I32(30))
-    );
-}
-
-#[test]
-fn test_md5() {
-    use std::ffi::CString;
-
-    let module = Module::decode_end(&std::fs::read("./example/md5.wasm").unwrap()).unwrap();
-    let instance = ModuleInst::new(&module);
-
-    let input_bytes = CString::new("abc").unwrap().into_bytes();
-    let input_ptr = instance
-        .export_call_func("alloc", vec![Val::I32(input_bytes.len() as i32)])
-        .unwrap()
-        .unwrap_i32() as usize;
-    for i in 0..input_bytes.len() {
-        let mut mem = instance.mem.as_ref().unwrap().0.borrow_mut();
-        mem.data[input_ptr + i] = input_bytes[i];
+    #[test]
+    fn test_add() {
+        let module = Module::decode_end(&std::fs::read("./example/add.wasm").unwrap()).unwrap();
+        let mut instance = ModuleInst::new(&module);
+        assert_eq!(
+            instance.export_call_func("add", vec![Val::I32(3), Val::I32(5)]),
+            Some(Val::I32(8))
+        );
     }
 
-    let output_ptr = instance
-        .export_call_func("md5", vec![Val::I32(input_ptr as i32)])
-        .unwrap()
-        .unwrap_i32() as usize;
-    let raw = &instance.mem.as_ref().unwrap().0.borrow_mut().data;
-    assert_eq!(
-        CString::new(
-            raw.into_iter()
-                .skip(output_ptr)
-                .cloned()
-                .take_while(|x| *x != 0)
-                .collect::<Vec<_>>(),
-        )
-        .unwrap()
-        .into_string()
-        .unwrap(),
-        "900150983cd24fb0d6963f7d28e17f72".to_string()
-    );
+    #[test]
+    fn test_gcd() {
+        let module = Module::decode_end(&std::fs::read("./example/gcd.wasm").unwrap()).unwrap();
+        let mut instance = ModuleInst::new(&module);
+
+        assert_eq!(
+            instance.export_call_func("gcd", vec![Val::I32(182), Val::I32(1029)]),
+            Some(Val::I32(7))
+        );
+    }
+
+    #[test]
+    fn test_pow() {
+        let module = Module::decode_end(&std::fs::read("./example/pow.wasm").unwrap()).unwrap();
+        let mut instance = ModuleInst::new(&module);
+        assert_eq!(
+            instance.export_call_func("pow", vec![Val::I32(2), Val::I32(10)]),
+            Some(Val::I32(1024))
+        );
+    }
+
+    #[test]
+    fn test_br_table() {
+        let module =
+            Module::decode_end(&std::fs::read("./example/br_table.wasm").unwrap()).unwrap();
+        let mut instance = ModuleInst::new(&module);
+
+        assert_eq!(
+            instance.export_call_func("br_table", vec![Val::I32(0)]),
+            Some(Val::I32(10))
+        );
+        assert_eq!(
+            instance.export_call_func("br_table", vec![Val::I32(10)]),
+            Some(Val::I32(30))
+        );
+    }
+
+    #[test]
+    fn test_md5() {
+        use std::ffi::CString;
+
+        let module = Module::decode_end(&std::fs::read("./example/md5.wasm").unwrap()).unwrap();
+        let instance = ModuleInst::new(&module);
+
+        let input_bytes = CString::new("abc").unwrap().into_bytes();
+        let input_ptr = instance
+            .export_call_func("alloc", vec![Val::I32(input_bytes.len() as i32)])
+            .unwrap()
+            .unwrap_i32() as usize;
+        for i in 0..input_bytes.len() {
+            let mut mem = instance.mem.as_ref().unwrap().0.borrow_mut();
+            mem.data[input_ptr + i] = input_bytes[i];
+        }
+
+        let output_ptr = instance
+            .export_call_func("md5", vec![Val::I32(input_ptr as i32)])
+            .unwrap()
+            .unwrap_i32() as usize;
+        let raw = &instance.mem.as_ref().unwrap().0.borrow_mut().data;
+        assert_eq!(
+            CString::new(
+                raw.into_iter()
+                    .skip(output_ptr)
+                    .cloned()
+                    .take_while(|x| *x != 0)
+                    .collect::<Vec<_>>(),
+            )
+            .unwrap()
+            .into_string()
+            .unwrap(),
+            "900150983cd24fb0d6963f7d28e17f72".to_string()
+        );
+    }
 }

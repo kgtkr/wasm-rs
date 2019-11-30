@@ -1,7 +1,7 @@
 use super::parser;
 use super::Decoder;
 use super::Encoder;
-use crate::structure::instructions::{Expr, Instr};
+use crate::structure::instructions::Expr;
 use crate::structure::modules::{
     Data, Elem, Export, ExportDesc, Func, FuncIdx, Global, GlobalIdx, Import, ImportDesc, LabelIdx,
     LocalIdx, Mem, MemIdx, Module, Start, Table, TableIdx, TypeIdx,
@@ -572,6 +572,7 @@ impl Decoder for Module {
 
 #[test]
 fn test_add() {
+    use crate::structure::instructions::Instr;
     assert_eq!(
         Module::decode_end(&std::fs::read("./example/add.wasm").unwrap()).unwrap(),
         Module {

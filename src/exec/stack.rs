@@ -1,14 +1,14 @@
-use super::instance::{FuncAddr, FuncInst, ModuleInst, TypedIdxAccess, Val};
-use crate::structure::instructions::{Expr, Instr};
+use super::instance::{FuncAddr, ModuleInst, TypedIdxAccess, Val};
+use crate::structure::instructions::{Instr};
 use crate::structure::modules::{
     Data, Elem, Export, ExportDesc, Func, FuncIdx, Global, GlobalIdx, LabelIdx, LocalIdx, Mem,
     Module, Table, TypeIdx, TypedIdx,
 };
-use crate::structure::types::{FuncType, Limits, MemType, Mut, ResultType, TableType, ValType};
+use crate::structure::types::{ValType};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use std::cell::RefCell;
+
 use std::io::Cursor;
-use std::rc::{Rc, Weak};
+use std::rc::{Weak};
 
 pub const mem_page_size: usize = 65536;
 
@@ -783,9 +783,9 @@ impl LabelStack {
                                 cur.write_f64::<LittleEndian>(x).unwrap();
                             });
                         }
-                        Instr::I32Load8S(m) => {
+                        Instr::I32Load8S(_m) => {
                             let instance = frame.module.upgrade().unwrap();
-                            let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
+                            let _ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             instance.mem.as_ref().unwrap().with_cursor(|mut cur| {
                                 let x = cur.read_i8().unwrap();
                                 self.stack.push(Val::I32(x as i32));
@@ -943,7 +943,7 @@ impl LabelStack {
                         Instr::Unreachable => {
                             panic!("unreachable");
                         }
-                        Instr::Block(rt, is) => {
+                        Instr::Block(_rt, is) => {
                             self.instrs
                                 .push(AdminInstr::Label(Label { instrs: vec![] }, is));
                         }
@@ -955,7 +955,7 @@ impl LabelStack {
                                 is,
                             ));
                         }
-                        Instr::If(rt, is1, is2) => {
+                        Instr::If(_rt, is1, is2) => {
                             let x = self.stack.pop().unwrap().unwrap_i32();
                             self.instrs.push(AdminInstr::Label(
                                 Label { instrs: vec![] },
@@ -982,7 +982,7 @@ impl LabelStack {
                             self.instrs
                                 .push(AdminInstr::Invoke(instance.funcs.get_idx(idx).clone()));
                         }
-                        Instr::CallIndirect(t) => {
+                        Instr::CallIndirect(_t) => {
                             let instance = frame.module.upgrade().unwrap();
                             let i = self.stack.pop().unwrap().unwrap_i32() as usize;
                             self.instrs.push(AdminInstr::Invoke(
