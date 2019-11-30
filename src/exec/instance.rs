@@ -1,4 +1,4 @@
-use super::stack::{mem_page_size, AdminInstr, Frame, FrameStack, Label, LabelStack, Stack};
+use super::stack::{AdminInstr, Frame, FrameStack, Label, LabelStack, Stack};
 use crate::structure::instructions::{Expr, Instr};
 use crate::structure::modules::{
     Data, Elem, Export, ExportDesc, Func, FuncIdx, Global, GlobalIdx, ImportDesc, LabelIdx,
@@ -76,9 +76,11 @@ pub struct MemInst {
 }
 
 impl MemInst {
+    const PAGE_SIZE: usize = 65536;
+
     fn new(mem: &Mem) -> MemInst {
-        let min = mem.type_.0.min as usize * mem_page_size;
-        let max = mem.type_.0.max.map(|max| max as usize * mem_page_size);
+        let min = mem.type_.0.min as usize * MemInst::PAGE_SIZE;
+        let max = mem.type_.0.max.map(|max| max as usize * MemInst::PAGE_SIZE);
         MemInst {
             max,
             data: {
@@ -95,6 +97,17 @@ impl MemInst {
         for i in 0..init.len() {
             self.data[offset + i] = init[i];
         }
+    }
+
+    pub fn page_size(&self) -> i32 {
+        (self.data.len() / MemInst::PAGE_SIZE) as i32
+    }
+
+    pub fn grow(&mut self, add_size: i32) -> i32 {
+        let prev = self.page_size();
+        self.data
+            .resize((prev as usize + add_size as usize) * MemInst::PAGE_SIZE, 0);
+        prev
     }
 }
 

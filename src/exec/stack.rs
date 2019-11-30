@@ -1,16 +1,14 @@
 use super::instance::{FuncAddr, ModuleInst, TypedIdxAccess, Val};
-use crate::structure::instructions::{Instr};
+use crate::structure::instructions::Instr;
 use crate::structure::modules::{
     Data, Elem, Export, ExportDesc, Func, FuncIdx, Global, GlobalIdx, LabelIdx, LocalIdx, Mem,
     Module, Table, TypeIdx, TypedIdx,
 };
-use crate::structure::types::{ValType};
+use crate::structure::types::ValType;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use std::io::Cursor;
-use std::rc::{Weak};
-
-pub const mem_page_size: usize = 65536;
+use std::rc::Weak;
 
 #[derive(Debug, Clone)]
 pub enum FrameLevelInstr {
@@ -920,24 +918,15 @@ impl LabelStack {
                         Instr::MemorySize => {
                             let instance = frame.module.upgrade().unwrap();
                             self.stack.push(Val::I32(
-                                (instance.mem.as_ref().unwrap().0.borrow().data.len()
-                                    / mem_page_size) as i32,
+                                instance.mem.as_ref().unwrap().0.borrow().page_size(),
                             ));
                         }
                         Instr::MemoryGrow => {
                             let instance = frame.module.upgrade().unwrap();
-                            let cur_size = instance.mem.as_ref().unwrap().0.borrow().data.len()
-                                / mem_page_size;
-                            let x = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            instance
-                                .mem
-                                .as_ref()
-                                .unwrap()
-                                .0
-                                .borrow_mut()
-                                .data
-                                .resize((cur_size + x) * mem_page_size, 0);
-                            self.stack.push(Val::I32(cur_size as i32));
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(
+                                instance.mem.as_ref().unwrap().0.borrow_mut().grow(x),
+                            ));
                         }
                         Instr::Nop => {}
                         Instr::Unreachable => {
