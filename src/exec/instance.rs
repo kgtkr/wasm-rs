@@ -1159,16 +1159,16 @@ impl Stack {
 }
 
 #[derive(Debug, PartialEq)]
-struct Instance {
+struct Instance<'a> {
     funcs: Vec<FuncInst>,
     table: Option<TableInst>,
     mem: Option<MemInst>,
     globals: Vec<GlobalInst>,
-    module: Module,
+    module: &'a Module,
 }
 
-impl Instance {
-    fn new(module: Module) -> Instance {
+impl<'a> Instance<'a> {
+    fn new(module: &'a Module) -> Instance {
         let mut result = Instance {
             funcs: module
                 .funcs
@@ -1302,7 +1302,7 @@ use crate::binary::Decoder;
 #[test]
 fn test_add() {
     let module = Module::decode_end(&std::fs::read("./example/add.wasm").unwrap()).unwrap();
-    let mut instance = Instance::new(module);
+    let mut instance = Instance::new(&module);
     assert_eq!(
         instance.export_call_func("add", vec![Val::I32(3), Val::I32(5)]),
         Some(Val::I32(8))
@@ -1312,7 +1312,7 @@ fn test_add() {
 #[test]
 fn test_gcd() {
     let module = Module::decode_end(&std::fs::read("./example/gcd.wasm").unwrap()).unwrap();
-    let mut instance = Instance::new(module);
+    let mut instance = Instance::new(&module);
 
     assert_eq!(
         instance.export_call_func("gcd", vec![Val::I32(182), Val::I32(1029)]),
@@ -1323,7 +1323,7 @@ fn test_gcd() {
 #[test]
 fn test_pow() {
     let module = Module::decode_end(&std::fs::read("./example/pow.wasm").unwrap()).unwrap();
-    let mut instance = Instance::new(module);
+    let mut instance = Instance::new(&module);
 
     assert_eq!(
         instance.export_call_func("pow", vec![Val::I32(2), Val::I32(10)]),
@@ -1334,7 +1334,7 @@ fn test_pow() {
 #[test]
 fn test_br_table() {
     let module = Module::decode_end(&std::fs::read("./example/br_table.wasm").unwrap()).unwrap();
-    let mut instance = Instance::new(module);
+    let mut instance = Instance::new(&module);
 
     assert_eq!(
         instance.export_call_func("br_table", vec![Val::I32(0)]),
@@ -1351,7 +1351,7 @@ fn test_md5() {
     use std::ffi::CString;
 
     let module = Module::decode_end(&std::fs::read("./example/md5.wasm").unwrap()).unwrap();
-    let mut instance = Instance::new(module);
+    let mut instance = Instance::new(&module);
 
     let input_bytes = CString::new("abc").unwrap().into_bytes();
     let input_ptr = instance
