@@ -8,11 +8,11 @@ use crate::structure::types::{FuncType, Limits, MemType, Mut, ResultType, TableT
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::cell::RefCell;
 use std::io::Cursor;
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 
 pub const mem_page_size: usize = 65536;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum FrameLevelInstr {
     Label(Label, /* 前から */ Vec<Instr>),
     Br(LabelIdx),
@@ -21,13 +21,13 @@ pub enum FrameLevelInstr {
     Return,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum ModuleLevelInstr {
     Invoke(FuncAddr),
     Return,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum AdminInstr {
     Instr(Instr),
     Invoke(FuncAddr),
@@ -36,9 +36,9 @@ pub enum AdminInstr {
     Return,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Frame {
-    pub module: Rc<ModuleInst>,
+    pub module: Weak<ModuleInst>,
     pub locals: Vec<Val>,
 }
 
@@ -48,7 +48,7 @@ pub struct Label {
     pub instrs: Vec<Instr>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct FrameStack {
     pub frame: Frame,
     // not empty
@@ -119,7 +119,7 @@ impl FrameStack {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct LabelStack {
     pub label: Label,
     // 後ろから実行
@@ -129,7 +129,6 @@ pub struct LabelStack {
 
 impl LabelStack {
     fn step(&mut self, frame: &mut Frame) -> Option<FrameLevelInstr> {
-        let instance = frame.module.as_ref();
         match self.instrs.pop() {
             Some(instr) => match instr {
                 AdminInstr::Instr(instr) => {
@@ -701,15 +700,19 @@ impl LabelStack {
                             frame.locals[idx.to_idx()] = x;
                         }
                         Instr::GlobalGet(idx) => {
+                            let instance = frame.module.upgrade().unwrap();
+
                             self.stack
                                 .push(instance.globals[idx.to_idx()].0.borrow().value);
                         }
                         Instr::GlobalSet(idx) => {
+                            let instance = frame.module.upgrade().unwrap();
                             let x = self.stack.pop().unwrap();
                             let mut global = instance.globals[idx.to_idx()].0.borrow_mut();
                             global.value = x;
                         }
                         Instr::I32Load(m) => {
+                            let instance = frame.module.upgrade().unwrap();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
@@ -718,6 +721,7 @@ impl LabelStack {
                             self.stack.push(Val::I32(x));
                         }
                         Instr::I64Load(m) => {
+                            let instance = frame.module.upgrade().unwrap();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
@@ -726,6 +730,7 @@ impl LabelStack {
                             self.stack.push(Val::I64(x));
                         }
                         Instr::F32Load(m) => {
+                            let instance = frame.module.upgrade().unwrap();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
@@ -734,6 +739,7 @@ impl LabelStack {
                             self.stack.push(Val::F32(x));
                         }
                         Instr::F64Load(m) => {
+                            let instance = frame.module.upgrade().unwrap();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
@@ -742,6 +748,7 @@ impl LabelStack {
                             self.stack.push(Val::F64(x));
                         }
                         Instr::I32Store(m) => {
+                            let instance = frame.module.upgrade().unwrap();
                             let x = self.stack.pop().unwrap().unwrap_i32();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
 
@@ -751,6 +758,7 @@ impl LabelStack {
                             cur.write_i32::<LittleEndian>(x).unwrap();
                         }
                         Instr::I64Store(m) => {
+                            let instance = frame.module.upgrade().unwrap();
                             let x = self.stack.pop().unwrap().unwrap_i64();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             let raw = &mut instance.mem.as_ref().unwrap().0.borrow_mut().data;
@@ -759,6 +767,7 @@ impl LabelStack {
                             cur.write_i64::<LittleEndian>(x).unwrap();
                         }
                         Instr::F32Store(m) => {
+                            let instance = frame.module.upgrade().unwrap();
                             let x = self.stack.pop().unwrap().unwrap_f32();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             let raw = &mut instance.mem.as_ref().unwrap().0.borrow_mut().data;
@@ -767,6 +776,7 @@ impl LabelStack {
                             cur.write_f32::<LittleEndian>(x).unwrap();
                         }
                         Instr::F64Store(m) => {
+                            let instance = frame.module.upgrade().unwrap();
                             let x = self.stack.pop().unwrap().unwrap_f64();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             let raw = &mut instance.mem.as_ref().unwrap().0.borrow_mut().data;
@@ -775,6 +785,7 @@ impl LabelStack {
                             cur.write_f64::<LittleEndian>(x).unwrap();
                         }
                         Instr::I32Load8S(m) => {
+                            let instance = frame.module.upgrade().unwrap();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
@@ -783,6 +794,7 @@ impl LabelStack {
                             self.stack.push(Val::I32(x as i32));
                         }
                         Instr::I32Load8U(m) => {
+                            let instance = frame.module.upgrade().unwrap();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
@@ -791,6 +803,7 @@ impl LabelStack {
                             self.stack.push(Val::I32(x as i32));
                         }
                         Instr::I64Load8S(m) => {
+                            let instance = frame.module.upgrade().unwrap();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
@@ -799,6 +812,7 @@ impl LabelStack {
                             self.stack.push(Val::I64(x as i64));
                         }
                         Instr::I64Load8U(m) => {
+                            let instance = frame.module.upgrade().unwrap();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
@@ -807,6 +821,7 @@ impl LabelStack {
                             self.stack.push(Val::I64(x as i64));
                         }
                         Instr::I32Load16S(m) => {
+                            let instance = frame.module.upgrade().unwrap();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
@@ -815,6 +830,7 @@ impl LabelStack {
                             self.stack.push(Val::I32(x as i32));
                         }
                         Instr::I32Load16U(m) => {
+                            let instance = frame.module.upgrade().unwrap();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
@@ -823,6 +839,7 @@ impl LabelStack {
                             self.stack.push(Val::I32(x as i32));
                         }
                         Instr::I64Load16S(m) => {
+                            let instance = frame.module.upgrade().unwrap();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
@@ -831,6 +848,7 @@ impl LabelStack {
                             self.stack.push(Val::I64(x as i64));
                         }
                         Instr::I64Load16U(m) => {
+                            let instance = frame.module.upgrade().unwrap();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
@@ -839,6 +857,7 @@ impl LabelStack {
                             self.stack.push(Val::I64(x as i64));
                         }
                         Instr::I64Load32S(m) => {
+                            let instance = frame.module.upgrade().unwrap();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
@@ -847,6 +866,7 @@ impl LabelStack {
                             self.stack.push(Val::I64(x as i64));
                         }
                         Instr::I64Load32U(m) => {
+                            let instance = frame.module.upgrade().unwrap();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             let raw = &instance.mem.as_ref().unwrap().0.borrow().data;
                             let mut cur = Cursor::new(raw);
@@ -855,6 +875,7 @@ impl LabelStack {
                             self.stack.push(Val::I64(x as i64));
                         }
                         Instr::I32Store8(m) => {
+                            let instance = frame.module.upgrade().unwrap();
                             let x = self.stack.pop().unwrap().unwrap_i32();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             let raw = &mut instance.mem.as_ref().unwrap().0.borrow_mut().data;
@@ -863,6 +884,7 @@ impl LabelStack {
                             cur.write_i8(x as i8).unwrap();
                         }
                         Instr::I64Store8(m) => {
+                            let instance = frame.module.upgrade().unwrap();
                             let x = self.stack.pop().unwrap().unwrap_i64();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             let raw = &mut instance.mem.as_ref().unwrap().0.borrow_mut().data;
@@ -871,6 +893,7 @@ impl LabelStack {
                             cur.write_i8(x as i8).unwrap();
                         }
                         Instr::I32Store16(m) => {
+                            let instance = frame.module.upgrade().unwrap();
                             let x = self.stack.pop().unwrap().unwrap_i32();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             let raw = &mut instance.mem.as_ref().unwrap().0.borrow_mut().data;
@@ -879,6 +902,7 @@ impl LabelStack {
                             cur.write_i16::<LittleEndian>(x as i16).unwrap();
                         }
                         Instr::I64Store16(m) => {
+                            let instance = frame.module.upgrade().unwrap();
                             let x = self.stack.pop().unwrap().unwrap_i64();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             let raw = &mut instance.mem.as_ref().unwrap().0.borrow_mut().data;
@@ -887,6 +911,7 @@ impl LabelStack {
                             cur.write_i16::<LittleEndian>(x as i16).unwrap();
                         }
                         Instr::I64Store32(m) => {
+                            let instance = frame.module.upgrade().unwrap();
                             let x = self.stack.pop().unwrap().unwrap_i64();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             let raw = &mut instance.mem.as_ref().unwrap().0.borrow_mut().data;
@@ -895,12 +920,14 @@ impl LabelStack {
                             cur.write_i32::<LittleEndian>(x as i32).unwrap();
                         }
                         Instr::MemorySize => {
+                            let instance = frame.module.upgrade().unwrap();
                             self.stack.push(Val::I32(
                                 (instance.mem.as_ref().unwrap().0.borrow().data.len()
                                     / mem_page_size) as i32,
                             ));
                         }
                         Instr::MemoryGrow => {
+                            let instance = frame.module.upgrade().unwrap();
                             let cur_size = instance.mem.as_ref().unwrap().0.borrow().data.len()
                                 / mem_page_size;
                             let x = self.stack.pop().unwrap().unwrap_i32() as usize;
@@ -953,10 +980,12 @@ impl LabelStack {
                             self.instrs.push(AdminInstr::Return);
                         }
                         Instr::Call(idx) => {
+                            let instance = frame.module.upgrade().unwrap();
                             self.instrs
                                 .push(AdminInstr::Invoke(instance.funcs.get_idx(idx).clone()));
                         }
                         Instr::CallIndirect(t) => {
+                            let instance = frame.module.upgrade().unwrap();
                             let i = self.stack.pop().unwrap().unwrap_i32() as usize;
                             self.instrs.push(AdminInstr::Invoke(
                                 instance
@@ -982,7 +1011,7 @@ impl LabelStack {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub struct Stack {
     // not empty
     pub stack: Vec<FrameStack>,

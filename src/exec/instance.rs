@@ -8,9 +8,9 @@ use crate::structure::types::{FuncType, Limits, MemType, Mut, ResultType, TableT
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::cell::RefCell;
 use std::io::Cursor;
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum ExternalVal {
     Func(FuncAddr),
     Table(TableAddr),
@@ -18,23 +18,23 @@ pub enum ExternalVal {
     Global(GlobalAddr),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct ExportInst {
     name: String,
     value: ExternalVal,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct FuncInst {
     pub type_: FuncType,
     pub code: Func,
-    pub module: Rc<ModuleInst>,
+    pub module: Weak<ModuleInst>,
 }
 
 impl FuncInst {
-    fn new(func: Func, module: Rc<ModuleInst>) -> FuncInst {
+    fn new(func: Func, module: Weak<ModuleInst>) -> FuncInst {
         FuncInst {
-            type_: module.types.get_idx(func.type_).clone(),
+            type_: module.upgrade().unwrap().types.get_idx(func.type_).clone(),
             code: func,
             module,
         }
@@ -162,7 +162,7 @@ impl TypedIdxAccess<TypeIdx> for Vec<FuncType> {}
 impl TypedIdxAccess<FuncIdx> for Vec<FuncAddr> {}
 impl TypedIdxAccess<GlobalIdx> for Vec<GlobalAddr> {}
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct FuncAddr(pub Rc<RefCell<FuncInst>>);
 
 impl FuncAddr {
@@ -171,7 +171,7 @@ impl FuncAddr {
             stack: vec![FrameStack {
                 frame: Frame {
                     locals: Vec::new(),
-                    module: Rc::new(ModuleInst::dummy()),
+                    module: Weak::new(),
                 },
                 stack: vec![LabelStack {
                     label: Label { instrs: vec![] },
@@ -212,7 +212,7 @@ pub struct MemAddr(pub Rc<RefCell<MemInst>>);
 #[derive(Clone, Debug, PartialEq)]
 pub struct GlobalAddr(pub Rc<RefCell<GlobalInst>>);
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub struct ModuleInst {
     pub types: Vec<FuncType>,
     pub funcs: Vec<FuncAddr>,
@@ -249,7 +249,7 @@ impl ModuleInst {
                     locals: Vec::new(),
                     body: Expr(Vec::new()),
                 },
-                module: Rc::new(ModuleInst::dummy()),
+                module: Weak::new(),
             };
             result
                 .funcs
@@ -317,7 +317,7 @@ impl ModuleInst {
                 })
                 .sum::<usize>();
             let mut dummy = result.funcs[idx].0.borrow_mut();
-            *dummy = FuncInst::new(func.clone(), result.clone());
+            *dummy = FuncInst::new(func.clone(), Rc::downgrade(&result));
         }
 
         if let Some(start) = &module.start {
@@ -391,7 +391,6 @@ fn test_gcd() {
 fn test_pow() {
     let module = Module::decode_end(&std::fs::read("./example/pow.wasm").unwrap()).unwrap();
     let mut instance = ModuleInst::new(&module);
-
     assert_eq!(
         instance.export_call_func("pow", vec![Val::I32(2), Val::I32(10)]),
         Some(Val::I32(1024))
