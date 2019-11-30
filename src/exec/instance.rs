@@ -11,6 +11,20 @@ use std::io::Cursor;
 use std::rc::Rc;
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum ExternalVal {
+    Func(Rc<FuncInst>),
+    Table(Rc<RefCell<TableInst>>),
+    Mem(Rc<RefCell<MemInst>>),
+    Global(Rc<RefCell<GlobalInst>>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExportInst {
+    name: String,
+    value: ExternalVal,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct FuncInst {
     pub type_: FuncType,
     pub code: Func,
@@ -154,7 +168,7 @@ pub struct ModuleInst {
     pub table: Option<Rc<RefCell<TableInst>>>,
     pub mem: Option<Rc<RefCell<MemInst>>>,
     pub globals: Vec<Rc<RefCell<GlobalInst>>>,
-    pub module: Module,
+    pub exports: Vec<ExportInst>,
 }
 
 impl ModuleInst {
@@ -178,7 +192,7 @@ impl ModuleInst {
                 .next()
                 .map(|m| Rc::new(RefCell::new(MemInst::new(m)))),
             globals: Vec::new(),
-            module: module.clone(),
+            exports: Vec::new(),
         };
 
         for global in &module.globals {
@@ -208,8 +222,25 @@ impl ModuleInst {
         }
 
         if let Some(start) = &module.start {
-            result.call_func(start.func, vec![]);
+            result.call_func(result.funcs.get_idx(start.func).clone(), vec![]);
         }
+
+        for export in &module.exports {
+            result.exports.push(ExportInst {
+                name: export.name.0.clone(),
+                value: match export.desc {
+                    ExportDesc::Func(idx) => ExternalVal::Func(result.funcs.get_idx(idx).clone()),
+                    ExportDesc::Global(idx) => {
+                        ExternalVal::Global(result.globals.get_idx(idx).clone())
+                    }
+                    ExportDesc::Mem(idx) => ExternalVal::Mem(result.mem.as_ref().unwrap().clone()),
+                    ExportDesc::Table(idx) => {
+                        ExternalVal::Table(result.table.as_ref().unwrap().clone())
+                    }
+                },
+            });
+        }
+
         result
     }
 
@@ -224,13 +255,13 @@ impl ModuleInst {
         }
     }
 
-    fn call_func(&mut self, idx: FuncIdx, params: Vec<Val>) -> Option<Val> {
+    fn call_func(&mut self, func: Rc<FuncInst>, params: Vec<Val>) -> Option<Val> {
         let mut stack = Stack {
             stack: vec![FrameStack {
                 frame: Frame { locals: Vec::new() },
                 stack: vec![LabelStack {
                     label: Label { instrs: vec![] },
-                    instrs: vec![AdminInstr::Invoke(idx)],
+                    instrs: vec![AdminInstr::Invoke(func)],
                     stack: params,
                 }],
             }],
@@ -258,16 +289,17 @@ impl ModuleInst {
     }
 
     pub fn export_call_func(&mut self, name: &str, params: Vec<Val>) -> Option<Val> {
-        self.call_func(
-            self.module
-                .exports
-                .iter()
-                .find(|e| e.name.0.as_str() == name)
-                .unwrap()
-                .desc
-                .unwrap_func(),
-            params,
-        )
+        if let ExternalVal::Func(func) = &self
+            .exports
+            .iter()
+            .find(|e| e.name.as_str() == name)
+            .unwrap()
+            .value
+        {
+            self.call_func(func.clone(), params)
+        } else {
+            panic!()
+        }
     }
 }
 

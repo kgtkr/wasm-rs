@@ -1,4 +1,4 @@
-use super::instance::{ModuleInst, TypedIdxAccess, Val};
+use super::instance::{FuncInst, ModuleInst, TypedIdxAccess, Val};
 use crate::structure::instructions::{Expr, Instr};
 use crate::structure::modules::{
     Data, Elem, Export, ExportDesc, Func, FuncIdx, Global, GlobalIdx, LabelIdx, LocalIdx, Mem,
@@ -7,6 +7,7 @@ use crate::structure::modules::{
 use crate::structure::types::{FuncType, Limits, MemType, Mut, ResultType, TableType, ValType};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::Cursor;
+use std::rc::Rc;
 
 pub const mem_page_size: usize = 65536;
 
@@ -15,20 +16,20 @@ pub enum FrameLevelInstr {
     Label(Label, /* 前から */ Vec<Instr>),
     Br(LabelIdx),
     LabelEnd,
-    Invoke(FuncIdx),
+    Invoke(Rc<FuncInst>),
     Return,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ModuleLevelInstr {
-    Invoke(FuncIdx),
+    Invoke(Rc<FuncInst>),
     Return,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AdminInstr {
     Instr(Instr),
-    Invoke(FuncIdx),
+    Invoke(Rc<FuncInst>),
     Label(Label, Vec<Instr>),
     Br(LabelIdx),
     Return,
@@ -947,12 +948,18 @@ impl LabelStack {
                             self.instrs.push(AdminInstr::Return);
                         }
                         Instr::Call(idx) => {
-                            self.instrs.push(AdminInstr::Invoke(idx));
+                            self.instrs
+                                .push(AdminInstr::Invoke(instance.funcs.get_idx(idx).clone()));
                         }
                         Instr::CallIndirect(t) => {
                             let i = self.stack.pop().unwrap().unwrap_i32() as usize;
                             self.instrs.push(AdminInstr::Invoke(
-                                instance.table.as_ref().unwrap().borrow().elem[i].unwrap(),
+                                instance
+                                    .funcs
+                                    .get_idx(
+                                        instance.table.as_ref().unwrap().borrow().elem[i].unwrap(),
+                                    )
+                                    .clone(),
                             ));
                         }
                         x => unimplemented!("{:?}", x),
@@ -981,8 +988,7 @@ impl Stack {
         if let Some(instr) = cur_frame.step(instance) {
             let cur_label = cur_frame.stack.last_mut().unwrap();
             match instr {
-                ModuleLevelInstr::Invoke(idx) => {
-                    let func = instance.funcs.get_idx(idx);
+                ModuleLevelInstr::Invoke(func) => {
                     let fs = FrameStack {
                         frame: Frame {
                             locals: {
