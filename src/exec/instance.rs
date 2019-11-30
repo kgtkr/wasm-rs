@@ -239,16 +239,8 @@ impl ModuleInst {
         let mut result = ModuleInst {
             types: module.types.clone(),
             funcs: Vec::new(),
-            table: module
-                .tables
-                .iter()
-                .next()
-                .map(|t| TableAddr(Rc::new(RefCell::new(TableInst::new(t))))),
-            mem: module
-                .mems
-                .iter()
-                .next()
-                .map(|m| MemAddr(Rc::new(RefCell::new(MemInst::new(m))))),
+            table: None,
+            mem: None,
             globals: Vec::new(),
             exports: Vec::new(),
         };
@@ -266,6 +258,14 @@ impl ModuleInst {
             result
                 .funcs
                 .push(FuncAddr(Rc::new(RefCell::new(dummy_func.clone()))));
+        }
+
+        if let Some(table) = module.tables.iter().next() {
+            result.table = Some(TableAddr(Rc::new(RefCell::new(TableInst::new(table)))));
+        }
+
+        if let Some(mem) = module.mems.iter().next() {
+            result.mem = Some(MemAddr(Rc::new(RefCell::new(MemInst::new(mem)))));
         }
 
         for global in &module.globals {
