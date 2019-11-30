@@ -384,7 +384,7 @@ mod tests {
     #[test]
     fn test_add() {
         let module = Module::decode_end(&std::fs::read("./example/add.wasm").unwrap()).unwrap();
-        let mut instance = ModuleInst::new(&module);
+        let instance = ModuleInst::new(&module);
         assert_eq!(
             instance.export_call_func("add", vec![Val::I32(3), Val::I32(5)]),
             Some(Val::I32(8))
@@ -394,7 +394,7 @@ mod tests {
     #[test]
     fn test_gcd() {
         let module = Module::decode_end(&std::fs::read("./example/gcd.wasm").unwrap()).unwrap();
-        let mut instance = ModuleInst::new(&module);
+        let instance = ModuleInst::new(&module);
 
         assert_eq!(
             instance.export_call_func("gcd", vec![Val::I32(182), Val::I32(1029)]),
@@ -405,7 +405,7 @@ mod tests {
     #[test]
     fn test_pow() {
         let module = Module::decode_end(&std::fs::read("./example/pow.wasm").unwrap()).unwrap();
-        let mut instance = ModuleInst::new(&module);
+        let instance = ModuleInst::new(&module);
         assert_eq!(
             instance.export_call_func("pow", vec![Val::I32(2), Val::I32(10)]),
             Some(Val::I32(1024))
@@ -416,7 +416,7 @@ mod tests {
     fn test_br_table() {
         let module =
             Module::decode_end(&std::fs::read("./example/br_table.wasm").unwrap()).unwrap();
-        let mut instance = ModuleInst::new(&module);
+        let instance = ModuleInst::new(&module);
 
         assert_eq!(
             instance.export_call_func("br_table", vec![Val::I32(0)]),
