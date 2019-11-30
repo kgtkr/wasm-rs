@@ -982,7 +982,7 @@ impl Stack {
             let cur_label = cur_frame.stack.last_mut().unwrap();
             match instr {
                 ModuleLevelInstr::Invoke(idx) => {
-                    let func = instance.funcs.get_idx(idx).borrow();
+                    let func = instance.funcs.get_idx(idx);
                     let fs = FrameStack {
                         frame: Frame {
                             locals: {

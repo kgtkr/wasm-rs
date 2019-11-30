@@ -143,14 +143,14 @@ where
 impl TypedIdxAccess<FuncIdx> for Vec<FuncInst> {}
 impl TypedIdxAccess<GlobalIdx> for Vec<GlobalInst> {}
 impl TypedIdxAccess<TypeIdx> for Vec<FuncType> {}
-impl TypedIdxAccess<FuncIdx> for Vec<Rc<RefCell<FuncInst>>> {}
+impl TypedIdxAccess<FuncIdx> for Vec<Rc<FuncInst>> {}
 impl TypedIdxAccess<GlobalIdx> for Vec<Rc<RefCell<GlobalInst>>> {}
-impl TypedIdxAccess<TypeIdx> for Vec<Rc<RefCell<FuncType>>> {}
+impl TypedIdxAccess<TypeIdx> for Vec<Rc<FuncType>> {}
 
 #[derive(Debug, PartialEq)]
 pub struct ModuleInst {
     pub types: Vec<FuncType>,
-    pub funcs: Vec<Rc<RefCell<FuncInst>>>,
+    pub funcs: Vec<Rc<FuncInst>>,
     pub table: Option<Rc<RefCell<TableInst>>>,
     pub mem: Option<Rc<RefCell<MemInst>>>,
     pub globals: Vec<Rc<RefCell<GlobalInst>>>,
@@ -165,7 +165,7 @@ impl ModuleInst {
                 .funcs
                 .clone()
                 .into_iter()
-                .map(|f| Rc::new(RefCell::new(FuncInst::new(f, &module))))
+                .map(|f| Rc::new(FuncInst::new(f, &module)))
                 .collect(),
             table: module
                 .tables
