@@ -161,7 +161,6 @@ impl TypedIdxAccess<GlobalIdx> for Vec<GlobalInst> {}
 impl TypedIdxAccess<TypeIdx> for Vec<FuncType> {}
 impl TypedIdxAccess<FuncIdx> for Vec<Rc<RefCell<FuncInst>>> {}
 impl TypedIdxAccess<GlobalIdx> for Vec<Rc<RefCell<GlobalInst>>> {}
-impl TypedIdxAccess<TypeIdx> for Vec<Rc<FuncType>> {}
 
 #[derive(Debug, PartialEq)]
 pub struct ModuleInst {
