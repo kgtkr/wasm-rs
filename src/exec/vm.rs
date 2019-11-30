@@ -337,12 +337,30 @@ impl LabelStack {
                         Instr::F64Const(x) => {
                             self.stack.push(Val::F64(x));
                         }
-                        Instr::I32Clz => unimplemented!(),
-                        Instr::I32Ctz => unimplemented!(),
-                        Instr::I32Popcnt => unimplemented!(),
-                        Instr::I64Clz => unimplemented!(),
-                        Instr::I64Ctz => unimplemented!(),
-                        Instr::I64Popcnt => unimplemented!(),
+                        Instr::I32Clz => {
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(x.leading_zeros() as i32));
+                        }
+                        Instr::I32Ctz => {
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(x.trailing_zeros() as i32));
+                        }
+                        Instr::I32Popcnt => {
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            self.stack.push(Val::I32(x.count_ones() as i32));
+                        }
+                        Instr::I64Clz => {
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I64(x.leading_zeros() as i64));
+                        }
+                        Instr::I64Ctz => {
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I64(x.trailing_zeros() as i64));
+                        }
+                        Instr::I64Popcnt => {
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+                            self.stack.push(Val::I64(x.count_ones() as i64));
+                        }
                         Instr::F32Abs => {
                             let x = self.stack.pop().unwrap().unwrap_f32();
                             self.stack.push(Val::F32(x.abs()));
