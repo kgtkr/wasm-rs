@@ -144,14 +144,6 @@ impl Val {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-struct Store {
-    funcs: Vec<FuncInst>,
-    table: Option<TableInst>,
-    mem: Option<MemInst>,
-    globals: Vec<GlobalInst>,
-}
-
 trait TypedIdxAccess<Idx>
 where
     Idx: TypedIdx,
@@ -184,6 +176,14 @@ struct Frame {
 struct Label {
     // 前から実行
     instrs: Vec<Instr>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct Store {
+    funcs: Vec<FuncInst>,
+    table: Option<TableInst>,
+    mem: Option<MemInst>,
+    globals: Vec<GlobalInst>,
 }
 
 impl Store {
