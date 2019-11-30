@@ -9,6 +9,37 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::Cursor;
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct Runtime {
+    pub funcs: Vec<FuncInst>,
+    pub tables: Vec<TableInst>,
+    pub mems: Vec<MemInst>,
+    pub globals: Vec<GlobalInst>,
+}
+
+impl Runtime {
+    fn new() -> Runtime {
+        Runtime {
+            funcs: Vec::new(),
+            tables: Vec::new(),
+            mems: Vec::new(),
+            globals: Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct FuncAddr(usize);
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TableAddr(usize);
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MemAddr(usize);
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct GlobalAddr(usize);
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct FuncInst {
     pub type_: FuncType,
     pub code: Func,
