@@ -19,7 +19,7 @@ pub enum ExternalVal {
 }
 
 impl ExternalVal {
-    fn unwrap_func(&self) -> &FuncAddr {
+    fn unwrap_func(self) -> FuncAddr {
         if let ExternalVal::Func(x) = self {
             x
         } else {
@@ -27,7 +27,7 @@ impl ExternalVal {
         }
     }
 
-    fn unwrap_table(&self) -> &TableAddr {
+    fn unwrap_table(self) -> TableAddr {
         if let ExternalVal::Table(x) = self {
             x
         } else {
@@ -35,7 +35,7 @@ impl ExternalVal {
         }
     }
 
-    fn unwrap_mem(&self) -> &MemAddr {
+    fn unwrap_mem(self) -> MemAddr {
         if let ExternalVal::Mem(x) = self {
             x
         } else {
@@ -43,7 +43,7 @@ impl ExternalVal {
         }
     }
 
-    fn unwrap_global(&self) -> &GlobalAddr {
+    fn unwrap_global(self) -> GlobalAddr {
         if let ExternalVal::Global(x) = self {
             x
         } else {
@@ -142,6 +142,14 @@ impl MemInst {
         self.data
             .resize((prev as usize + add_size as usize) * MemInst::PAGE_SIZE, 0);
         prev
+    }
+
+    pub fn mut_buffer(&mut self) -> &mut [u8] {
+        &mut self.data[..]
+    }
+
+    pub fn buffer(&self) -> &[u8] {
+        &self.data[..]
     }
 }
 
@@ -504,8 +512,10 @@ mod tests {
             .unwrap()
             .unwrap_i32() as usize;
         for i in 0..input_bytes.len() {
-            let mut mem = instance.mem.as_ref().unwrap().0.borrow_mut();
-            mem.data[input_ptr + i] = input_bytes[i];
+            let mem = instance.export("memory").unwrap_mem();
+            let mut mem = mem.0.borrow_mut();
+            let buf = mem.mut_buffer();
+            buf[input_ptr + i] = input_bytes[i];
         }
 
         let output_ptr = instance
@@ -514,7 +524,10 @@ mod tests {
             .call(vec![Val::I32(input_ptr as i32)])
             .unwrap()
             .unwrap_i32() as usize;
-        let raw = &instance.mem.as_ref().unwrap().0.borrow_mut().data;
+
+        let mem = instance.export("memory").unwrap_mem();
+        let mem = mem.0.borrow();
+        let raw = mem.buffer();
         assert_eq!(
             CString::new(
                 raw.into_iter()
