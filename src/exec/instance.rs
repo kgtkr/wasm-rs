@@ -1,8 +1,8 @@
 use super::stack::{mem_page_size, AdminInstr, Frame, FrameStack, Label, LabelStack, Stack};
 use crate::structure::instructions::{Expr, Instr};
 use crate::structure::modules::{
-    Data, Elem, Export, ExportDesc, Func, FuncIdx, Global, GlobalIdx, LabelIdx, LocalIdx, Mem,
-    Module, Table, TypeIdx, TypedIdx,
+    Data, Elem, Export, ExportDesc, Func, FuncIdx, Global, GlobalIdx, ImportDesc, LabelIdx,
+    LocalIdx, Mem, Module, Table, TypeIdx, TypedIdx,
 };
 use crate::structure::types::{FuncType, Limits, MemType, Mut, ResultType, TableType, ValType};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
@@ -12,7 +12,7 @@ use std::rc::Rc;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExternalVal {
-    Func(Rc<FuncInst>),
+    Func(Rc<RefCell<FuncInst>>),
     Table(Rc<RefCell<TableInst>>),
     Mem(Rc<RefCell<MemInst>>),
     Global(Rc<RefCell<GlobalInst>>),
@@ -28,13 +28,15 @@ pub struct ExportInst {
 pub struct FuncInst {
     pub type_: FuncType,
     pub code: Func,
+    pub module: Rc<ModuleInst>,
 }
 
 impl FuncInst {
-    fn new(func: Func, module: &Module) -> FuncInst {
+    fn new(func: Func, module: Rc<ModuleInst>) -> FuncInst {
         FuncInst {
             type_: module.types.get_idx(func.type_).clone(),
             code: func,
+            module,
         }
     }
 }
@@ -157,14 +159,14 @@ where
 impl TypedIdxAccess<FuncIdx> for Vec<FuncInst> {}
 impl TypedIdxAccess<GlobalIdx> for Vec<GlobalInst> {}
 impl TypedIdxAccess<TypeIdx> for Vec<FuncType> {}
-impl TypedIdxAccess<FuncIdx> for Vec<Rc<FuncInst>> {}
+impl TypedIdxAccess<FuncIdx> for Vec<Rc<RefCell<FuncInst>>> {}
 impl TypedIdxAccess<GlobalIdx> for Vec<Rc<RefCell<GlobalInst>>> {}
 impl TypedIdxAccess<TypeIdx> for Vec<Rc<FuncType>> {}
 
 #[derive(Debug, PartialEq)]
 pub struct ModuleInst {
     pub types: Vec<FuncType>,
-    pub funcs: Vec<Rc<FuncInst>>,
+    pub funcs: Vec<Rc<RefCell<FuncInst>>>,
     pub table: Option<Rc<RefCell<TableInst>>>,
     pub mem: Option<Rc<RefCell<MemInst>>>,
     pub globals: Vec<Rc<RefCell<GlobalInst>>>,
@@ -172,15 +174,10 @@ pub struct ModuleInst {
 }
 
 impl ModuleInst {
-    fn new(module: &Module) -> ModuleInst {
+    fn new(module: &Module) -> Rc<ModuleInst> {
         let mut result = ModuleInst {
             types: module.types.clone(),
-            funcs: module
-                .funcs
-                .clone()
-                .into_iter()
-                .map(|f| Rc::new(FuncInst::new(f, &module)))
-                .collect(),
+            funcs: Vec::new(),
             table: module
                 .tables
                 .iter()
@@ -194,6 +191,26 @@ impl ModuleInst {
             globals: Vec::new(),
             exports: Vec::new(),
         };
+
+        for _ in &module.funcs {
+            let dummy_func = FuncInst {
+                type_: FuncType(Vec::new(), Vec::new()),
+                code: Func {
+                    type_: TypeIdx(0),
+                    locals: Vec::new(),
+                    body: Expr(Vec::new()),
+                },
+                module: Rc::new(ModuleInst {
+                    types: Vec::new(),
+                    funcs: Vec::new(),
+                    table: None,
+                    mem: None,
+                    globals: Vec::new(),
+                    exports: Vec::new(),
+                }),
+            };
+            result.funcs.push(Rc::new(RefCell::new(dummy_func.clone())));
+        }
 
         for global in &module.globals {
             result.globals.push(Rc::new(RefCell::new(GlobalInst {
@@ -241,6 +258,24 @@ impl ModuleInst {
             });
         }
 
+        let result = Rc::new(result);
+
+        for (i, func) in module.funcs.iter().enumerate() {
+            let idx = i + module
+                .imports
+                .iter()
+                .map(|x| {
+                    if let ImportDesc::Func(_) = x.desc {
+                        1
+                    } else {
+                        0
+                    }
+                })
+                .sum::<usize>();
+            let mut dummy = result.funcs[idx].borrow_mut();
+            *dummy = FuncInst::new(func.clone(), result.clone());
+        }
+
         result
     }
 
@@ -255,7 +290,7 @@ impl ModuleInst {
         }
     }
 
-    fn call_func(&mut self, func: Rc<FuncInst>, params: Vec<Val>) -> Option<Val> {
+    fn call_func(&self, func: Rc<RefCell<FuncInst>>, params: Vec<Val>) -> Option<Val> {
         let mut stack = Stack {
             stack: vec![FrameStack {
                 frame: Frame { locals: Vec::new() },
@@ -288,7 +323,7 @@ impl ModuleInst {
         stack.stack.pop().unwrap().stack.pop().unwrap().stack.pop()
     }
 
-    pub fn export_call_func(&mut self, name: &str, params: Vec<Val>) -> Option<Val> {
+    pub fn export_call_func(&self, name: &str, params: Vec<Val>) -> Option<Val> {
         if let ExternalVal::Func(func) = &self
             .exports
             .iter()
@@ -357,7 +392,7 @@ fn test_md5() {
     use std::ffi::CString;
 
     let module = Module::decode_end(&std::fs::read("./example/md5.wasm").unwrap()).unwrap();
-    let mut instance = ModuleInst::new(&module);
+    let instance = ModuleInst::new(&module);
 
     let input_bytes = CString::new("abc").unwrap().into_bytes();
     let input_ptr = instance
@@ -365,7 +400,8 @@ fn test_md5() {
         .unwrap()
         .unwrap_i32() as usize;
     for i in 0..input_bytes.len() {
-        instance.mem.as_mut().unwrap().borrow_mut().data[input_ptr + i] = input_bytes[i];
+        let mut mem = instance.mem.as_ref().unwrap().borrow_mut();
+        mem.data[input_ptr + i] = input_bytes[i];
     }
 
     let output_ptr = instance

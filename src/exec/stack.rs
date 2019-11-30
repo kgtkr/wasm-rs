@@ -6,6 +6,7 @@ use crate::structure::modules::{
 };
 use crate::structure::types::{FuncType, Limits, MemType, Mut, ResultType, TableType, ValType};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use std::cell::RefCell;
 use std::io::Cursor;
 use std::rc::Rc;
 
@@ -16,20 +17,20 @@ pub enum FrameLevelInstr {
     Label(Label, /* 前から */ Vec<Instr>),
     Br(LabelIdx),
     LabelEnd,
-    Invoke(Rc<FuncInst>),
+    Invoke(Rc<RefCell<FuncInst>>),
     Return,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ModuleLevelInstr {
-    Invoke(Rc<FuncInst>),
+    Invoke(Rc<RefCell<FuncInst>>),
     Return,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AdminInstr {
     Instr(Instr),
-    Invoke(Rc<FuncInst>),
+    Invoke(Rc<RefCell<FuncInst>>),
     Label(Label, Vec<Instr>),
     Br(LabelIdx),
     Return,
@@ -55,7 +56,7 @@ pub struct FrameStack {
 }
 
 impl FrameStack {
-    pub fn step(&mut self, instance: &mut ModuleInst) -> Option<ModuleLevelInstr> {
+    pub fn step(&mut self, instance: &ModuleInst) -> Option<ModuleLevelInstr> {
         let cur_lavel = self.stack.last_mut().unwrap();
         if let Some(instr) = cur_lavel.step(instance, &mut self.frame) {
             match instr {
@@ -126,7 +127,7 @@ pub struct LabelStack {
 }
 
 impl LabelStack {
-    fn step(&mut self, instance: &mut ModuleInst, frame: &mut Frame) -> Option<FrameLevelInstr> {
+    fn step(&mut self, instance: &ModuleInst, frame: &mut Frame) -> Option<FrameLevelInstr> {
         match self.instrs.pop() {
             Some(instr) => match instr {
                 AdminInstr::Instr(instr) => {
@@ -699,11 +700,12 @@ impl LabelStack {
                         }
                         Instr::GlobalGet(idx) => {
                             self.stack
-                                .push(instance.globals[idx.to_idx()].borrow_mut().value);
+                                .push(instance.globals[idx.to_idx()].borrow().value);
                         }
                         Instr::GlobalSet(idx) => {
                             let x = self.stack.pop().unwrap();
-                            instance.globals[idx.to_idx()].borrow_mut().value = x;
+                            let mut global = instance.globals[idx.to_idx()].borrow_mut();
+                            global.value = x;
                         }
                         Instr::I32Load(m) => {
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
@@ -902,7 +904,7 @@ impl LabelStack {
                             let x = self.stack.pop().unwrap().unwrap_i32() as usize;
                             instance
                                 .mem
-                                .as_mut()
+                                .as_ref()
                                 .unwrap()
                                 .borrow_mut()
                                 .data
@@ -983,7 +985,7 @@ pub struct Stack {
 }
 
 impl Stack {
-    pub fn step(&mut self, instance: &mut ModuleInst) {
+    pub fn step(&mut self, instance: &ModuleInst) {
         let cur_frame = self.stack.last_mut().unwrap();
         if let Some(instr) = cur_frame.step(instance) {
             let cur_label = cur_frame.stack.last_mut().unwrap();
@@ -995,10 +997,11 @@ impl Stack {
                                 let mut locals = Vec::new();
                                 locals.append(&mut pop_n(
                                     &mut cur_label.stack,
-                                    func.type_.params().len(),
+                                    func.borrow().type_.params().len(),
                                 ));
                                 locals.append(
                                     &mut func
+                                        .borrow()
                                         .code
                                         .locals
                                         .iter()
@@ -1018,6 +1021,7 @@ impl Stack {
                             stack: vec![],
                             label: Label { instrs: vec![] },
                             instrs: func
+                                .borrow()
                                 .code
                                 .body
                                 .0
