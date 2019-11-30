@@ -209,6 +209,18 @@ pub struct TableAddr(pub Rc<RefCell<TableInst>>);
 #[derive(Clone, Debug, PartialEq)]
 pub struct MemAddr(pub Rc<RefCell<MemInst>>);
 
+impl MemAddr {
+    pub fn with_mut_cursor<T>(&self, f: impl FnOnce(Cursor<&mut Vec<u8>>) -> T) -> T {
+        let raw = &mut self.0.borrow_mut().data;
+        f(Cursor::new(raw))
+    }
+
+    pub fn with_cursor<T>(&self, f: impl FnOnce(Cursor<&Vec<u8>>) -> T) -> T {
+        let raw = &self.0.borrow().data;
+        f(Cursor::new(raw))
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct GlobalAddr(pub Rc<RefCell<GlobalInst>>);
 
