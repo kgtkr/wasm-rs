@@ -178,68 +178,6 @@ struct Label {
     instrs: Vec<Instr>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-struct Store {
-    funcs: Vec<FuncInst>,
-    table: Option<TableInst>,
-    mem: Option<MemInst>,
-    globals: Vec<GlobalInst>,
-}
-
-impl Store {
-    pub fn new(module: &Module) -> Store {
-        let mut store = Store {
-            funcs: module
-                .funcs
-                .clone()
-                .into_iter()
-                .map(|f| FuncInst::new(f, module))
-                .collect(),
-            table: module.tables.iter().next().map(|t| TableInst::new(t)),
-            mem: module.mems.iter().next().map(|m| MemInst::new(m)),
-            globals: Vec::new(),
-        };
-
-        for global in &module.globals {
-            store.globals.push(GlobalInst {
-                value: store.eval_const_expr(&global.init),
-                mut_: global.type_.0,
-            });
-        }
-
-        for elem in &module.elem {
-            let offset = store.eval_const_expr(&elem.offset).unwrap_i32() as usize;
-            store
-                .table
-                .as_mut()
-                .unwrap()
-                .init_elem(offset, elem.init.clone());
-        }
-
-        for data in &module.data {
-            let offset = store.eval_const_expr(&data.offset).unwrap_i32() as usize;
-            store
-                .mem
-                .as_mut()
-                .unwrap()
-                .init_data(offset, data.init.clone().into_iter().map(|x| x.0).collect());
-        }
-
-        store
-    }
-
-    pub fn eval_const_expr(&self, expr: &Expr) -> Val {
-        match &expr.0[..] {
-            &[Instr::I32Const(x)] => Val::I32(x),
-            &[Instr::I64Const(x)] => Val::I64(x),
-            &[Instr::F32Const(x)] => Val::F32(x),
-            &[Instr::F64Const(x)] => Val::F64(x),
-            &[Instr::GlobalGet(i)] => self.globals[i.to_idx()].value,
-            _ => panic!(),
-        }
-    }
-}
-
 #[derive(Debug, PartialEq, Clone)]
 struct FrameStack {
     frame: Frame,
@@ -249,7 +187,7 @@ struct FrameStack {
 }
 
 impl FrameStack {
-    fn step(&mut self, store: &mut Store) -> Option<ModuleLevelInstr> {
+    fn step(&mut self, store: &mut VMModule) -> Option<ModuleLevelInstr> {
         let cur_lavel = self.stack.last_mut().unwrap();
         if let Some(instr) = cur_lavel.step(store, &mut self.frame) {
             match instr {
@@ -320,7 +258,7 @@ struct LabelStack {
 }
 
 impl LabelStack {
-    fn step(&mut self, store: &mut Store, frame: &mut Frame) -> Option<FrameLevelInstr> {
+    fn step(&mut self, store: &mut VMModule, frame: &mut Frame) -> Option<FrameLevelInstr> {
         match self.instrs.pop() {
             Some(instr) => match instr {
                 AdminInstr::Instr(instr) => {
@@ -1152,7 +1090,7 @@ pub struct Stack {
 }
 
 impl Stack {
-    fn step(&mut self, store: &mut Store) {
+    fn step(&mut self, store: &mut VMModule) {
         let cur_frame = self.stack.last_mut().unwrap();
         if let Some(instr) = cur_frame.step(store) {
             let cur_label = cur_frame.stack.last_mut().unwrap();
@@ -1221,18 +1159,66 @@ impl Stack {
 
 #[derive(Debug, PartialEq)]
 struct VMModule {
-    store: Store,
+    funcs: Vec<FuncInst>,
+    table: Option<TableInst>,
+    mem: Option<MemInst>,
+    globals: Vec<GlobalInst>,
     module: Module,
 }
 
 impl VMModule {
     fn new(module: Module) -> VMModule {
-        let store = Store::new(&module);
-        let mut result = VMModule { store, module };
+        let mut result = VMModule {
+            funcs: module
+                .funcs
+                .clone()
+                .into_iter()
+                .map(|f| FuncInst::new(f, &module))
+                .collect(),
+            table: module.tables.iter().next().map(|t| TableInst::new(t)),
+            mem: module.mems.iter().next().map(|m| MemInst::new(m)),
+            globals: Vec::new(),
+            module,
+        };
+
+        for global in &result.module.globals {
+            result.globals.push(GlobalInst {
+                value: result.eval_const_expr(&global.init),
+                mut_: global.type_.0,
+            });
+        }
+        for elem in &result.module.elem {
+            let offset = result.eval_const_expr(&elem.offset).unwrap_i32() as usize;
+            result
+                .table
+                .as_mut()
+                .unwrap()
+                .init_elem(offset, elem.init.clone());
+        }
+        for data in &result.module.data {
+            let offset = result.eval_const_expr(&data.offset).unwrap_i32() as usize;
+            result
+                .mem
+                .as_mut()
+                .unwrap()
+                .init_data(offset, data.init.clone().into_iter().map(|x| x.0).collect());
+        }
+
         if let Some(start) = &result.module.start {
             result.call_func(start.func, vec![]);
         }
         result
+    }
+
+    fn eval_const_expr(&self, expr: &Expr) -> Val {
+        match &expr.0[..] {
+            &[Instr::I32Const(x)] => Val::I32(x),
+            &[Instr::I64Const(x)] => Val::I64(x),
+            &[Instr::F32Const(x)] => Val::F32(x),
+            &[Instr::F64Const(x)] => Val::F64(x),
+            &[Instr::GlobalGet(i)] => self.globals[i.to_idx()].value,
+            _ => panic!(),
+        }
     }
 
     fn call_func(&mut self, idx: FuncIdx, params: Vec<Val>) -> Option<Val> {
@@ -1248,7 +1234,7 @@ impl VMModule {
         };
 
         loop {
-            stack.step(&mut self.store);
+            stack.step(self);
             if stack.stack.len() == 1
                 && stack.stack.first().unwrap().stack.len() == 1
                 && stack
@@ -1372,7 +1358,7 @@ fn test_md5() {
         .unwrap()
         .unwrap_i32() as usize;
     for i in 0..input_bytes.len() {
-        vm.store.mem.as_mut().unwrap().data[input_ptr + i] = input_bytes[i];
+        vm.mem.as_mut().unwrap().data[input_ptr + i] = input_bytes[i];
     }
 
     let output_ptr = vm
@@ -1381,8 +1367,7 @@ fn test_md5() {
         .unwrap_i32() as usize;
     assert_eq!(
         CString::new(
-            vm.store
-                .mem
+            vm.mem
                 .unwrap()
                 .data
                 .into_iter()
