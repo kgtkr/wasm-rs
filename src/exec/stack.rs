@@ -1,4 +1,4 @@
-use super::instance::{Instance, TypedIdxAccess, Val};
+use super::instance::{ModuleInst, TypedIdxAccess, Val};
 use crate::structure::instructions::{Expr, Instr};
 use crate::structure::modules::{
     Data, Elem, Export, ExportDesc, Func, FuncIdx, Global, GlobalIdx, LabelIdx, LocalIdx, Mem,
@@ -54,7 +54,7 @@ pub struct FrameStack {
 }
 
 impl FrameStack {
-    pub fn step(&mut self, instance: &mut Instance) -> Option<ModuleLevelInstr> {
+    pub fn step(&mut self, instance: &mut ModuleInst) -> Option<ModuleLevelInstr> {
         let cur_lavel = self.stack.last_mut().unwrap();
         if let Some(instr) = cur_lavel.step(instance, &mut self.frame) {
             match instr {
@@ -125,7 +125,7 @@ pub struct LabelStack {
 }
 
 impl LabelStack {
-    fn step(&mut self, instance: &mut Instance, frame: &mut Frame) -> Option<FrameLevelInstr> {
+    fn step(&mut self, instance: &mut ModuleInst, frame: &mut Frame) -> Option<FrameLevelInstr> {
         match self.instrs.pop() {
             Some(instr) => match instr {
                 AdminInstr::Instr(instr) => {
@@ -958,7 +958,7 @@ pub struct Stack {
 }
 
 impl Stack {
-    pub fn step(&mut self, instance: &mut Instance) {
+    pub fn step(&mut self, instance: &mut ModuleInst) {
         let cur_frame = self.stack.last_mut().unwrap();
         if let Some(instr) = cur_frame.step(instance) {
             let cur_label = cur_frame.stack.last_mut().unwrap();
