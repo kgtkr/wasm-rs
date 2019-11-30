@@ -169,7 +169,10 @@ impl FuncAddr {
     fn call(&self, params: Vec<Val>) -> Option<Val> {
         let mut stack = Stack {
             stack: vec![FrameStack {
-                frame: Frame { locals: Vec::new() },
+                frame: Frame {
+                    locals: Vec::new(),
+                    module: Rc::new(ModuleInst::dummy()),
+                },
                 stack: vec![LabelStack {
                     label: Label { instrs: vec![] },
                     instrs: vec![AdminInstr::Invoke(self.clone())],
@@ -179,7 +182,7 @@ impl FuncAddr {
         };
 
         loop {
-            stack.step(self.0.borrow().module.as_ref());
+            stack.step();
             if stack.stack.len() == 1
                 && stack.stack.first().unwrap().stack.len() == 1
                 && stack
@@ -246,14 +249,7 @@ impl ModuleInst {
                     locals: Vec::new(),
                     body: Expr(Vec::new()),
                 },
-                module: Rc::new(ModuleInst {
-                    types: Vec::new(),
-                    funcs: Vec::new(),
-                    table: None,
-                    mem: None,
-                    globals: Vec::new(),
-                    exports: Vec::new(),
-                }),
+                module: Rc::new(ModuleInst::dummy()),
             };
             result
                 .funcs
@@ -329,6 +325,17 @@ impl ModuleInst {
         }
 
         result
+    }
+
+    fn dummy() -> ModuleInst {
+        ModuleInst {
+            types: Vec::new(),
+            funcs: Vec::new(),
+            table: None,
+            mem: None,
+            globals: Vec::new(),
+            exports: Vec::new(),
+        }
     }
 
     fn eval_const_expr(&self, expr: &Expr) -> Val {

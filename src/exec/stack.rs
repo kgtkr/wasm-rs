@@ -38,6 +38,7 @@ pub enum AdminInstr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Frame {
+    pub module: Rc<ModuleInst>,
     pub locals: Vec<Val>,
 }
 
@@ -56,9 +57,9 @@ pub struct FrameStack {
 }
 
 impl FrameStack {
-    pub fn step(&mut self, instance: &ModuleInst) -> Option<ModuleLevelInstr> {
+    pub fn step(&mut self) -> Option<ModuleLevelInstr> {
         let cur_lavel = self.stack.last_mut().unwrap();
-        if let Some(instr) = cur_lavel.step(instance, &mut self.frame) {
+        if let Some(instr) = cur_lavel.step(&mut self.frame) {
             match instr {
                 FrameLevelInstr::Invoke(idx) => Some(ModuleLevelInstr::Invoke(idx)),
                 FrameLevelInstr::Return => Some(ModuleLevelInstr::Return),
@@ -127,7 +128,8 @@ pub struct LabelStack {
 }
 
 impl LabelStack {
-    fn step(&mut self, instance: &ModuleInst, frame: &mut Frame) -> Option<FrameLevelInstr> {
+    fn step(&mut self, frame: &mut Frame) -> Option<FrameLevelInstr> {
+        let instance = frame.module.as_ref();
         match self.instrs.pop() {
             Some(instr) => match instr {
                 AdminInstr::Instr(instr) => {
@@ -987,9 +989,9 @@ pub struct Stack {
 }
 
 impl Stack {
-    pub fn step(&mut self, instance: &ModuleInst) {
+    pub fn step(&mut self) {
         let cur_frame = self.stack.last_mut().unwrap();
-        if let Some(instr) = cur_frame.step(instance) {
+        if let Some(instr) = cur_frame.step() {
             let cur_label = cur_frame.stack.last_mut().unwrap();
             match instr {
                 ModuleLevelInstr::Invoke(func) => {
@@ -1019,6 +1021,7 @@ impl Stack {
 
                                 locals
                             },
+                            module: func.0.borrow().module.clone(),
                         },
                         stack: vec![LabelStack {
                             stack: vec![],
