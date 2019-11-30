@@ -18,6 +18,40 @@ pub enum ExternalVal {
     Global(GlobalAddr),
 }
 
+impl ExternalVal {
+    fn unwrap_func(&self) -> &FuncAddr {
+        if let ExternalVal::Func(x) = self {
+            x
+        } else {
+            panic!();
+        }
+    }
+
+    fn unwrap_table(&self) -> &TableAddr {
+        if let ExternalVal::Table(x) = self {
+            x
+        } else {
+            panic!();
+        }
+    }
+
+    fn unwrap_mem(&self) -> &MemAddr {
+        if let ExternalVal::Mem(x) = self {
+            x
+        } else {
+            panic!();
+        }
+    }
+
+    fn unwrap_global(&self) -> &GlobalAddr {
+        if let ExternalVal::Global(x) = self {
+            x
+        } else {
+            panic!();
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ExportInst {
     name: String,
@@ -378,18 +412,13 @@ impl ModuleInst {
         }
     }
 
-    pub fn export_call_func(&self, name: &str, params: Vec<Val>) -> Option<Val> {
-        if let ExternalVal::Func(func) = &self
-            .exports
+    pub fn export(&self, name: &str) -> ExternalVal {
+        self.exports
             .iter()
             .find(|e| e.name.as_str() == name)
+            .map(|x| x.value.clone())
             .unwrap()
-            .value
-        {
-            func.call(params)
-        } else {
-            panic!()
-        }
+            .clone()
     }
 }
 
@@ -403,7 +432,10 @@ mod tests {
         let module = Module::decode_end(&std::fs::read("./example/add.wasm").unwrap()).unwrap();
         let instance = ModuleInst::new(&module);
         assert_eq!(
-            instance.export_call_func("add", vec![Val::I32(3), Val::I32(5)]),
+            instance
+                .export("add")
+                .unwrap_func()
+                .call(vec![Val::I32(3), Val::I32(5)]),
             Some(Val::I32(8))
         );
     }
@@ -414,7 +446,10 @@ mod tests {
         let instance = ModuleInst::new(&module);
 
         assert_eq!(
-            instance.export_call_func("gcd", vec![Val::I32(182), Val::I32(1029)]),
+            instance
+                .export("gcd")
+                .unwrap_func()
+                .call(vec![Val::I32(182), Val::I32(1029)]),
             Some(Val::I32(7))
         );
     }
@@ -424,7 +459,10 @@ mod tests {
         let module = Module::decode_end(&std::fs::read("./example/pow.wasm").unwrap()).unwrap();
         let instance = ModuleInst::new(&module);
         assert_eq!(
-            instance.export_call_func("pow", vec![Val::I32(2), Val::I32(10)]),
+            instance
+                .export("pow")
+                .unwrap_func()
+                .call(vec![Val::I32(2), Val::I32(10)]),
             Some(Val::I32(1024))
         );
     }
@@ -436,11 +474,17 @@ mod tests {
         let instance = ModuleInst::new(&module);
 
         assert_eq!(
-            instance.export_call_func("br_table", vec![Val::I32(0)]),
+            instance
+                .export("br_table")
+                .unwrap_func()
+                .call(vec![Val::I32(0)]),
             Some(Val::I32(10))
         );
         assert_eq!(
-            instance.export_call_func("br_table", vec![Val::I32(10)]),
+            instance
+                .export("br_table")
+                .unwrap_func()
+                .call(vec![Val::I32(10)]),
             Some(Val::I32(30))
         );
     }
@@ -454,7 +498,9 @@ mod tests {
 
         let input_bytes = CString::new("abc").unwrap().into_bytes();
         let input_ptr = instance
-            .export_call_func("alloc", vec![Val::I32(input_bytes.len() as i32)])
+            .export("alloc")
+            .unwrap_func()
+            .call(vec![Val::I32(input_bytes.len() as i32)])
             .unwrap()
             .unwrap_i32() as usize;
         for i in 0..input_bytes.len() {
@@ -463,7 +509,9 @@ mod tests {
         }
 
         let output_ptr = instance
-            .export_call_func("md5", vec![Val::I32(input_ptr as i32)])
+            .export("md5")
+            .unwrap_func()
+            .call(vec![Val::I32(input_ptr as i32)])
             .unwrap()
             .unwrap_i32() as usize;
         let raw = &instance.mem.as_ref().unwrap().0.borrow_mut().data;
