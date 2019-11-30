@@ -261,11 +261,15 @@ impl ModuleInst {
         }
 
         if let Some(table) = module.tables.iter().next() {
-            result.table = Some(TableAddr(Rc::new(RefCell::new(TableInst::new(table)))));
+            let _ = result
+                .table
+                .replace(TableAddr(Rc::new(RefCell::new(TableInst::new(table)))));
         }
 
         if let Some(mem) = module.mems.iter().next() {
-            result.mem = Some(MemAddr(Rc::new(RefCell::new(MemInst::new(mem)))));
+            let _ = result
+                .mem
+                .replace(MemAddr(Rc::new(RefCell::new(MemInst::new(mem)))));
         }
 
         for global in &module.globals {
