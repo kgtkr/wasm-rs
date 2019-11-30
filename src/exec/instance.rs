@@ -143,17 +143,19 @@ impl TypedIdxAccess<GlobalIdx> for Vec<GlobalInst> {}
 impl TypedIdxAccess<TypeIdx> for Vec<FuncType> {}
 
 #[derive(Debug, PartialEq)]
-pub struct ModuleInst<'a> {
+pub struct ModuleInst {
+    pub types: Vec<FuncType>,
     pub funcs: Vec<FuncInst>,
     pub table: Option<TableInst>,
     pub mem: Option<MemInst>,
     pub globals: Vec<GlobalInst>,
-    pub module: &'a Module,
+    pub module: Module,
 }
 
-impl<'a> ModuleInst<'a> {
-    fn new(module: &'a Module) -> ModuleInst {
+impl ModuleInst {
+    fn new(module: &Module) -> ModuleInst {
         let mut result = ModuleInst {
+            types: module.types.clone(),
             funcs: module
                 .funcs
                 .clone()
@@ -163,16 +165,16 @@ impl<'a> ModuleInst<'a> {
             table: module.tables.iter().next().map(|t| TableInst::new(t)),
             mem: module.mems.iter().next().map(|m| MemInst::new(m)),
             globals: Vec::new(),
-            module,
+            module: module.clone(),
         };
 
-        for global in &result.module.globals {
+        for global in &module.globals {
             result.globals.push(GlobalInst {
                 value: result.eval_const_expr(&global.init),
                 mut_: global.type_.0,
             });
         }
-        for elem in &result.module.elem {
+        for elem in &module.elem {
             let offset = result.eval_const_expr(&elem.offset).unwrap_i32() as usize;
             result
                 .table
@@ -180,7 +182,7 @@ impl<'a> ModuleInst<'a> {
                 .unwrap()
                 .init_elem(offset, elem.init.clone());
         }
-        for data in &result.module.data {
+        for data in &module.data {
             let offset = result.eval_const_expr(&data.offset).unwrap_i32() as usize;
             result
                 .mem
@@ -189,7 +191,7 @@ impl<'a> ModuleInst<'a> {
                 .init_data(offset, data.init.clone().into_iter().map(|x| x.0).collect());
         }
 
-        if let Some(start) = &result.module.start {
+        if let Some(start) = &module.start {
             result.call_func(start.func, vec![]);
         }
         result
