@@ -702,4 +702,49 @@ mod tests {
 
         main_instance.export("main").unwrap_func().call(vec![]);
     }
+
+    #[test]
+    fn test_cl8w_ex() {
+        let memory = ExternalVal::Mem(MemAddr(Rc::new(RefCell::new(MemInst::from_min_max(
+            10, None,
+        )))));
+        let print = ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::HostFunc {
+            type_: FuncType(vec![ValType::I32], vec![]),
+            host_code: |params| match &params[..] {
+                &[Val::I32(x)] => {
+                    println!("{}", x);
+                    None
+                }
+                _ => panic!(),
+            },
+        }))));
+
+        let memory_module =
+            Module::decode_end(&std::fs::read("./example/memory.wasm").unwrap()).unwrap();
+        let memory_instance = ModuleInst::new(
+            &memory_module,
+            map!(
+                "resource".to_string() => map!(
+                    "memory".to_string() => memory.clone()
+                )
+            ),
+        );
+
+        let main_module =
+            Module::decode_end(&std::fs::read("./example/cl8w-ex.wasm").unwrap()).unwrap();
+        let main_instance = ModuleInst::new(
+            &main_module,
+            map!(
+                "resource".to_string() => map!(
+                    "memory".to_string() => memory.clone()
+                ),
+                "memory".to_string() => memory_instance.exports(),
+                "io".to_string() => map!(
+                    "print".to_string() => print.clone()
+                )
+            ),
+        );
+
+        main_instance.export("main").unwrap_func().call(vec![]);
+    }
 }
