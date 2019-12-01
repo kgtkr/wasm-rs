@@ -130,8 +130,14 @@ impl MemInst {
     const PAGE_SIZE: usize = 65536;
 
     fn new(mem: &Mem) -> MemInst {
-        let min = mem.type_.0.min as usize * MemInst::PAGE_SIZE;
-        let max = mem.type_.0.max.map(|max| max as usize * MemInst::PAGE_SIZE);
+        let min = mem.type_.0.min;
+        let max = mem.type_.0.max;
+        MemInst::from_min_max(min, max)
+    }
+
+    fn from_min_max(min: u32, max: Option<u32>) -> MemInst {
+        let min = min as usize * MemInst::PAGE_SIZE;
+        let max = max.map(|max| max as usize * MemInst::PAGE_SIZE);
         MemInst {
             max,
             data: {
@@ -304,6 +310,18 @@ pub struct ModuleInst {
     pub mem: Option<MemAddr>,
     pub globals: Vec<GlobalAddr>,
     pub exports: Vec<ExportInst>,
+}
+
+macro_rules! map {
+    ( $( $k:expr => $v:expr),* ) => {
+        {
+            let mut result = HashMap::new();
+            $(
+                result.insert($k, $v);
+            )*
+            result
+        }
+    };
 }
 
 impl ModuleInst {
@@ -638,5 +656,50 @@ mod tests {
             .unwrap(),
             "900150983cd24fb0d6963f7d28e17f72".to_string()
         );
+    }
+
+    #[test]
+    fn test_cl8w_gcd() {
+        let memory = ExternalVal::Mem(MemAddr(Rc::new(RefCell::new(MemInst::from_min_max(
+            10, None,
+        )))));
+        let print = ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::HostFunc {
+            type_: FuncType(vec![ValType::I32], vec![]),
+            host_code: |params| match &params[..] {
+                &[Val::I32(x)] => {
+                    println!("{}", x);
+                    None
+                }
+                _ => panic!(),
+            },
+        }))));
+
+        let memory_module =
+            Module::decode_end(&std::fs::read("./example/memory.wasm").unwrap()).unwrap();
+        let memory_instance = ModuleInst::new(
+            &memory_module,
+            map!(
+                "resource".to_string() => map!(
+                    "memory".to_string() => memory.clone()
+                )
+            ),
+        );
+
+        let main_module =
+            Module::decode_end(&std::fs::read("./example/cl8w-gcd.wasm").unwrap()).unwrap();
+        let main_instance = ModuleInst::new(
+            &main_module,
+            map!(
+                "resource".to_string() => map!(
+                    "memory".to_string() => memory.clone()
+                ),
+                "memory".to_string() => memory_instance.exports(),
+                "io".to_string() => map!(
+                    "print".to_string() => print.clone()
+                )
+            ),
+        );
+
+        main_instance.export("main").unwrap_func().call(vec![]);
     }
 }
