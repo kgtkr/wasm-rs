@@ -244,7 +244,7 @@ impl TypedIdxAccess<GlobalIdx> for Vec<GlobalAddr> {}
 pub struct FuncAddr(pub Rc<RefCell<FuncInst>>);
 
 impl FuncAddr {
-    fn call(&self, params: Vec<Val>) -> Option<Val> {
+    pub fn call(&self, params: Vec<Val>) -> Option<Val> {
         let mut stack = Stack {
             stack: vec![FrameStack {
                 frame: Frame {
