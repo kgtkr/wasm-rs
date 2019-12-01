@@ -254,6 +254,7 @@ impl FuncAddr {
                 frame: Frame {
                     locals: Vec::new(),
                     module: Weak::new(),
+                    n: 0,
                 },
                 stack: vec![LabelStack {
                     label: Label {

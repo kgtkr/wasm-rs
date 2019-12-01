@@ -38,6 +38,7 @@ pub enum AdminInstr {
 pub struct Frame {
     pub module: Weak<ModuleInst>,
     pub locals: Vec<Val>,
+    pub n: usize,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -787,10 +788,11 @@ impl LabelStack {
                                 cur.write_f64::<LittleEndian>(x).unwrap();
                             });
                         }
-                        Instr::I32Load8S(_m) => {
+                        Instr::I32Load8S(m) => {
                             let instance = frame.module.upgrade().unwrap();
-                            let _ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
+                            let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             instance.mem.as_ref().unwrap().with_cursor(|mut cur| {
+                                cur.set_position((ptr + m.offset as usize) as u64);
                                 let x = cur.read_i8().unwrap();
                                 self.stack.push(Val::I32(x as i32));
                             });
@@ -1058,6 +1060,7 @@ impl Stack {
                                     locals
                                 },
                                 module: module.clone(),
+                                n: type_.ret().iter().count(),
                             },
                             stack: vec![LabelStack {
                                 stack: vec![],
@@ -1086,8 +1089,7 @@ impl Stack {
                 },
                 ModuleLevelInstr::Return => {
                     let ret = cur_label.stack.pop();
-                    self.stack.pop();
-                    if let Some(ret) = ret {
+                    if self.stack.pop().unwrap().frame.n != 0 {
                         self.stack
                             .last_mut()
                             .unwrap()
@@ -1095,7 +1097,7 @@ impl Stack {
                             .last_mut()
                             .unwrap()
                             .stack
-                            .push(ret);
+                            .push(ret.unwrap());
                     }
                 }
             }
