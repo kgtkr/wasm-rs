@@ -5,10 +5,14 @@ use crate::structure::modules::{
     LocalIdx, Mem, Module, Table, TypeIdx, TypedIdx,
 };
 use crate::structure::types::{FuncType, Limits, MemType, Mut, ResultType, TableType, ValType};
+use std::collections::HashMap;
 
 use std::cell::RefCell;
 use std::io::Cursor;
 use std::rc::{Rc, Weak};
+
+pub type ExternalModule = HashMap<String, ExternalVal>;
+pub type ImportObjects = HashMap<String, ExternalModule>;
 
 #[derive(Debug, Clone)]
 pub enum ExternalVal {
@@ -303,13 +307,85 @@ pub struct ModuleInst {
 }
 
 impl ModuleInst {
-    fn new(module: &Module) -> Rc<ModuleInst> {
+    fn new(module: &Module, imports_objects: ImportObjects) -> Rc<ModuleInst> {
         let mut result = ModuleInst {
             types: module.types.clone(),
-            funcs: Vec::new(),
-            table: None,
-            mem: None,
-            globals: Vec::new(),
+            funcs: module
+                .imports
+                .iter()
+                .flat_map(|import| {
+                    if let ImportDesc::Func(idx) = &import.desc {
+                        Some(
+                            imports_objects
+                                .get(&import.module.0)
+                                .unwrap()
+                                .get(&import.name.0)
+                                .unwrap()
+                                .clone()
+                                .unwrap_func(),
+                        )
+                    } else {
+                        None
+                    }
+                })
+                .collect(),
+            table: module
+                .imports
+                .iter()
+                .flat_map(|import| {
+                    if let ImportDesc::Table(idx) = &import.desc {
+                        Some(
+                            imports_objects
+                                .get(&import.module.0)
+                                .unwrap()
+                                .get(&import.name.0)
+                                .unwrap()
+                                .clone()
+                                .unwrap_table(),
+                        )
+                    } else {
+                        None
+                    }
+                })
+                .next(),
+            mem: module
+                .imports
+                .iter()
+                .flat_map(|import| {
+                    if let ImportDesc::Mem(idx) = &import.desc {
+                        Some(
+                            imports_objects
+                                .get(&import.module.0)
+                                .unwrap()
+                                .get(&import.name.0)
+                                .unwrap()
+                                .clone()
+                                .unwrap_mem(),
+                        )
+                    } else {
+                        None
+                    }
+                })
+                .next(),
+            globals: module
+                .imports
+                .iter()
+                .flat_map(|import| {
+                    if let ImportDesc::Global(idx) = &import.desc {
+                        Some(
+                            imports_objects
+                                .get(&import.module.0)
+                                .unwrap()
+                                .get(&import.name.0)
+                                .unwrap()
+                                .clone()
+                                .unwrap_global(),
+                        )
+                    } else {
+                        None
+                    }
+                })
+                .collect(),
             exports: Vec::new(),
         };
 
@@ -451,7 +527,7 @@ mod tests {
     #[test]
     fn test_add() {
         let module = Module::decode_end(&std::fs::read("./example/add.wasm").unwrap()).unwrap();
-        let instance = ModuleInst::new(&module);
+        let instance = ModuleInst::new(&module, HashMap::new());
         assert_eq!(
             instance
                 .export("add")
@@ -464,7 +540,7 @@ mod tests {
     #[test]
     fn test_gcd() {
         let module = Module::decode_end(&std::fs::read("./example/gcd.wasm").unwrap()).unwrap();
-        let instance = ModuleInst::new(&module);
+        let instance = ModuleInst::new(&module, HashMap::new());
 
         assert_eq!(
             instance
@@ -478,7 +554,7 @@ mod tests {
     #[test]
     fn test_pow() {
         let module = Module::decode_end(&std::fs::read("./example/pow.wasm").unwrap()).unwrap();
-        let instance = ModuleInst::new(&module);
+        let instance = ModuleInst::new(&module, HashMap::new());
         assert_eq!(
             instance
                 .export("pow")
@@ -492,7 +568,7 @@ mod tests {
     fn test_br_table() {
         let module =
             Module::decode_end(&std::fs::read("./example/br_table.wasm").unwrap()).unwrap();
-        let instance = ModuleInst::new(&module);
+        let instance = ModuleInst::new(&module, HashMap::new());
 
         assert_eq!(
             instance
@@ -515,7 +591,7 @@ mod tests {
         use std::ffi::CString;
 
         let module = Module::decode_end(&std::fs::read("./example/md5.wasm").unwrap()).unwrap();
-        let instance = ModuleInst::new(&module);
+        let instance = ModuleInst::new(&module, HashMap::new());
 
         let input_bytes = CString::new("abc").unwrap().into_bytes();
         let input_ptr = instance
