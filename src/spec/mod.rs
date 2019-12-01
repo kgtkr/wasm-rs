@@ -162,7 +162,7 @@ fn spec_test() {
                     println!("========[success]{}", name);
                 }
                 Err(e) => {
-                    println!("=========[error]{}{:?}", name, e);
+                    println!("=========[error]{} {:?}", name, e);
                 }
             }
         }
