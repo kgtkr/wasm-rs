@@ -229,12 +229,12 @@ impl LabelStack {
                         Instr::I32Sub => {
                             let y = self.stack.pop().unwrap().unwrap_i32();
                             let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(x - y));
+                            self.stack.push(Val::I32(x.overflowing_sub(y).0));
                         }
                         Instr::I32Mul => {
                             let y = self.stack.pop().unwrap().unwrap_i32();
                             let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(x * y));
+                            self.stack.push(Val::I32(x.overflowing_mul(y).0));
                         }
                         Instr::I32DivS => {
                             let y = self.stack.pop().unwrap().unwrap_i32();
@@ -310,12 +310,12 @@ impl LabelStack {
                         Instr::I64Sub => {
                             let y = self.stack.pop().unwrap().unwrap_i64();
                             let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I64(x - y));
+                            self.stack.push(Val::I64(x.overflowing_sub(y).0));
                         }
                         Instr::I64Mul => {
                             let y = self.stack.pop().unwrap().unwrap_i64();
                             let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I64(x * y));
+                            self.stack.push(Val::I64(x.overflowing_mul(y).0));
                         }
                         Instr::I64DivS => {
                             let y = self.stack.pop().unwrap().unwrap_i64();
