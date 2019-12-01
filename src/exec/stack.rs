@@ -1116,6 +1116,6 @@ fn pop_n<T>(vec: &mut Vec<T>, n: usize) -> Vec<T> {
 
 #[test]
 fn test_pop_n() {
-    assert_eq!(pop_n::<i32>(&mut vec![], 0), vec![]);
+    assert_eq!(pop_n::<i32>(&mut vec![], 0), vec![] as Vec<i32>);
     assert_eq!(pop_n::<i32>(&mut vec![1, 2, 3, 4, 5], 2), vec![4, 5]);
 }
