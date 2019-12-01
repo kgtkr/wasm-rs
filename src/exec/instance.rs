@@ -162,9 +162,13 @@ impl MemInst {
 
     pub fn grow(&mut self, add_size: i32) -> i32 {
         let prev = self.page_size();
-        self.data
-            .resize((prev as usize + add_size as usize) * MemInst::PAGE_SIZE, 0);
-        prev
+        if prev + add_size > 1024 {
+            -1
+        } else {
+            self.data
+                .resize((prev as usize + add_size as usize) * MemInst::PAGE_SIZE, 0);
+            prev
+        }
     }
 
     pub fn mut_buffer(&mut self) -> &mut [u8] {
