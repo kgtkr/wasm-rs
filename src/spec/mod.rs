@@ -135,7 +135,7 @@ pub fn run_test(filename: String, suc_c: &mut i32, err_c: &mut i32) {
                 module = Some(
                     Module::decode_end(&std::fs::read(format!("spec/{}", name)).unwrap()).unwrap(),
                 );
-                println!("[success module]{}", name);
+                println!("==========[success module]{}", name);
             }
             Cmd::AssertReturn {
                 name,
