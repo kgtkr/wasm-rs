@@ -305,7 +305,7 @@ impl LabelStack {
                         Instr::I64Add => {
                             let y = self.stack.pop().unwrap().unwrap_i64();
                             let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I64(x + y));
+                            self.stack.push(Val::I64(x.overflowing_add(y).0));
                         }
                         Instr::I64Sub => {
                             let y = self.stack.pop().unwrap().unwrap_i64();
