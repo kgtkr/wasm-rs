@@ -747,4 +747,32 @@ mod tests {
 
         main_instance.export("main").unwrap_func().call(vec![]);
     }
+
+    #[test]
+    fn test_self_host() {
+        let print = ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::HostFunc {
+            type_: FuncType(vec![ValType::I32], vec![]),
+            host_code: |params| match &params[..] {
+                &[Val::I32(x)] => {
+                    println!("{}", x);
+                    None
+                }
+                _ => panic!(),
+            },
+        }))));
+
+        let module =
+            Module::decode_end(&std::fs::read("./example/wasm-rs-self-host.wasm").unwrap())
+                .unwrap();
+        let instance = ModuleInst::new(
+            &module,
+            map!(
+                "env".to_string() => map!(
+                    "print".to_string() => print
+                )
+            ),
+        );
+
+        instance.export("run").unwrap_func().call(vec![]);
+    }
 }
