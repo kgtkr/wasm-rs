@@ -517,6 +517,14 @@ impl ModuleInst {
             .unwrap()
             .clone()
     }
+
+    pub fn exports(&self) -> ExternalModule {
+        self.exports
+            .clone()
+            .into_iter()
+            .map(|x| (x.name, x.value))
+            .collect()
+    }
 }
 
 #[cfg(test)]
