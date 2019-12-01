@@ -106,8 +106,7 @@ impl Cmd {
     }
 }
 
-pub fn run_assert(module: &Module, name: &String, args: &Vec<Val>, expected: &Vec<Val>) {
-    let instance = ModuleInst::new(&module, std::collections::HashMap::new());
+pub fn run_assert(instance: &ModuleInst, name: &String, args: &Vec<Val>, expected: &Vec<Val>) {
     assert_eq!(
         &instance
             .export(name)
@@ -119,41 +118,31 @@ pub fn run_assert(module: &Module, name: &String, args: &Vec<Val>, expected: &Ve
     );
 }
 
-pub fn run_test(filename: String, suc_c: &mut i32, err_c: &mut i32) {
-    println!("[run test]{}", filename);
+pub fn run_test(filename: String) {
     let cmds = Cmd::to_cmds(
         &serde_json::from_slice::<Value>(&std::fs::read(format!("spec/{}", filename)).unwrap())
             .unwrap(),
     );
 
-    let mut module: Option<Module> = None;
+    let mut instance = None;
 
     for cmd in &cmds {
         println!("[begin]{:?}", cmd);
         match cmd {
             Cmd::Module(name) => {
-                module = Some(
-                    Module::decode_end(&std::fs::read(format!("spec/{}", name)).unwrap()).unwrap(),
-                );
-                println!("==========[success module]{}", name);
+                instance = Some(ModuleInst::new(
+                    &Module::decode_end(&std::fs::read(format!("spec/{}", name)).unwrap()).unwrap(),
+                    std::collections::HashMap::new(),
+                ));
+                println!("[[[success module]]]{}", name);
             }
             Cmd::AssertReturn {
                 name,
                 args,
                 expected,
             } => {
-                match std::panic::catch_unwind(|| {
-                    run_assert(module.as_ref().unwrap(), name, args, expected);
-                }) {
-                    Ok(_) => {
-                        *suc_c += 1;
-                        println!("[success assert-return]{}", name);
-                    }
-                    Err(e) => {
-                        *err_c += 1;
-                        println!("[error assert-return]{}{:?}", name, e);
-                    }
-                }
+                run_assert(instance.as_ref().unwrap(), name, args, expected);
+                println!("[success test]{}", filename);
             }
             _ => {}
         }
@@ -162,13 +151,20 @@ pub fn run_test(filename: String, suc_c: &mut i32, err_c: &mut i32) {
 
 #[test]
 fn spec_test() {
-    let mut suc_c = 0;
-    let mut err_c = 0;
     for file in std::fs::read_dir("spec").unwrap() {
         let name = file.unwrap().file_name().into_string().unwrap();
         if name.ends_with(".json") {
-            run_test(name, &mut suc_c, &mut err_c);
+            println!("========[begin]{}", name);
+            match std::panic::catch_unwind(|| {
+                run_test(name.to_string());
+            }) {
+                Ok(_) => {
+                    println!("========[success]{}", name);
+                }
+                Err(e) => {
+                    println!("=========[error]{}{:?}", name, e);
+                }
+            }
         }
     }
-    println!("suc:{} err:{}", suc_c, err_c);
 }
