@@ -755,7 +755,7 @@ mod tests {
         main_instance.export("main").unwrap_func().call(vec![]);
     }
 
-    /*#[test]
+    #[test]
     fn test_self_host() {
         let print = ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::HostFunc {
             type_: FuncType(vec![ValType::I32], vec![]),
@@ -781,5 +781,5 @@ mod tests {
         );
 
         instance.export("run").unwrap_func().call(vec![]);
-    }*/
+    }
 }

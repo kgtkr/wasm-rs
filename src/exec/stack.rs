@@ -243,25 +243,25 @@ impl LabelStack {
                         Instr::I32DivS => {
                             let y = self.stack.pop().unwrap().unwrap_i32();
                             let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(x / y));
+                            self.stack.push(Val::I32(x.overflowing_div(y).0));
                         }
                         Instr::I32DivU => {
                             let y = self.stack.pop().unwrap().unwrap_i32();
                             let x = self.stack.pop().unwrap().unwrap_i32();
                             self.stack.push(Val::I32(u32_convert_i32(
-                                i32_convert_u32(x) / i32_convert_u32(y),
+                                i32_convert_u32(x).overflowing_div(i32_convert_u32(y)).0,
                             )));
                         }
                         Instr::I32RemS => {
                             let y = self.stack.pop().unwrap().unwrap_i32();
                             let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(x % y));
+                            self.stack.push(Val::I32(x.overflowing_rem(y).0));
                         }
                         Instr::I32RemU => {
                             let y = self.stack.pop().unwrap().unwrap_i32();
                             let x = self.stack.pop().unwrap().unwrap_i32();
                             self.stack.push(Val::I32(u32_convert_i32(
-                                i32_convert_u32(x) % i32_convert_u32(y),
+                                i32_convert_u32(x).overflowing_rem(i32_convert_u32(y)).0,
                             )));
                         }
                         Instr::I32And => {
@@ -282,18 +282,18 @@ impl LabelStack {
                         Instr::I32ShL => {
                             let y = self.stack.pop().unwrap().unwrap_i32();
                             let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(x << y));
+                            self.stack.push(Val::I32(x.overflowing_shl(y as u32).0));
                         }
                         Instr::I32ShrS => {
                             let y = self.stack.pop().unwrap().unwrap_i32();
                             let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(x >> y));
+                            self.stack.push(Val::I32(x.overflowing_shr(y as u32).0));
                         }
                         Instr::I32ShrU => {
                             let y = self.stack.pop().unwrap().unwrap_i32();
                             let x = self.stack.pop().unwrap().unwrap_i32();
                             self.stack.push(Val::I32(u32_convert_i32(
-                                i32_convert_u32(x) >> i32_convert_u32(y),
+                                i32_convert_u32(x).overflowing_shr(i32_convert_u32(y)).0,
                             )));
                         }
                         Instr::I32Rotl => {
@@ -324,25 +324,25 @@ impl LabelStack {
                         Instr::I64DivS => {
                             let y = self.stack.pop().unwrap().unwrap_i64();
                             let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I64(x / y));
+                            self.stack.push(Val::I64(x.overflowing_div(y).0));
                         }
                         Instr::I64DivU => {
                             let y = self.stack.pop().unwrap().unwrap_i64();
                             let x = self.stack.pop().unwrap().unwrap_i64();
                             self.stack.push(Val::I64(u64_convert_i64(
-                                i64_convert_u64(x) / i64_convert_u64(y),
+                                i64_convert_u64(x).overflowing_div(i64_convert_u64(y)).0,
                             )));
                         }
                         Instr::I64RemS => {
                             let y = self.stack.pop().unwrap().unwrap_i64();
                             let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I64(x % y));
+                            self.stack.push(Val::I64(x.overflowing_rem(y).0));
                         }
                         Instr::I64RemU => {
                             let y = self.stack.pop().unwrap().unwrap_i64();
                             let x = self.stack.pop().unwrap().unwrap_i64();
                             self.stack.push(Val::I64(u64_convert_i64(
-                                i64_convert_u64(x) % i64_convert_u64(y),
+                                i64_convert_u64(x).overflowing_rem(i64_convert_u64(y)).0,
                             )));
                         }
                         Instr::I64And => {
@@ -363,18 +363,20 @@ impl LabelStack {
                         Instr::I64ShL => {
                             let y = self.stack.pop().unwrap().unwrap_i64();
                             let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I64(x << y));
+                            self.stack.push(Val::I64(x.overflowing_shl(y as u32).0));
                         }
                         Instr::I64ShrS => {
                             let y = self.stack.pop().unwrap().unwrap_i64();
                             let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I64(x >> y));
+                            self.stack.push(Val::I64(x.overflowing_shr(y as u32).0));
                         }
                         Instr::I64ShrU => {
                             let y = self.stack.pop().unwrap().unwrap_i64();
                             let x = self.stack.pop().unwrap().unwrap_i64();
                             self.stack.push(Val::I64(u64_convert_i64(
-                                i64_convert_u64(x) >> i64_convert_u64(y),
+                                i64_convert_u64(x)
+                                    .overflowing_shr(i64_convert_u64(y) as u32)
+                                    .0,
                             )));
                         }
                         Instr::I64Rotl => {
