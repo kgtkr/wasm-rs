@@ -59,18 +59,31 @@ pub struct ExportInst {
 }
 
 #[derive(Debug, Clone)]
-pub struct FuncInst {
-    pub type_: FuncType,
-    pub code: Func,
-    pub module: Weak<ModuleInst>,
+pub enum FuncInst {
+    RuntimeFunc {
+        type_: FuncType,
+        code: Func,
+        module: Weak<ModuleInst>,
+    },
+    HostFunc {
+        type_: FuncType,
+        host_code: fn(Vec<Val>) -> Option<Val>,
+    },
 }
 
 impl FuncInst {
     fn new(func: Func, module: Weak<ModuleInst>) -> FuncInst {
-        FuncInst {
+        FuncInst::RuntimeFunc {
             type_: module.upgrade().unwrap().types.get_idx(func.type_).clone(),
             code: func,
             module,
+        }
+    }
+
+    pub fn type_(&self) -> &FuncType {
+        match self {
+            FuncInst::RuntimeFunc { type_, .. } => type_,
+            FuncInst::HostFunc { type_, .. } => type_,
         }
     }
 }
@@ -301,7 +314,7 @@ impl ModuleInst {
         };
 
         for _ in &module.funcs {
-            let dummy_func = FuncInst {
+            let dummy_func = FuncInst::RuntimeFunc {
                 type_: FuncType(Vec::new(), Vec::new()),
                 code: Func {
                     type_: TypeIdx(0),
