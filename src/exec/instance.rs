@@ -23,7 +23,7 @@ pub enum ExternalVal {
 }
 
 impl ExternalVal {
-    fn unwrap_func(self) -> FuncAddr {
+    pub fn unwrap_func(self) -> FuncAddr {
         if let ExternalVal::Func(x) = self {
             x
         } else {
@@ -31,7 +31,7 @@ impl ExternalVal {
         }
     }
 
-    fn unwrap_table(self) -> TableAddr {
+    pub fn unwrap_table(self) -> TableAddr {
         if let ExternalVal::Table(x) = self {
             x
         } else {
@@ -39,7 +39,7 @@ impl ExternalVal {
         }
     }
 
-    fn unwrap_mem(self) -> MemAddr {
+    pub fn unwrap_mem(self) -> MemAddr {
         if let ExternalVal::Mem(x) = self {
             x
         } else {
@@ -47,7 +47,7 @@ impl ExternalVal {
         }
     }
 
-    fn unwrap_global(self) -> GlobalAddr {
+    pub fn unwrap_global(self) -> GlobalAddr {
         if let ExternalVal::Global(x) = self {
             x
         } else {
@@ -129,13 +129,13 @@ pub struct MemInst {
 impl MemInst {
     const PAGE_SIZE: usize = 65536;
 
-    fn new(mem: &Mem) -> MemInst {
+    pub fn new(mem: &Mem) -> MemInst {
         let min = mem.type_.0.min;
         let max = mem.type_.0.max;
         MemInst::from_min_max(min, max)
     }
 
-    fn from_min_max(min: u32, max: Option<u32>) -> MemInst {
+    pub fn from_min_max(min: u32, max: Option<u32>) -> MemInst {
         let min = min as usize * MemInst::PAGE_SIZE;
         let max = max.map(|max| max as usize * MemInst::PAGE_SIZE);
         MemInst {
@@ -325,7 +325,7 @@ macro_rules! map {
 }
 
 impl ModuleInst {
-    fn new(module: &Module, imports_objects: ImportObjects) -> Rc<ModuleInst> {
+    pub fn new(module: &Module, imports_objects: ImportObjects) -> Rc<ModuleInst> {
         let mut result = ModuleInst {
             types: module.types.clone(),
             funcs: module
