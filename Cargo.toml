@@ -9,8 +9,7 @@ byteorder = "1"
 leb128 = "0.2"
 nom = "5.0.1"
 serde_json = "*"
-num = "*"
-num-traits = "*"
+
 
 [dev-dependencies]
 proptest-derive = { git = "https://github.com/alessandrod/proptest.git", rev = "983253ec281c5e71ca16e726eabe6a8dbf5be675" }

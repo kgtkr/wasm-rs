@@ -162,7 +162,7 @@ impl MemInst {
 
     pub fn grow(&mut self, add_size: i32) -> i32 {
         let prev = self.page_size();
-        if prev + add_size > 1024 {
+        if prev + add_size > 16384 {
             -1
         } else {
             self.data
@@ -256,7 +256,10 @@ impl FuncAddr {
                     module: Weak::new(),
                 },
                 stack: vec![LabelStack {
-                    label: Label { instrs: vec![] },
+                    label: Label {
+                        instrs: vec![],
+                        n: 0,
+                    },
                     instrs: vec![AdminInstr::Invoke(self.clone())],
                     stack: params,
                 }],
@@ -752,7 +755,7 @@ mod tests {
         main_instance.export("main").unwrap_func().call(vec![]);
     }
 
-    #[test]
+    /*#[test]
     fn test_self_host() {
         let print = ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::HostFunc {
             type_: FuncType(vec![ValType::I32], vec![]),
@@ -778,5 +781,5 @@ mod tests {
         );
 
         instance.export("run").unwrap_func().call(vec![]);
-    }
+    }*/
 }

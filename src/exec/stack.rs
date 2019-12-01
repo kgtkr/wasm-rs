@@ -44,6 +44,7 @@ pub struct Frame {
 pub struct Label {
     // 前から実行
     pub instrs: Vec<Instr>,
+    pub n: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -67,11 +68,9 @@ impl FrameStack {
                     for _ in 0..idx {
                         self.stack.pop().unwrap();
                     }
-                    let mut k = self
-                        .stack
-                        .pop()
-                        .unwrap()
-                        .label
+
+                    let k_label = self.stack.pop().unwrap().label;
+                    let mut k = k_label
                         .instrs
                         .clone()
                         .into_iter()
@@ -81,11 +80,16 @@ impl FrameStack {
 
                     if let Some(last_label) = self.stack.last_mut() {
                         last_label.instrs.append(&mut k);
-                        last_label.stack.append(&mut add_stack);
+                        last_label
+                            .stack
+                            .append(&mut pop_n(&mut add_stack, k_label.n));
                         None
                     } else {
                         self.stack.push(LabelStack {
-                            label: Label { instrs: vec![] },
+                            label: Label {
+                                instrs: vec![],
+                                n: 0, /* dummy */
+                            },
                             instrs: vec![],
                             stack: add_stack,
                         });
@@ -932,22 +936,31 @@ impl LabelStack {
                         Instr::Unreachable => {
                             panic!("unreachable");
                         }
-                        Instr::Block(_rt, is) => {
-                            self.instrs
-                                .push(AdminInstr::Label(Label { instrs: vec![] }, is));
+                        Instr::Block(rt, is) => {
+                            self.instrs.push(AdminInstr::Label(
+                                Label {
+                                    instrs: vec![],
+                                    n: rt.0.iter().count(),
+                                },
+                                is,
+                            ));
                         }
                         Instr::Loop(rt, is) => {
                             self.instrs.push(AdminInstr::Label(
                                 Label {
                                     instrs: vec![Instr::Loop(rt, is.clone())],
+                                    n: 0,
                                 },
                                 is,
                             ));
                         }
-                        Instr::If(_rt, is1, is2) => {
+                        Instr::If(rt, is1, is2) => {
                             let x = self.stack.pop().unwrap().unwrap_i32();
                             self.instrs.push(AdminInstr::Label(
-                                Label { instrs: vec![] },
+                                Label {
+                                    instrs: vec![],
+                                    n: rt.0.iter().count(),
+                                },
                                 if x != 0 { is1 } else { is2 },
                             ));
                         }
@@ -960,8 +973,11 @@ impl LabelStack {
                         }
                         Instr::BrTable(ls, l) => {
                             let i = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            self.instrs
-                                .push(AdminInstr::Br(ls.get(i).cloned().unwrap_or(l)));
+                            if i < ls.len() {
+                                self.instrs.push(AdminInstr::Br(ls[i]));
+                            } else {
+                                self.instrs.push(AdminInstr::Br(l));
+                            }
                         }
                         Instr::Return => {
                             self.instrs.push(AdminInstr::Return);
@@ -1043,7 +1059,10 @@ impl Stack {
                             },
                             stack: vec![LabelStack {
                                 stack: vec![],
-                                label: Label { instrs: vec![] },
+                                label: Label {
+                                    instrs: vec![],
+                                    n: type_.ret().iter().count(),
+                                },
                                 instrs: code
                                     .body
                                     .0
