@@ -254,13 +254,15 @@ impl LabelStack {
                         Instr::I32DivU => {
                             let y = self.stack.pop().unwrap().unwrap_i32();
                             let x = self.stack.pop().unwrap().unwrap_i32();
+
+                            let x = i32_convert_u32(x);
+                            let y = i32_convert_u32(y);
+
                             if y == 0 {
                                 return Err(RuntimeError::Trap);
                             }
                             self.stack.push(Val::I32(u32_convert_i32(
-                                i32_convert_u32(x)
-                                    .checked_div(i32_convert_u32(y))
-                                    .ok_or_else(|| RuntimeError::Trap)?,
+                                x.checked_div(y).ok_or_else(|| RuntimeError::Trap)?,
                             )));
                         }
                         Instr::I32RemS => {
@@ -345,13 +347,14 @@ impl LabelStack {
                         Instr::I64DivU => {
                             let y = self.stack.pop().unwrap().unwrap_i64();
                             let x = self.stack.pop().unwrap().unwrap_i64();
+
+                            let x = i64_convert_u64(x);
+                            let y = i64_convert_u64(y);
                             if y == 0 {
                                 return Err(RuntimeError::Trap);
                             }
                             self.stack.push(Val::I64(u64_convert_i64(
-                                i64_convert_u64(x)
-                                    .checked_div(i64_convert_u64(y))
-                                    .ok_or_else(|| RuntimeError::Trap)?,
+                                x.checked_div(y).ok_or_else(|| RuntimeError::Trap)?,
                             )));
                         }
                         Instr::I64RemS => {
