@@ -167,6 +167,9 @@ impl FromJSON for CommandPayload {
             "assert_invalid" => CommandPayload::Skip {
                 type_: "assert_invalid".to_string(),
             },
+            "assert_unlinkable" => CommandPayload::Skip {
+                type_: "assert_unlinkable".to_string(),
+            },
             _ => panic!(),
         }
     }
