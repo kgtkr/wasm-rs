@@ -5,6 +5,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::io::Cursor;
+use std::panic::{catch_unwind, resume_unwind, AssertUnwindSafe};
 use std::rc::{Rc, Weak};
 
 #[derive(Debug, Clone, Copy)]
@@ -162,14 +163,14 @@ impl SpecState {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Spec {
     commands: Vec<Command>,
+    source_filename: String,
 }
 
 impl FromJSON for Spec {
     fn from_json(json: &Value) -> Spec {
+        let json_obj = json.as_object().unwrap();
         Spec {
-            commands: json
-                .as_object()
-                .unwrap()
+            commands: json_obj
                 .get("commands")
                 .unwrap()
                 .as_array()
@@ -177,15 +178,22 @@ impl FromJSON for Spec {
                 .iter()
                 .map(Command::from_json)
                 .collect::<Vec<_>>(),
+            source_filename: json_obj
+                .get("source_filename")
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string(),
         }
     }
 }
 
 impl Spec {
-    fn run(&self) {
+    fn run(&self, line: &mut i32) {
         let mut state = SpecState::new();
 
         for command in &self.commands {
+            *line = command.line;
             command.run(&mut state);
         }
     }
@@ -199,7 +207,6 @@ pub struct Command {
 
 impl Command {
     fn run(&self, state: &mut SpecState) {
-        println!(" run line: {}", self.line);
         match &self.paylaod {
             CommandPayload::Module { filename, name } => {
                 state.instances.insert(
@@ -353,23 +360,39 @@ impl FromJSON for CommandPayload {
 
 #[test]
 fn spec_test() {
+    let mut passed_count = 0;
+    let mut failed_count = 0;
+    let mut fail_msgs = Vec::new();
+
     for file in std::fs::read_dir("spec").unwrap() {
         let name = file.unwrap().file_name().into_string().unwrap();
         if name.ends_with(".json") {
+            let mut line = 0;
             let spec = Spec::from_json(
                 &serde_json::from_slice::<Value>(&std::fs::read(format!("spec/{}", name)).unwrap())
                     .unwrap(),
             );
-            match std::panic::catch_unwind(|| {
-                spec.run();
+            let line_ref = AssertUnwindSafe(&mut line);
+            let spec_ref = &spec;
+            match catch_unwind(move || {
+                spec_ref.run(line_ref.0);
             }) {
                 Ok(_) => {
-                    println!("[success]{}", name);
+                    passed_count += 1;
+                    println!("[passed]{}", spec.source_filename);
                 }
                 Err(e) => {
-                    println!("[error]{} {:?}", name, e);
+                    failed_count += 1;
+                    fail_msgs.push(format!("[{}:{}]\n{:?}", spec.source_filename, line, e));
+                    println!("[failed]{}", spec.source_filename);
                 }
             }
         }
     }
+
+    for msg in fail_msgs {
+        println!("{}", msg);
+    }
+
+    println!("passed:{} failed:{}", passed_count, failed_count);
 }
