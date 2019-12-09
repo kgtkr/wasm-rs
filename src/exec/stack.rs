@@ -937,9 +937,7 @@ impl LabelStack {
                             ));
                         }
                         Instr::Nop => {}
-                        Instr::Unreachable => {
-                            panic!("unreachable");
-                        }
+                        Instr::Unreachable => return Err(RuntimeError::Trap),
                         Instr::Block(rt, is) => {
                             self.instrs.push(AdminInstr::Label(
                                 Label {

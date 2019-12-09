@@ -13,7 +13,7 @@ use std::rc::{Rc, Weak};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum RuntimeError {
-    Panic,
+    Trap,
 }
 
 pub type ExternalModule = HashMap<String, ExternalVal>;
