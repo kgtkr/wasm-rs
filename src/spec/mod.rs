@@ -384,7 +384,7 @@ fn spec_test() {
                 Err(e) => {
                     failed_count += 1;
                     fail_msgs.push(format!("[{}:{}]\n{:?}", spec.source_filename, line, e));
-                    println!("[failed]{}", spec.source_filename);
+                    println!("[failed]{}:{}", spec.source_filename, line);
                 }
             }
         }
