@@ -1,0 +1,3 @@
+[submodule "wasm-spec"]
+	path = wasm-spec
+	url = https://github.com/WebAssembly/spec.git
