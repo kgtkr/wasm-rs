@@ -247,7 +247,9 @@ impl LabelStack {
                             if y == 0 {
                                 return Err(RuntimeError::Trap);
                             }
-                            self.stack.push(Val::I32(x.overflowing_div(y).0));
+                            self.stack.push(Val::I32(
+                                x.checked_div(y).ok_or_else(|| RuntimeError::Trap)?,
+                            ));
                         }
                         Instr::I32DivU => {
                             let y = self.stack.pop().unwrap().unwrap_i32();
@@ -256,7 +258,9 @@ impl LabelStack {
                                 return Err(RuntimeError::Trap);
                             }
                             self.stack.push(Val::I32(u32_convert_i32(
-                                i32_convert_u32(x).overflowing_div(i32_convert_u32(y)).0,
+                                i32_convert_u32(x)
+                                    .checked_div(i32_convert_u32(y))
+                                    .ok_or_else(|| RuntimeError::Trap)?,
                             )));
                         }
                         Instr::I32RemS => {
@@ -334,7 +338,9 @@ impl LabelStack {
                             if y == 0 {
                                 return Err(RuntimeError::Trap);
                             }
-                            self.stack.push(Val::I64(x.overflowing_div(y).0));
+                            self.stack.push(Val::I64(
+                                x.checked_div(y).ok_or_else(|| RuntimeError::Trap)?,
+                            ));
                         }
                         Instr::I64DivU => {
                             let y = self.stack.pop().unwrap().unwrap_i64();
@@ -343,7 +349,9 @@ impl LabelStack {
                                 return Err(RuntimeError::Trap);
                             }
                             self.stack.push(Val::I64(u64_convert_i64(
-                                i64_convert_u64(x).overflowing_div(i64_convert_u64(y)).0,
+                                i64_convert_u64(x)
+                                    .checked_div(i64_convert_u64(y))
+                                    .ok_or_else(|| RuntimeError::Trap)?,
                             )));
                         }
                         Instr::I64RemS => {
