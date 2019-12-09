@@ -1001,18 +1001,16 @@ impl LabelStack {
                             self.instrs
                                 .push(AdminInstr::Invoke(instance.funcs.get_idx(idx).clone()));
                         }
-                        Instr::CallIndirect(_t) => {
+                        Instr::CallIndirect(t) => {
                             let instance = frame.module.upgrade().unwrap();
                             let i = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            self.instrs.push(AdminInstr::Invoke(
-                                instance
-                                    .funcs
-                                    .get_idx(
-                                        instance.table.as_ref().unwrap().0.borrow().elem[i]
-                                            .unwrap(),
-                                    )
-                                    .clone(),
-                            ));
+                            let func = instance.funcs.get_idx(
+                                instance.table.as_ref().unwrap().0.borrow().elem[i].unwrap(),
+                            );
+                            if func.0.borrow().type_() != instance.types.get_idx(t) {
+                                return Err(RuntimeError::Trap);
+                            }
+                            self.instrs.push(AdminInstr::Invoke(func.clone()));
                         }
                         x => unimplemented!("{:?}", x),
                     }
