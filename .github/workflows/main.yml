@@ -1,0 +1,23 @@
+name: main
+
+on: [push]
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: git submodule init
+      - run: |
+        git clone --recursive https://github.com/WebAssembly/wabt
+        cd wabt
+        make
+        echo ::add-path::$HOME/wabt/bin
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+      - run: ./init.sh
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
