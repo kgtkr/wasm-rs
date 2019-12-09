@@ -268,14 +268,25 @@ impl LabelStack {
                         Instr::I32RemS => {
                             let y = self.stack.pop().unwrap().unwrap_i32();
                             let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(x.overflowing_rem(y).0));
+
+                            if y == 0 {
+                                return Err(RuntimeError::Trap);
+                            }
+
+                            self.stack.push(Val::I32(x % y));
                         }
                         Instr::I32RemU => {
                             let y = self.stack.pop().unwrap().unwrap_i32();
                             let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(u32_convert_i32(
-                                i32_convert_u32(x).overflowing_rem(i32_convert_u32(y)).0,
-                            )));
+
+                            let x = i32_convert_u32(x);
+                            let y = i32_convert_u32(y);
+
+                            if y == 0 {
+                                return Err(RuntimeError::Trap);
+                            }
+
+                            self.stack.push(Val::I32(u32_convert_i32(x % y)));
                         }
                         Instr::I32And => {
                             let y = self.stack.pop().unwrap().unwrap_i32();
@@ -360,14 +371,25 @@ impl LabelStack {
                         Instr::I64RemS => {
                             let y = self.stack.pop().unwrap().unwrap_i64();
                             let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I64(x.overflowing_rem(y).0));
+
+                            if y == 0 {
+                                return Err(RuntimeError::Trap);
+                            }
+
+                            self.stack.push(Val::I64(x % y));
                         }
                         Instr::I64RemU => {
                             let y = self.stack.pop().unwrap().unwrap_i64();
                             let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I64(u64_convert_i64(
-                                i64_convert_u64(x).overflowing_rem(i64_convert_u64(y)).0,
-                            )));
+
+                            let x = i64_convert_u64(x);
+                            let y = i64_convert_u64(y);
+
+                            if y == 0 {
+                                return Err(RuntimeError::Trap);
+                            }
+
+                            self.stack.push(Val::I64(u64_convert_i64(x % y)));
                         }
                         Instr::I64And => {
                             let y = self.stack.pop().unwrap().unwrap_i64();
