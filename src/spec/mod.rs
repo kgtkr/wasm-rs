@@ -295,10 +295,13 @@ impl FromJSON for CommandPayload {
                 type_: "assert_exhaustion".to_string(),
             },
             "assert_return_canonical_nan" => CommandPayload::Skip {
-                type_: "assert_exhaustion".to_string(),
+                type_: "assert_return_canonical_nan".to_string(),
             },
             "assert_return_arithmetic_nan" => CommandPayload::Skip {
-                type_: "assert_exhaustion".to_string(),
+                type_: "assert_return_arithmetic_nan".to_string(),
+            },
+            "assert_uninstantiable" => CommandPayload::Skip {
+                type_: "assert_uninstantiable".to_string(),
             },
             ty => panic!("unknown type: {}", ty),
         }
