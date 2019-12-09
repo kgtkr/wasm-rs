@@ -395,4 +395,7 @@ fn spec_test() {
     }
 
     println!("passed:{} failed:{}", passed_count, failed_count);
+    if failed_count != 0 {
+        panic!("test failed");
+    }
 }
