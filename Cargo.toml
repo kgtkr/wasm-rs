@@ -14,3 +14,4 @@ serde_json = "*"
 [dev-dependencies]
 proptest-derive = { git = "https://github.com/alessandrod/proptest.git", rev = "983253ec281c5e71ca16e726eabe6a8dbf5be675" }
 proptest = "0.9.4"
+lazy_static = "*"

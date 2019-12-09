@@ -1,10 +1,12 @@
 use crate::binary::Decoder;
 use crate::exec::instance::{ModuleInst, RuntimeError, Val};
+use crate::lazy_static;
 use crate::structure::modules::Module;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::io::Cursor;
+use std::panic;
 use std::panic::{catch_unwind, resume_unwind, AssertUnwindSafe};
 use std::path::Path;
 use std::rc::{Rc, Weak};
@@ -359,8 +361,25 @@ impl FromJSON for CommandPayload {
     }
 }
 
+use std::sync::RwLock;
+
+lazy_static! {
+    pub static ref last_panic_msg: RwLock<Option<String>> = { RwLock::new(None) };
+}
+
 #[test]
 fn test_specs() {
+    let default_hook = panic::take_hook();
+
+    panic::set_hook(Box::new(move |panic_info| {
+        *self::last_panic_msg.write().unwrap() = Some(format!(
+            "{}\n{}",
+            panic_info,
+            std::backtrace::Backtrace::capture()
+        ));
+        default_hook(panic_info);
+    }));
+
     let base_dir = Path::new("./spec");
     let mut passed_count = 0;
     let mut failed_count = 0;
@@ -374,6 +393,7 @@ fn test_specs() {
             let spec = Spec::from_json(
                 &serde_json::from_slice::<Value>(&std::fs::read(&json_path).unwrap()).unwrap(),
             );
+
             let line_ref = AssertUnwindSafe(&mut line);
             let spec_ref = &spec;
             match catch_unwind(move || {
@@ -385,7 +405,13 @@ fn test_specs() {
                 }
                 Err(e) => {
                     failed_count += 1;
-                    fail_msgs.push(format!("[{}:{}]\n{:?}", spec.source_filename, line, e));
+                    fail_msgs.push(format!(
+                        "[{}:{}] {}\n{}",
+                        spec.source_filename,
+                        line,
+                        any_to_string(&*e),
+                        self::last_panic_msg.read().unwrap().as_ref().unwrap()
+                    ));
                     println!("[failed]{}:{}", spec.source_filename, line);
                 }
             }
@@ -399,5 +425,15 @@ fn test_specs() {
     println!("{} passed; {} failed;", passed_count, failed_count);
     if failed_count != 0 {
         panic!("test failed");
+    }
+}
+
+fn any_to_string(any: &dyn std::any::Any) -> String {
+    if let Some(s) = any.downcast_ref::<String>() {
+        s.clone()
+    } else if let Some(s) = any.downcast_ref::<&str>() {
+        s.to_string()
+    } else {
+        "Any".to_string()
     }
 }
