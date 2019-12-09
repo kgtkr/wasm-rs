@@ -161,9 +161,13 @@ impl FromJSON for CommandPayload {
             "assert_trap" => CommandPayload::AssertTrap {
                 action: Action::from_json(json_obj.get("action").unwrap()),
             },
-            ty => CommandPayload::Skip {
-                type_: ty.to_string(),
+            "assert_malformed" => CommandPayload::Skip {
+                type_: "assert_malformed".to_string(),
             },
+            "assert_invalid" => CommandPayload::Skip {
+                type_: "assert_invalid".to_string(),
+            },
+            _ => panic!(),
         }
     }
 }
