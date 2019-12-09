@@ -36,19 +36,50 @@ impl FromJSON for Val {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ActionPayload {
-    Invoke {
-        field: String,
-        args: Vec<Val>,
-        expected: Vec<Val>,
-    },
-    Get {
-        field: String,
-    },
+    Invoke { field: String, args: Vec<Val> },
+    Get { field: String },
+}
+
+impl FromJSON for ActionPayload {
+    fn from_json(json: &Value) -> ActionPayload {
+        let json_obj = json.as_object().unwrap();
+        match json_obj.get("type").unwrap().as_str().unwrap() {
+            "invoke" => ActionPayload::Invoke {
+                field: json_obj.get("field").unwrap().as_str().unwrap().to_string(),
+                args: json_obj
+                    .get("args")
+                    .unwrap()
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(Val::from_json)
+                    .collect::<Vec<_>>(),
+            },
+            "get" => ActionPayload::Get {
+                field: json_obj.get("field").unwrap().as_str().unwrap().to_string(),
+            },
+            _ => panic!(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Action {
     payload: ActionPayload,
+    module: Option<String>,
+}
+
+impl FromJSON for Action {
+    fn from_json(json: &Value) -> Action {
+        Action {
+            payload: ActionPayload::from_json(json),
+            module: json
+                .as_object()
+                .unwrap()
+                .get("module")
+                .map(|x| x.as_str().unwrap().to_string()),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -76,78 +107,83 @@ impl FromJSON for Spec {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Command {
     paylaod: CommandPayload,
+    name: Option<String>,
 }
 
 impl FromJSON for Command {
     fn from_json(json: &Value) -> Command {
         Command {
             paylaod: CommandPayload::from_json(json),
+            name: json
+                .as_object()
+                .unwrap()
+                .get("name")
+                .map(|x| x.as_str().unwrap().to_string()),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum CommandPayload {
-    Module(String),
-    AssertReturn {
-        name: String,
-        args: Vec<Val>,
-        expected: Vec<Val>,
-    },
-    Skip(String),
+    Module { filename: String },
+    AssertReturn { action: Action, expected: Vec<Val> },
+    Register { as_: String },
+    AssertTrap { action: Action },
+    Skip { type_: String },
 }
 
 impl FromJSON for CommandPayload {
     fn from_json(json: &Value) -> CommandPayload {
         let json_obj = json.as_object().unwrap();
         match json_obj.get("type").unwrap().as_str().unwrap() {
-            "module" => CommandPayload::Module(
-                json_obj
+            "module" => CommandPayload::Module {
+                filename: json_obj
                     .get("filename")
                     .unwrap()
                     .as_str()
                     .unwrap()
                     .to_string(),
-            ),
-            "assert_return" => {
-                let action = json_obj.get("action").unwrap().as_object().unwrap();
-                assert_eq!(action.get("type").unwrap().as_str().unwrap(), "invoke");
-                CommandPayload::AssertReturn {
-                    name: action.get("field").unwrap().as_str().unwrap().to_string(),
-                    args: action
-                        .get("args")
-                        .unwrap()
-                        .as_array()
-                        .unwrap()
-                        .iter()
-                        .map(Val::from_json)
-                        .collect::<Vec<_>>(),
-                    expected: json_obj
-                        .get("expected")
-                        .unwrap()
-                        .as_array()
-                        .unwrap()
-                        .iter()
-                        .map(Val::from_json)
-                        .collect::<Vec<_>>(),
-                }
-            }
-            ty => CommandPayload::Skip(ty.to_string()),
+            },
+            "assert_return" => CommandPayload::AssertReturn {
+                action: Action::from_json(json_obj.get("action").unwrap()),
+                expected: json_obj
+                    .get("expected")
+                    .unwrap()
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(Val::from_json)
+                    .collect::<Vec<_>>(),
+            },
+            "register" => CommandPayload::Register {
+                as_: json_obj.get("as").unwrap().as_str().unwrap().to_string(),
+            },
+            "assert_trap" => CommandPayload::AssertTrap {
+                action: Action::from_json(json_obj.get("action").unwrap()),
+            },
+            ty => CommandPayload::Skip {
+                type_: ty.to_string(),
+            },
         }
     }
 }
 
-pub fn run_assert(instance: &ModuleInst, name: &String, args: &Vec<Val>, expected: &Vec<Val>) {
-    assert_eq!(
-        &instance
-            .export(name)
-            .unwrap_func()
-            .call(args.clone())
-            .unwrap()
-            .into_iter()
-            .collect::<Vec<_>>(),
-        expected
-    );
+pub fn run_assert(instance: &ModuleInst, action: &Action, expected: &Vec<Val>) {
+    match &action.payload {
+        ActionPayload::Invoke { field, args } => {
+            assert_eq!(
+                &instance
+                    .export(field)
+                    .unwrap_func()
+                    .call(args.clone())
+                    .unwrap()
+                    .into_iter()
+                    .collect::<Vec<_>>(),
+                expected
+            );
+        }
+        _ => panic!(),
+    }
 }
 
 pub fn run_test(filename: String) {
@@ -161,19 +197,15 @@ pub fn run_test(filename: String) {
     for cmd in &spec.commands {
         println!("[begin]{:?}", cmd);
         match &cmd.paylaod {
-            CommandPayload::Module(name) => {
+            CommandPayload::Module { filename: name } => {
                 instance = Some(ModuleInst::new(
                     &Module::decode_end(&std::fs::read(format!("spec/{}", name)).unwrap()).unwrap(),
                     std::collections::HashMap::new(),
                 ));
                 println!("[[[success module]]]{}", name);
             }
-            CommandPayload::AssertReturn {
-                name,
-                args,
-                expected,
-            } => {
-                run_assert(instance.as_ref().unwrap(), &name, &args, &expected);
+            CommandPayload::AssertReturn { action, expected } => {
+                run_assert(instance.as_ref().unwrap(), &action, &expected);
                 println!("[success test]{}", filename);
             }
             _ => {}
