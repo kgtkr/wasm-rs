@@ -67,7 +67,7 @@ impl FromJSON for Spec {
                 .as_array()
                 .unwrap()
                 .iter()
-                .map(FromJSON::from_json)
+                .map(Command::from_json)
                 .collect::<Vec<_>>(),
         }
     }
@@ -81,7 +81,7 @@ pub struct Command {
 impl FromJSON for Command {
     fn from_json(json: &Value) -> Command {
         Command {
-            paylaod: FromJSON::from_json(json),
+            paylaod: CommandPayload::from_json(json),
         }
     }
 }
@@ -120,7 +120,7 @@ impl FromJSON for CommandPayload {
                         .as_array()
                         .unwrap()
                         .iter()
-                        .map(FromJSON::from_json)
+                        .map(Val::from_json)
                         .collect::<Vec<_>>(),
                     expected: json_obj
                         .get("expected")
@@ -128,7 +128,7 @@ impl FromJSON for CommandPayload {
                         .as_array()
                         .unwrap()
                         .iter()
-                        .map(FromJSON::from_json)
+                        .map(Val::from_json)
                         .collect::<Vec<_>>(),
                 }
             }
@@ -151,7 +151,7 @@ pub fn run_assert(instance: &ModuleInst, name: &String, args: &Vec<Val>, expecte
 }
 
 pub fn run_test(filename: String) {
-    let spec: Spec = FromJSON::from_json(
+    let spec = Spec::from_json(
         &serde_json::from_slice::<Value>(&std::fs::read(format!("spec/{}", filename)).unwrap())
             .unwrap(),
     );
