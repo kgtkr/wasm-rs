@@ -374,7 +374,6 @@ fn test_specs() {
             let spec = Spec::from_json(
                 &serde_json::from_slice::<Value>(&std::fs::read(&json_path).unwrap()).unwrap(),
             );
-            let wat_path = json_path.with_file_name(&spec.source_filename);
             let line_ref = AssertUnwindSafe(&mut line);
             let spec_ref = &spec;
             match catch_unwind(move || {
@@ -382,17 +381,12 @@ fn test_specs() {
             }) {
                 Ok(_) => {
                     passed_count += 1;
-                    println!("[passed]{}", wat_path.to_str().unwrap());
+                    println!("[passed]{}", spec.source_filename);
                 }
                 Err(e) => {
                     failed_count += 1;
-                    fail_msgs.push(format!(
-                        "[{}:{}]\n{:?}",
-                        wat_path.to_str().unwrap(),
-                        line,
-                        e
-                    ));
-                    println!("[failed]{}:{}", wat_path.to_str().unwrap(), line);
+                    fail_msgs.push(format!("[{}:{}]\n{:?}", spec.source_filename, line, e));
+                    println!("[failed]{}:{}", spec.source_filename, line);
                 }
             }
         }
