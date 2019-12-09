@@ -4,5 +4,5 @@ mkdir spec
 cp ./wasm-spec/test/core/*.wast ./spec
 
 for file in $(ls spec); do
-  wast2json spec/$file
+  wast2json spec/$file -o spec/$file.json
 done
