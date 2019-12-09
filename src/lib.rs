@@ -3,10 +3,12 @@
 
 pub mod binary;
 pub mod exec;
-pub mod spec;
 pub mod structure;
 pub mod validation;
 
 #[cfg(test)]
 #[macro_use]
 extern crate proptest_derive;
+
+#[cfg(test)]
+mod spec;
