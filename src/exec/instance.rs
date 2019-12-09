@@ -301,9 +301,30 @@ pub struct TableAddr(pub Rc<RefCell<TableInst>>);
 pub struct MemAddr(pub Rc<RefCell<MemInst>>);
 
 impl MemAddr {
-    pub fn with_mut_cursor<T>(&self, f: impl FnOnce(Cursor<&mut Vec<u8>>) -> T) -> T {
+    pub fn write_with_cursor<T>(
+        &self,
+        position: usize,
+        f: impl FnOnce(Cursor<&mut Vec<u8>>) -> T,
+    ) -> Result<T, RuntimeError> {
+        let mut buf = Vec::new();
+        let cur = Cursor::new(&mut buf);
+        let res = f(cur);
+
         let raw = &mut self.0.borrow_mut().data;
-        f(Cursor::new(raw))
+        if raw.len()
+            < buf
+                .len()
+                .checked_add(position)
+                .ok_or_else(|| RuntimeError::Trap)?
+        {
+            return Err(RuntimeError::Trap);
+        }
+
+        for (i, x) in buf.into_iter().enumerate() {
+            raw[i + position] = x;
+        }
+
+        Ok(res)
     }
 
     pub fn with_cursor<T>(&self, f: impl FnOnce(Cursor<&Vec<u8>>) -> T) -> T {
