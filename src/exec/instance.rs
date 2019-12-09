@@ -11,6 +11,11 @@ use std::cell::RefCell;
 use std::io::Cursor;
 use std::rc::{Rc, Weak};
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum RuntimeError {
+    Panic,
+}
+
 pub type ExternalModule = HashMap<String, ExternalVal>;
 pub type ImportObjects = HashMap<String, ExternalModule>;
 
@@ -71,7 +76,7 @@ pub enum FuncInst {
     },
     HostFunc {
         type_: FuncType,
-        host_code: fn(Vec<Val>) -> Option<Val>,
+        host_code: fn(Vec<Val>) -> Result<Option<Val>, RuntimeError>,
     },
 }
 
@@ -248,7 +253,7 @@ impl TypedIdxAccess<GlobalIdx> for Vec<GlobalAddr> {}
 pub struct FuncAddr(pub Rc<RefCell<FuncInst>>);
 
 impl FuncAddr {
-    pub fn call(&self, params: Vec<Val>) -> Option<Val> {
+    pub fn call(&self, params: Vec<Val>) -> Result<Option<Val>, RuntimeError> {
         let mut stack = Stack {
             stack: vec![FrameStack {
                 frame: Frame {
@@ -268,7 +273,7 @@ impl FuncAddr {
         };
 
         loop {
-            stack.step();
+            stack.step()?;
             if stack.stack.len() == 1
                 && stack.stack.first().unwrap().stack.len() == 1
                 && stack
@@ -285,7 +290,7 @@ impl FuncAddr {
             }
         }
 
-        stack.stack.pop().unwrap().stack.pop().unwrap().stack.pop()
+        Ok(stack.stack.pop().unwrap().stack.pop().unwrap().stack.pop())
     }
 }
 
@@ -567,7 +572,7 @@ mod tests {
                 .export("add")
                 .unwrap_func()
                 .call(vec![Val::I32(3), Val::I32(5)]),
-            Some(Val::I32(8))
+            Ok(Some(Val::I32(8)))
         );
     }
 
@@ -581,7 +586,7 @@ mod tests {
                 .export("gcd")
                 .unwrap_func()
                 .call(vec![Val::I32(182), Val::I32(1029)]),
-            Some(Val::I32(7))
+            Ok(Some(Val::I32(7)))
         );
     }
 
@@ -594,7 +599,7 @@ mod tests {
                 .export("pow")
                 .unwrap_func()
                 .call(vec![Val::I32(2), Val::I32(10)]),
-            Some(Val::I32(1024))
+            Ok(Some(Val::I32(1024)))
         );
     }
 
@@ -609,14 +614,14 @@ mod tests {
                 .export("br_table")
                 .unwrap_func()
                 .call(vec![Val::I32(0)]),
-            Some(Val::I32(10))
+            Ok(Some(Val::I32(10)))
         );
         assert_eq!(
             instance
                 .export("br_table")
                 .unwrap_func()
                 .call(vec![Val::I32(10)]),
-            Some(Val::I32(30))
+            Ok(Some(Val::I32(30)))
         );
     }
 
@@ -633,6 +638,7 @@ mod tests {
             .unwrap_func()
             .call(vec![Val::I32(input_bytes.len() as i32)])
             .unwrap()
+            .unwrap()
             .unwrap_i32() as usize;
         for i in 0..input_bytes.len() {
             let mem = instance.export("memory").unwrap_mem();
@@ -645,6 +651,7 @@ mod tests {
             .export("md5")
             .unwrap_func()
             .call(vec![Val::I32(input_ptr as i32)])
+            .unwrap()
             .unwrap()
             .unwrap_i32() as usize;
 
@@ -676,7 +683,7 @@ mod tests {
             host_code: |params| match &params[..] {
                 &[Val::I32(x)] => {
                     println!("{}", x);
-                    None
+                    Ok(None)
                 }
                 _ => panic!(),
             },
@@ -721,7 +728,7 @@ mod tests {
             host_code: |params| match &params[..] {
                 &[Val::I32(x)] => {
                     println!("{}", x);
-                    None
+                    Ok(None)
                 }
                 _ => panic!(),
             },
@@ -763,7 +770,7 @@ mod tests {
             host_code: |params| match &params[..] {
                 &[Val::I32(x)] => {
                     println!("{}", x);
-                    None
+                    Ok(None)
                 }
                 _ => panic!(),
             },

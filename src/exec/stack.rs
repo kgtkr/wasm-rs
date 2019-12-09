@@ -1,4 +1,4 @@
-use super::instance::{FuncAddr, FuncInst, ModuleInst, TypedIdxAccess, Val};
+use super::instance::{FuncAddr, FuncInst, ModuleInst, RuntimeError, TypedIdxAccess, Val};
 use crate::structure::instructions::Instr;
 use crate::structure::modules::{
     Data, Elem, Export, ExportDesc, Func, FuncIdx, Global, GlobalIdx, LabelIdx, LocalIdx, Mem,
@@ -57,9 +57,9 @@ pub struct FrameStack {
 }
 
 impl FrameStack {
-    pub fn step(&mut self) -> Option<ModuleLevelInstr> {
+    pub fn step(&mut self) -> Result<Option<ModuleLevelInstr>, RuntimeError> {
         let cur_lavel = self.stack.last_mut().unwrap();
-        if let Some(instr) = cur_lavel.step(&mut self.frame) {
+        Ok(if let Some(instr) = cur_lavel.step(&mut self.frame)? {
             match instr {
                 FrameLevelInstr::Invoke(idx) => Some(ModuleLevelInstr::Invoke(idx)),
                 FrameLevelInstr::Return => Some(ModuleLevelInstr::Return),
@@ -118,7 +118,7 @@ impl FrameStack {
             }
         } else {
             None
-        }
+        })
     }
 }
 
@@ -131,8 +131,8 @@ pub struct LabelStack {
 }
 
 impl LabelStack {
-    fn step(&mut self, frame: &mut Frame) -> Option<FrameLevelInstr> {
-        match self.instrs.pop() {
+    fn step(&mut self, frame: &mut Frame) -> Result<Option<FrameLevelInstr>, RuntimeError> {
+        Ok(match self.instrs.pop() {
             Some(instr) => match instr {
                 AdminInstr::Instr(instr) => {
                     match instr {
@@ -1014,7 +1014,7 @@ impl LabelStack {
                 AdminInstr::Return => Some(FrameLevelInstr::Return),
             },
             None => Some(FrameLevelInstr::LabelEnd),
-        }
+        })
     }
 }
 
@@ -1025,9 +1025,9 @@ pub struct Stack {
 }
 
 impl Stack {
-    pub fn step(&mut self) {
+    pub fn step(&mut self) -> Result<(), RuntimeError> {
         let cur_frame = self.stack.last_mut().unwrap();
-        if let Some(instr) = cur_frame.step() {
+        if let Some(instr) = cur_frame.step()? {
             let cur_label = cur_frame.stack.last_mut().unwrap();
             match instr {
                 ModuleLevelInstr::Invoke(func) => match &*func.0.borrow() {
@@ -1082,7 +1082,7 @@ impl Stack {
                     }
                     FuncInst::HostFunc { type_, host_code } => {
                         let params = pop_n(&mut cur_label.stack, type_.params().len());
-                        if let Some(result) = host_code(params) {
+                        if let Some(result) = host_code(params)? {
                             cur_label.stack.push(result);
                         }
                     }
@@ -1102,6 +1102,7 @@ impl Stack {
                 }
             }
         }
+        Ok(())
     }
 }
 

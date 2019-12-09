@@ -97,6 +97,7 @@ pub fn run_assert(instance: &ModuleInst, name: &String, args: &Vec<Val>, expecte
             .export(name)
             .unwrap_func()
             .call(args.clone())
+            .unwrap()
             .into_iter()
             .collect::<Vec<_>>(),
         expected
