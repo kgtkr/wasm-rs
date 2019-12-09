@@ -7,7 +7,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - run: git submodule init
+      - run: |
+          git submodule init
+          git submodule update
       - run: |
           git clone --recursive https://github.com/WebAssembly/wabt
           cd wabt
