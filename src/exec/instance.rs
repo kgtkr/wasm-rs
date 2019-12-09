@@ -133,6 +133,7 @@ pub struct MemInst {
 
 impl MemInst {
     const PAGE_SIZE: usize = 65536;
+    const MAX_PAGE_SIZE: i32 = 16384;
 
     pub fn new(mem: &Mem) -> MemInst {
         let min = mem.type_.0.min;
@@ -142,7 +143,7 @@ impl MemInst {
 
     pub fn from_min_max(min: u32, max: Option<u32>) -> MemInst {
         let min = min as usize * MemInst::PAGE_SIZE;
-        let max = max.map(|max| max as usize * MemInst::PAGE_SIZE);
+        let max = max.map(|max| max as usize);
         MemInst {
             max,
             data: {
@@ -167,11 +168,13 @@ impl MemInst {
 
     pub fn grow(&mut self, add_size: i32) -> i32 {
         let prev = self.page_size();
-        if prev + add_size > 16384 {
+        let new_size = prev + add_size;
+        if self.max.map(|max| new_size as usize > max).unwrap_or(false)
+            || new_size > MemInst::MAX_PAGE_SIZE
+        {
             -1
         } else {
-            self.data
-                .resize((prev as usize + add_size as usize) * MemInst::PAGE_SIZE, 0);
+            self.data.resize(new_size as usize * MemInst::PAGE_SIZE, 0);
             prev
         }
     }
