@@ -190,6 +190,9 @@ impl Command {
                     .registers
                     .insert(as_.clone(), state.instances.get(name).unwrap().clone());
             }
+            CommandPayload::Action { action, expected } => {
+                assert_eq!(&action.run(state).unwrap(), expected);
+            }
             CommandPayload::Skip { .. } => {}
         }
     }
@@ -222,6 +225,10 @@ pub enum CommandPayload {
     },
     Skip {
         type_: String,
+    },
+    Action {
+        action: Action,
+        expected: Vec<Val>,
     },
 }
 
@@ -261,6 +268,17 @@ impl FromJSON for CommandPayload {
                     .get("name")
                     .map(|x| x.as_str().unwrap().to_string()),
             },
+            "action" => CommandPayload::Action {
+                action: Action::from_json(json_obj.get("action").unwrap()),
+                expected: json_obj
+                    .get("expected")
+                    .unwrap()
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(Val::from_json)
+                    .collect::<Vec<_>>(),
+            },
             "assert_trap" => CommandPayload::AssertTrap {
                 action: Action::from_json(json_obj.get("action").unwrap()),
             },
@@ -273,7 +291,16 @@ impl FromJSON for CommandPayload {
             "assert_unlinkable" => CommandPayload::Skip {
                 type_: "assert_unlinkable".to_string(),
             },
-            _ => panic!(),
+            "assert_exhaustion" => CommandPayload::Skip {
+                type_: "assert_exhaustion".to_string(),
+            },
+            "assert_return_canonical_nan" => CommandPayload::Skip {
+                type_: "assert_exhaustion".to_string(),
+            },
+            "assert_return_arithmetic_nan" => CommandPayload::Skip {
+                type_: "assert_exhaustion".to_string(),
+            },
+            ty => panic!("unknown type: {}", ty),
         }
     }
 }
