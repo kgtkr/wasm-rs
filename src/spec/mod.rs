@@ -7,6 +7,40 @@ use std::collections::HashMap;
 use std::io::Cursor;
 use std::rc::{Rc, Weak};
 
+#[derive(Debug, Clone, Copy)]
+struct SpecVal(Val);
+impl PartialEq for SpecVal {
+    fn eq(&self, other: &SpecVal) -> bool {
+        match (self.0, other.0) {
+            (Val::I32(a), Val::I32(b)) => a == b,
+            (Val::I64(a), Val::I64(b)) => a == b,
+            (Val::F32(a), Val::F32(b)) => {
+                let mut a_bytes = Vec::new();
+                a_bytes.write_f32::<LittleEndian>(a).unwrap();
+
+                let mut b_bytes = Vec::new();
+                b_bytes.write_f32::<LittleEndian>(b).unwrap();
+                a_bytes == b_bytes
+            }
+            (Val::F64(a), Val::F64(b)) => {
+                let mut a_bytes = Vec::new();
+                a_bytes.write_f64::<LittleEndian>(a).unwrap();
+
+                let mut b_bytes = Vec::new();
+                b_bytes.write_f64::<LittleEndian>(b).unwrap();
+                a_bytes == b_bytes
+            }
+            _ => false,
+        }
+    }
+}
+
+impl FromJSON for SpecVal {
+    fn from_json(json: &Value) -> SpecVal {
+        SpecVal(Val::from_json(json))
+    }
+}
+
 trait FromJSON {
     fn from_json(json: &Value) -> Self;
 }
@@ -72,7 +106,7 @@ pub struct Action {
 }
 
 impl Action {
-    fn run(&self, state: &mut SpecState) -> Result<Vec<Val>, RuntimeError> {
+    fn run(&self, state: &mut SpecState) -> Result<Vec<SpecVal>, RuntimeError> {
         match &self.payload {
             ActionPayload::Invoke { field, args } => state
                 .instances
@@ -81,8 +115,8 @@ impl Action {
                 .export(field)
                 .unwrap_func()
                 .call(args.clone())
-                .map(|x| x.into_iter().collect::<Vec<_>>()),
-            ActionPayload::Get { field } => Ok(vec![
+                .map(|x| x.into_iter().map(SpecVal).collect::<Vec<_>>()),
+            ActionPayload::Get { field } => Ok(vec![SpecVal(
                 state
                     .instances
                     .get(&self.module)
@@ -92,7 +126,7 @@ impl Action {
                     .0
                     .borrow()
                     .value,
-            ]),
+            )]),
         }
     }
 }
@@ -159,11 +193,13 @@ impl Spec {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Command {
+    line: i32,
     paylaod: CommandPayload,
 }
 
 impl Command {
     fn run(&self, state: &mut SpecState) {
+        println!(" run line: {}", self.line);
         match &self.paylaod {
             CommandPayload::Module { filename, name } => {
                 state.instances.insert(
@@ -201,20 +237,27 @@ impl Command {
 impl FromJSON for Command {
     fn from_json(json: &Value) -> Command {
         Command {
+            line: json
+                .as_object()
+                .unwrap()
+                .get("line")
+                .unwrap()
+                .as_i64()
+                .unwrap() as i32,
             paylaod: CommandPayload::from_json(json),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum CommandPayload {
+enum CommandPayload {
     Module {
         filename: String,
         name: Option<String>,
     },
     AssertReturn {
         action: Action,
-        expected: Vec<Val>,
+        expected: Vec<SpecVal>,
     },
     Register {
         as_: String,
@@ -228,7 +271,7 @@ pub enum CommandPayload {
     },
     Action {
         action: Action,
-        expected: Vec<Val>,
+        expected: Vec<SpecVal>,
     },
 }
 
@@ -257,7 +300,7 @@ impl FromJSON for CommandPayload {
                     .as_array()
                     .unwrap()
                     .iter()
-                    .map(Val::from_json)
+                    .map(SpecVal::from_json)
                     .collect::<Vec<_>>(),
             },
             "register" => CommandPayload::Register {
@@ -276,7 +319,7 @@ impl FromJSON for CommandPayload {
                     .as_array()
                     .unwrap()
                     .iter()
-                    .map(Val::from_json)
+                    .map(SpecVal::from_json)
                     .collect::<Vec<_>>(),
             },
             "assert_trap" => CommandPayload::AssertTrap {
