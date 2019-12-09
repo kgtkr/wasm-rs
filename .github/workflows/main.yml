@@ -14,8 +14,7 @@ jobs:
           git clone --recursive https://github.com/WebAssembly/wabt
           cd wabt
           make
-          echo ::add-path::/github/home/wabt/bin
-        working-directory: /github/home
+          echo ::add-path::$PWD/wabt/bin
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
