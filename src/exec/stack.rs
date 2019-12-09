@@ -458,12 +458,21 @@ impl LabelStack {
                         Instr::F32Min => {
                             let y = self.stack.pop().unwrap().unwrap_f32();
                             let x = self.stack.pop().unwrap().unwrap_f32();
-                            self.stack.push(Val::F32(x.min(y)));
+                            // 0.0, -0.0対策
+                            self.stack.push(Val::F32(match (sign_f32(x), sign_f32(y)) {
+                                (Some(Sign::Positive), Some(Sign::Negative)) => y,
+                                (Some(Sign::Negative), Some(Sign::Positive)) => x,
+                                _ => x.min(y),
+                            }));
                         }
                         Instr::F32Max => {
                             let y = self.stack.pop().unwrap().unwrap_f32();
                             let x = self.stack.pop().unwrap().unwrap_f32();
-                            self.stack.push(Val::F32(x.max(y)));
+                            self.stack.push(Val::F32(match (sign_f32(x), sign_f32(y)) {
+                                (Some(Sign::Positive), Some(Sign::Negative)) => x,
+                                (Some(Sign::Negative), Some(Sign::Positive)) => y,
+                                _ => x.max(y),
+                            }));
                         }
                         Instr::F32CopySign => {
                             let y = self.stack.pop().unwrap().unwrap_f32();
@@ -493,12 +502,20 @@ impl LabelStack {
                         Instr::F64Min => {
                             let y = self.stack.pop().unwrap().unwrap_f64();
                             let x = self.stack.pop().unwrap().unwrap_f64();
-                            self.stack.push(Val::F64(x.min(y)));
+                            self.stack.push(Val::F64(match (sign_f64(x), sign_f64(y)) {
+                                (Some(Sign::Positive), Some(Sign::Negative)) => y,
+                                (Some(Sign::Negative), Some(Sign::Positive)) => x,
+                                _ => x.min(y),
+                            }));
                         }
                         Instr::F64Max => {
                             let y = self.stack.pop().unwrap().unwrap_f64();
                             let x = self.stack.pop().unwrap().unwrap_f64();
-                            self.stack.push(Val::F64(x.max(y)));
+                            self.stack.push(Val::F64(match (sign_f64(x), sign_f64(y)) {
+                                (Some(Sign::Positive), Some(Sign::Negative)) => x,
+                                (Some(Sign::Negative), Some(Sign::Positive)) => y,
+                                _ => x.max(y),
+                            }));
                         }
                         Instr::F64CopySign => {
                             let y = self.stack.pop().unwrap().unwrap_f64();
@@ -1189,4 +1206,29 @@ fn pop_n<T>(vec: &mut Vec<T>, n: usize) -> Vec<T> {
 fn test_pop_n() {
     assert_eq!(pop_n::<i32>(&mut vec![], 0), vec![] as Vec<i32>);
     assert_eq!(pop_n::<i32>(&mut vec![1, 2, 3, 4, 5], 2), vec![4, 5]);
+}
+
+enum Sign {
+    Positive,
+    Negative,
+}
+
+fn sign_f32(x: f32) -> Option<Sign> {
+    if x.is_sign_positive() {
+        Some(Sign::Positive)
+    } else if x.is_sign_negative() {
+        Some(Sign::Negative)
+    } else {
+        None
+    }
+}
+
+fn sign_f64(x: f64) -> Option<Sign> {
+    if x.is_sign_positive() {
+        Some(Sign::Positive)
+    } else if x.is_sign_negative() {
+        Some(Sign::Negative)
+    } else {
+        None
+    }
 }
