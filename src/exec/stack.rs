@@ -1004,9 +1004,15 @@ impl LabelStack {
                         Instr::CallIndirect(t) => {
                             let instance = frame.module.upgrade().unwrap();
                             let i = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            let func = instance.funcs.get_idx(
-                                instance.table.as_ref().unwrap().0.borrow().elem[i].unwrap(),
-                            );
+                            let func_idx = {
+                                let table = instance.table.as_ref().unwrap().0.borrow();
+                                if let Some(Some(func_idx)) = table.elem.get(i) {
+                                    func_idx.clone()
+                                } else {
+                                    return Err(RuntimeError::Trap);
+                                }
+                            };
+                            let func = instance.funcs.get_idx(func_idx);
                             if func.0.borrow().type_() != instance.types.get_idx(t) {
                                 return Err(RuntimeError::Trap);
                             }
