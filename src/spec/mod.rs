@@ -6,6 +6,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::io::Cursor;
 use std::panic::{catch_unwind, resume_unwind, AssertUnwindSafe};
+use std::path::Path;
 use std::rc::{Rc, Weak};
 
 #[derive(Debug, Clone, Copy)]
@@ -189,12 +190,12 @@ impl FromJSON for Spec {
 }
 
 impl Spec {
-    fn run(&self, line: &mut i32) {
+    fn run(&self, base_dir: &Path, line: &mut i32) {
         let mut state = SpecState::new();
 
         for command in &self.commands {
             *line = command.line;
-            command.run(&mut state);
+            command.run(base_dir, &mut state);
         }
     }
 }
@@ -206,13 +207,13 @@ pub struct Command {
 }
 
 impl Command {
-    fn run(&self, state: &mut SpecState) {
+    fn run(&self, base_dir: &Path, state: &mut SpecState) {
         match &self.paylaod {
             CommandPayload::Module { filename, name } => {
                 state.instances.insert(
                     name.clone(),
                     ModuleInst::new(
-                        &Module::decode_end(&std::fs::read(format!("spec/{}", filename)).unwrap())
+                        &Module::decode_end(&std::fs::read(base_dir.join(filename)).unwrap())
                             .unwrap(),
                         state
                             .registers
@@ -360,31 +361,38 @@ impl FromJSON for CommandPayload {
 
 #[test]
 fn test_specs() {
+    let base_dir = Path::new("./spec");
     let mut passed_count = 0;
     let mut failed_count = 0;
     let mut fail_msgs = Vec::new();
 
-    for file in std::fs::read_dir("spec").unwrap() {
-        let name = file.unwrap().file_name().into_string().unwrap();
-        if name.ends_with(".json") {
+    for file in std::fs::read_dir(base_dir).unwrap() {
+        let filename = file.unwrap().file_name().into_string().unwrap();
+        if filename.ends_with(".json") {
+            let json_path = base_dir.join(filename);
             let mut line = 0;
             let spec = Spec::from_json(
-                &serde_json::from_slice::<Value>(&std::fs::read(format!("spec/{}", name)).unwrap())
-                    .unwrap(),
+                &serde_json::from_slice::<Value>(&std::fs::read(&json_path).unwrap()).unwrap(),
             );
+            let wat_path = json_path.with_file_name(&spec.source_filename);
             let line_ref = AssertUnwindSafe(&mut line);
             let spec_ref = &spec;
             match catch_unwind(move || {
-                spec_ref.run(line_ref.0);
+                spec_ref.run(base_dir, line_ref.0);
             }) {
                 Ok(_) => {
                     passed_count += 1;
-                    println!("[passed]{}", spec.source_filename);
+                    println!("[passed]{}", wat_path.to_str().unwrap());
                 }
                 Err(e) => {
                     failed_count += 1;
-                    fail_msgs.push(format!("[{}:{}]\n{:?}", spec.source_filename, line, e));
-                    println!("[failed]{}:{}", spec.source_filename, line);
+                    fail_msgs.push(format!(
+                        "[{}:{}]\n{:?}",
+                        wat_path.to_str().unwrap(),
+                        line,
+                        e
+                    ));
+                    println!("[failed]{}:{}", wat_path.to_str().unwrap(), line);
                 }
             }
         }
