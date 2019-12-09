@@ -571,6 +571,7 @@ impl Decoder for Module {
 }
 
 #[test]
+#[ignore]
 fn test_add() {
     use crate::structure::instructions::Instr;
     assert_eq!(
@@ -605,6 +606,7 @@ fn test_add() {
 }
 
 #[test]
+#[ignore]
 fn test_md5() {
     assert!(Module::decode_end(&std::fs::read("./example/md5.wasm").unwrap()).is_ok(),);
 }
