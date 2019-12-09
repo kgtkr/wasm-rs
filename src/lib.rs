@@ -5,6 +5,7 @@ pub mod binary;
 pub mod exec;
 pub mod spec;
 pub mod structure;
+pub mod validation;
 
 #[cfg(test)]
 #[macro_use]
