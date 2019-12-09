@@ -359,7 +359,7 @@ impl FromJSON for CommandPayload {
 }
 
 #[test]
-fn spec_test() {
+fn test_specs() {
     let mut passed_count = 0;
     let mut failed_count = 0;
     let mut fail_msgs = Vec::new();
