@@ -98,10 +98,10 @@ impl FuncInst {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct TableInst {
     pub max: Option<usize>,
-    pub elem: Vec<Option<FuncIdx>>,
+    pub elem: Vec<Option<FuncAddr>>,
 }
 
 impl TableInst {
@@ -117,11 +117,11 @@ impl TableInst {
         }
     }
 
-    fn init_elem(&mut self, offset: usize, init: Vec<FuncIdx>) {
+    fn init_elem(&mut self, funcs: &Vec<FuncAddr>, offset: usize, init: Vec<FuncIdx>) {
         let len = std::cmp::max(self.elem.len(), offset + init.len());
         self.elem.resize(len, None);
         for (i, x) in init.into_iter().enumerate() {
-            self.elem[offset + i] = Some(x);
+            self.elem[offset + i] = Some(funcs.get_idx(x).clone());
         }
     }
 }
@@ -298,7 +298,7 @@ impl FuncAddr {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct TableAddr(pub Rc<RefCell<TableInst>>);
 
 #[derive(Clone, Debug, PartialEq)]
@@ -470,14 +470,11 @@ impl ModuleInst {
         }
         for elem in &module.elem {
             let offset = result.eval_const_expr(&elem.offset).unwrap_i32() as usize;
-            result.table.as_mut().unwrap();
-            result
-                .table
-                .as_ref()
-                .unwrap()
-                .0
-                .borrow_mut()
-                .init_elem(offset, elem.init.clone());
+            result.table.as_ref().unwrap().0.borrow_mut().init_elem(
+                &result.funcs,
+                offset,
+                elem.init.clone(),
+            );
         }
         for data in &module.data {
             let offset = result.eval_const_expr(&data.offset).unwrap_i32() as usize;

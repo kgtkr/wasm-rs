@@ -949,18 +949,14 @@ impl LabelStack {
                         Instr::I64Load16U(m) => {
                             let instance = frame.module.upgrade().unwrap();
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            instance
-                                .mem
-                                .as_ref()
-                                .unwrap()
-                                .with_cursor(|mut cur| {
-                                    cur.set_position((ptr + m.offset as usize) as u64);
-                                    let x = cur
-                                        .read_u16::<LittleEndian>()
-                                        .map_err(|_| RuntimeError::Trap)?;
-                                    self.stack.push(Val::I64(x as i64));
-                                    Ok(())
-                                })?;
+                            instance.mem.as_ref().unwrap().with_cursor(|mut cur| {
+                                cur.set_position((ptr + m.offset as usize) as u64);
+                                let x = cur
+                                    .read_u16::<LittleEndian>()
+                                    .map_err(|_| RuntimeError::Trap)?;
+                                self.stack.push(Val::I64(x as i64));
+                                Ok(())
+                            })?;
                         }
                         Instr::I64Load32S(m) => {
                             let instance = frame.module.upgrade().unwrap();
@@ -1110,15 +1106,14 @@ impl LabelStack {
                         Instr::CallIndirect(t) => {
                             let instance = frame.module.upgrade().unwrap();
                             let i = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            let func_idx = {
+                            let func = {
                                 let table = instance.table.as_ref().unwrap().0.borrow();
-                                if let Some(Some(func_idx)) = table.elem.get(i) {
-                                    func_idx.clone()
+                                if let Some(Some(func)) = table.elem.get(i) {
+                                    func.clone()
                                 } else {
                                     return Err(RuntimeError::Trap);
                                 }
                             };
-                            let func = instance.funcs.get_idx(func_idx);
                             if func.0.borrow().type_() != instance.types.get_idx(t) {
                                 return Err(RuntimeError::Trap);
                             }
