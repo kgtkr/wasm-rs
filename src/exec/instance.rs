@@ -7,6 +7,7 @@ use crate::structure::modules::{
 use crate::structure::types::{FuncType, Limits, MemType, Mut, ResultType, TableType, ValType};
 use std::collections::HashMap;
 
+use maplit::hashmap;
 use std::cell::RefCell;
 use std::io::Cursor;
 use std::rc::{Rc, Weak};
@@ -347,18 +348,6 @@ pub struct ModuleInst {
     pub mem: Option<MemAddr>,
     pub globals: Vec<GlobalAddr>,
     pub exports: Vec<ExportInst>,
-}
-
-macro_rules! map {
-    ( $( $k:expr => $v:expr),* ) => {
-        {
-            let mut result = HashMap::new();
-            $(
-                result.insert($k, $v);
-            )*
-            result
-        }
-    };
 }
 
 impl ModuleInst {
@@ -723,26 +712,26 @@ mod tests {
             Module::decode_end(&std::fs::read("./example/memory.wasm").unwrap()).unwrap();
         let memory_instance = ModuleInst::new(
             &memory_module,
-            map!(
-                "resource".to_string() => map!(
+            hashmap! {
+                "resource".to_string() => hashmap!{
                     "memory".to_string() => memory.clone()
-                )
-            ),
+                }
+            },
         );
 
         let main_module =
             Module::decode_end(&std::fs::read("./example/cl8w-gcd.wasm").unwrap()).unwrap();
         let main_instance = ModuleInst::new(
             &main_module,
-            map!(
-                "resource".to_string() => map!(
+            hashmap! {
+                "resource".to_string() => hashmap!{
                     "memory".to_string() => memory.clone()
-                ),
+                },
                 "memory".to_string() => memory_instance.exports(),
-                "io".to_string() => map!(
+                "io".to_string() => hashmap!{
                     "print".to_string() => print.clone()
-                )
-            ),
+                }
+            },
         );
 
         main_instance.export("main").unwrap_func().call(vec![]);
@@ -769,26 +758,26 @@ mod tests {
             Module::decode_end(&std::fs::read("./example/memory.wasm").unwrap()).unwrap();
         let memory_instance = ModuleInst::new(
             &memory_module,
-            map!(
-                "resource".to_string() => map!(
+            hashmap! {
+                "resource".to_string() => hashmap!{
                     "memory".to_string() => memory.clone()
-                )
-            ),
+                }
+            },
         );
 
         let main_module =
             Module::decode_end(&std::fs::read("./example/cl8w-ex.wasm").unwrap()).unwrap();
         let main_instance = ModuleInst::new(
             &main_module,
-            map!(
-                "resource".to_string() => map!(
+            hashmap! {
+                "resource".to_string() => hashmap!{
                     "memory".to_string() => memory.clone()
-                ),
+                },
                 "memory".to_string() => memory_instance.exports(),
-                "io".to_string() => map!(
+                "io".to_string() => hashmap!{
                     "print".to_string() => print.clone()
-                )
-            ),
+                }
+            },
         );
 
         main_instance.export("main").unwrap_func().call(vec![]);
@@ -813,11 +802,11 @@ mod tests {
                 .unwrap();
         let instance = ModuleInst::new(
             &module,
-            map!(
-                "env".to_string() => map!(
+            hashmap! {
+                "env".to_string() => hashmap!{
                     "print".to_string() => print
-                )
-            ),
+                }
+            },
         );
 
         instance.export("run").unwrap_func().call(vec![]);
