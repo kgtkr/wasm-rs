@@ -120,18 +120,14 @@ impl Action {
     fn run(&self, state: &mut SpecState) -> Result<Vec<SpecVal>, RuntimeError> {
         match &self.payload {
             ActionPayload::Invoke { field, args } => state
-                .instances
-                .get(&self.module)
-                .unwrap()
+                .instance(&self.module)
                 .export(field)
                 .unwrap_func()
                 .call(args.clone())
                 .map(|x| x.into_iter().map(SpecVal).collect::<Vec<_>>()),
             ActionPayload::Get { field } => Ok(vec![SpecVal(
                 state
-                    .instances
-                    .get(&self.module)
-                    .unwrap()
+                    .instance(&self.module)
                     .export(field)
                     .unwrap_global()
                     .0
@@ -157,14 +153,16 @@ impl FromJSON for Action {
 
 #[derive(Debug)]
 struct SpecState {
-    instances: HashMap<Option<String>, Rc<ModuleInst>>,
+    instances: Vec<Rc<ModuleInst>>,
+    instance_map: HashMap<String, Rc<ModuleInst>>,
     registers: ImportObjects,
 }
 
 impl SpecState {
     fn new() -> SpecState {
         SpecState {
-            instances: HashMap::new(),
+            instances: Vec::new(),
+            instance_map: HashMap::new(),
             registers: hashmap! {
                 "spectest".to_string() => hashmap! {
                     "print".to_string() => ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::HostFunc {
@@ -243,6 +241,12 @@ impl SpecState {
             },
         }
     }
+
+    fn instance(&self, name: &Option<String>) -> Rc<ModuleInst> {
+        name.as_ref()
+            .map(|name| self.instance_map.get(name).unwrap().clone())
+            .unwrap_or_else(|| self.instances.last().unwrap().clone())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -294,14 +298,14 @@ impl Command {
     fn run(&self, base_dir: &Path, state: &mut SpecState) {
         match &self.paylaod {
             CommandPayload::Module { filename, name } => {
-                state.instances.insert(
-                    name.clone(),
-                    ModuleInst::new(
-                        &Module::decode_end(&std::fs::read(base_dir.join(filename)).unwrap())
-                            .unwrap(),
-                        state.registers.clone(),
-                    ),
+                let module = ModuleInst::new(
+                    &Module::decode_end(&std::fs::read(base_dir.join(filename)).unwrap()).unwrap(),
+                    state.registers.clone(),
                 );
+                state.instances.push(module.clone());
+                if let Some(name) = name {
+                    state.instance_map.insert(name.clone(), module.clone());
+                }
             }
             CommandPayload::AssertReturn { action, expected } => {
                 assert_eq!(&action.run(state).unwrap(), expected);
@@ -312,7 +316,7 @@ impl Command {
             CommandPayload::Register { as_, name } => {
                 state
                     .registers
-                    .insert(as_.clone(), state.instances.get(name).unwrap().exports());
+                    .insert(as_.clone(), state.instance(name).exports());
             }
             CommandPayload::Action { action, expected } => {
                 assert_eq!(&action.run(state).unwrap(), expected);
