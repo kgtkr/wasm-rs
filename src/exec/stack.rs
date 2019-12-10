@@ -273,7 +273,7 @@ impl LabelStack {
                                 return Err(RuntimeError::Trap);
                             }
 
-                            self.stack.push(Val::I32(x % y));
+                            self.stack.push(Val::I32(x.overflowing_rem(y).0));
                         }
                         Instr::I32RemU => {
                             let y = self.stack.pop().unwrap().unwrap_i32();
@@ -286,7 +286,8 @@ impl LabelStack {
                                 return Err(RuntimeError::Trap);
                             }
 
-                            self.stack.push(Val::I32(u32_convert_i32(x % y)));
+                            self.stack
+                                .push(Val::I32(u32_convert_i32(x.overflowing_rem(y).0)));
                         }
                         Instr::I32And => {
                             let y = self.stack.pop().unwrap().unwrap_i32();
@@ -376,7 +377,7 @@ impl LabelStack {
                                 return Err(RuntimeError::Trap);
                             }
 
-                            self.stack.push(Val::I64(x % y));
+                            self.stack.push(Val::I64(x.overflowing_rem(y).0));
                         }
                         Instr::I64RemU => {
                             let y = self.stack.pop().unwrap().unwrap_i64();
@@ -389,7 +390,8 @@ impl LabelStack {
                                 return Err(RuntimeError::Trap);
                             }
 
-                            self.stack.push(Val::I64(u64_convert_i64(x % y)));
+                            self.stack
+                                .push(Val::I64(u64_convert_i64(x.overflowing_rem(y).0)));
                         }
                         Instr::I64And => {
                             let y = self.stack.pop().unwrap().unwrap_i64();
