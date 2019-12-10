@@ -1,9 +1,16 @@
 use crate::binary::Decoder;
-use crate::exec::instance::{ModuleInst, RuntimeError, Val};
+use crate::exec::instance::{
+    ExternalVal, FuncAddr, FuncInst, GlobalAddr, GlobalInst, ImportObjects, MemAddr, MemInst,
+    ModuleInst, RuntimeError, TableAddr, TableInst, Val,
+};
 use crate::lazy_static;
-use crate::structure::modules::Module;
+use crate::structure::modules::{Mem, Module, Table};
+use crate::structure::types::{ElemType, Limits, MemType, Mut, TableType};
+use crate::structure::types::{FuncType, ValType};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use maplit::hashmap;
 use serde_json::Value;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::Cursor;
 use std::panic;
@@ -151,14 +158,89 @@ impl FromJSON for Action {
 #[derive(Debug)]
 struct SpecState {
     instances: HashMap<Option<String>, Rc<ModuleInst>>,
-    registers: HashMap<String, Rc<ModuleInst>>,
+    registers: ImportObjects,
 }
 
 impl SpecState {
     fn new() -> SpecState {
         SpecState {
             instances: HashMap::new(),
-            registers: HashMap::new(),
+            registers: hashmap! {
+                "spectest".to_string() => hashmap! {
+                    "print".to_string() => ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::HostFunc {
+                        type_: FuncType(vec![], vec![]),
+                        host_code: |params| {
+                            match &params[..] {
+                                [] => Ok(None),
+                                _ => panic!()
+                            }
+                        }
+                    })))),
+                    "print_i32".to_string() => ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::HostFunc {
+                        type_: FuncType(vec![ValType::I32], vec![]),
+                        host_code: |params| {
+                            match &params[..] {
+                                [Val::I32(_)] => Ok(None),
+                                _ => panic!()
+                            }
+                        }
+                    })))),
+                    "print_i32_f32".to_string() => ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::HostFunc {
+                        type_: FuncType(vec![ValType::I32, ValType::F32], vec![]),
+                        host_code: |params| {
+                            match &params[..] {
+                                [Val::I32(_), Val::F32(_)] => Ok(None),
+                                _ => panic!()
+                            }
+                        }
+                    })))),
+                    "print_f64_f64".to_string() => ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::HostFunc {
+                        type_: FuncType(vec![ValType::F64, ValType::F64], vec![]),
+                        host_code: |params| {
+                            match &params[..] {
+                                [Val::F64(_), Val::F64(_)] => Ok(None),
+                                _ => panic!()
+                            }
+                        }
+                    })))),
+                    "print_f32".to_string() => ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::HostFunc {
+                        type_: FuncType(vec![ValType::F32], vec![]),
+                        host_code: |params| {
+                            match &params[..] {
+                                [Val::F32(_)] => Ok(None),
+                                _ => panic!()
+                            }
+                        }
+                    })))),
+                    "print_f64".to_string() => ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::HostFunc {
+                        type_: FuncType(vec![ValType::F64], vec![]),
+                        host_code: |params| {
+                            match &params[..] {
+                                [Val::F64(_)] => Ok(None),
+                                _ => panic!()
+                            }
+                        }
+                    })))),
+                    "global_i32".to_string() => ExternalVal::Global(GlobalAddr(Rc::new(RefCell::new(GlobalInst {
+                        value: Val::I32(666),
+                        mut_: Mut::Const
+                    })))),
+                    "global_f32".to_string() => ExternalVal::Global(GlobalAddr(Rc::new(RefCell::new(GlobalInst {
+                        value: Val::F32(666.0),
+                        mut_: Mut::Const
+                    })))),
+                    "global_f64".to_string() => ExternalVal::Global(GlobalAddr(Rc::new(RefCell::new(GlobalInst {
+                        value: Val::F64(666.0),
+                        mut_: Mut::Const
+                    })))),
+                    "table".to_string() => ExternalVal::Table(TableAddr(Rc::new(RefCell::new(TableInst::new(&Table {
+                        type_: TableType(Limits { min: 10, max: Some(20) }, ElemType::FuncRef)
+                    }))))),
+                    "memory".to_string() => ExternalVal::Mem(MemAddr(Rc::new(RefCell::new(MemInst::new(&Mem {
+                        type_: MemType(Limits { min: 1, max: Some(2) })
+                    }))))),
+                }
+            },
         }
     }
 }
@@ -217,11 +299,7 @@ impl Command {
                     ModuleInst::new(
                         &Module::decode_end(&std::fs::read(base_dir.join(filename)).unwrap())
                             .unwrap(),
-                        state
-                            .registers
-                            .iter()
-                            .map(|(name, inst)| (name.clone(), inst.exports()))
-                            .collect(),
+                        state.registers.clone(),
                     ),
                 );
             }
@@ -234,7 +312,7 @@ impl Command {
             CommandPayload::Register { as_, name } => {
                 state
                     .registers
-                    .insert(as_.clone(), state.instances.get(name).unwrap().clone());
+                    .insert(as_.clone(), state.instances.get(name).unwrap().exports());
             }
             CommandPayload::Action { action, expected } => {
                 assert_eq!(&action.run(state).unwrap(), expected);

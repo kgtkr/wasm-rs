@@ -105,7 +105,7 @@ pub struct TableInst {
 }
 
 impl TableInst {
-    fn new(table: &Table) -> TableInst {
+    pub fn new(table: &Table) -> TableInst {
         TableInst {
             max: table.type_.0.max.map(|x| x as usize),
             elem: {
