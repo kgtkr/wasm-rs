@@ -1,7 +1,7 @@
 use crate::binary::Decoder;
 use crate::exec::instance::{
     ExternalVal, FuncAddr, FuncInst, GlobalAddr, GlobalInst, ImportObjects, MemAddr, MemInst,
-    ModuleInst, RuntimeError, TableAddr, TableInst, Val,
+    ModuleInst, TableAddr, TableInst, Val, WasmError,
 };
 use crate::lazy_static;
 use crate::structure::modules::{Mem, Module, Table};
@@ -117,7 +117,7 @@ pub struct Action {
 }
 
 impl Action {
-    fn run(&self, state: &mut SpecState) -> Result<Vec<SpecVal>, RuntimeError> {
+    fn run(&self, state: &mut SpecState) -> Result<Vec<SpecVal>, WasmError> {
         match &self.payload {
             ActionPayload::Invoke { field, args } => state
                 .instance(&self.module)
@@ -311,7 +311,7 @@ impl Command {
                 assert_eq!(&action.run(state).unwrap(), expected);
             }
             CommandPayload::AssertTrap { action } => {
-                assert_eq!(action.run(state), Err(RuntimeError::Trap));
+                assert_eq!(action.run(state), Err(WasmError::RuntimeError));
             }
             CommandPayload::Register { as_, name } => {
                 state

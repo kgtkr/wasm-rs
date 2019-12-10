@@ -13,8 +13,10 @@ use std::io::Cursor;
 use std::rc::{Rc, Weak};
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum RuntimeError {
-    Trap,
+pub enum WasmError {
+    RuntimeError,
+    LinkError,
+    CompileError,
 }
 
 pub type ExternalModule = HashMap<String, ExternalVal>;
@@ -77,7 +79,7 @@ pub enum FuncInst {
     },
     HostFunc {
         type_: FuncType,
-        host_code: fn(Vec<Val>) -> Result<Option<Val>, RuntimeError>,
+        host_code: fn(Vec<Val>) -> Result<Option<Val>, WasmError>,
     },
 }
 
@@ -257,7 +259,7 @@ impl TypedIdxAccess<GlobalIdx> for Vec<GlobalAddr> {}
 pub struct FuncAddr(pub Rc<RefCell<FuncInst>>);
 
 impl FuncAddr {
-    pub fn call(&self, params: Vec<Val>) -> Result<Option<Val>, RuntimeError> {
+    pub fn call(&self, params: Vec<Val>) -> Result<Option<Val>, WasmError> {
         let mut stack = Stack {
             stack: vec![FrameStack {
                 frame: Frame {
@@ -309,7 +311,7 @@ impl MemAddr {
         &self,
         position: usize,
         f: impl FnOnce(Cursor<&mut Vec<u8>>) -> T,
-    ) -> Result<T, RuntimeError> {
+    ) -> Result<T, WasmError> {
         let mut buf = Vec::new();
         let cur = Cursor::new(&mut buf);
         let res = f(cur);
@@ -319,9 +321,9 @@ impl MemAddr {
             < buf
                 .len()
                 .checked_add(position)
-                .ok_or_else(|| RuntimeError::Trap)?
+                .ok_or_else(|| WasmError::RuntimeError)?
         {
-            return Err(RuntimeError::Trap);
+            return Err(WasmError::RuntimeError);
         }
 
         for (i, x) in buf.into_iter().enumerate() {

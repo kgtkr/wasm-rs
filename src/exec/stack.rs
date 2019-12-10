@@ -1,4 +1,4 @@
-use super::instance::{FuncAddr, FuncInst, ModuleInst, RuntimeError, TypedIdxAccess, Val};
+use super::instance::{FuncAddr, FuncInst, ModuleInst, TypedIdxAccess, Val, WasmError};
 use crate::structure::instructions::Instr;
 use crate::structure::modules::{
     Data, Elem, Export, ExportDesc, Func, FuncIdx, Global, GlobalIdx, LabelIdx, LocalIdx, Mem,
@@ -57,7 +57,7 @@ pub struct FrameStack {
 }
 
 impl FrameStack {
-    pub fn step(&mut self) -> Result<Option<ModuleLevelInstr>, RuntimeError> {
+    pub fn step(&mut self) -> Result<Option<ModuleLevelInstr>, WasmError> {
         let cur_lavel = self.stack.last_mut().unwrap();
         Ok(if let Some(instr) = cur_lavel.step(&mut self.frame)? {
             match instr {
@@ -131,7 +131,7 @@ pub struct LabelStack {
 }
 
 impl LabelStack {
-    fn step(&mut self, frame: &mut Frame) -> Result<Option<FrameLevelInstr>, RuntimeError> {
+    fn step(&mut self, frame: &mut Frame) -> Result<Option<FrameLevelInstr>, WasmError> {
         Ok(match self.instrs.pop() {
             Some(instr) => match instr {
                 AdminInstr::Instr(instr) => {
@@ -245,10 +245,10 @@ impl LabelStack {
                             let y = self.stack.pop().unwrap().unwrap_i32();
                             let x = self.stack.pop().unwrap().unwrap_i32();
                             if y == 0 {
-                                return Err(RuntimeError::Trap);
+                                return Err(WasmError::RuntimeError);
                             }
                             self.stack.push(Val::I32(
-                                x.checked_div(y).ok_or_else(|| RuntimeError::Trap)?,
+                                x.checked_div(y).ok_or_else(|| WasmError::RuntimeError)?,
                             ));
                         }
                         Instr::I32DivU => {
@@ -259,10 +259,10 @@ impl LabelStack {
                             let y = i32_convert_u32(y);
 
                             if y == 0 {
-                                return Err(RuntimeError::Trap);
+                                return Err(WasmError::RuntimeError);
                             }
                             self.stack.push(Val::I32(u32_convert_i32(
-                                x.checked_div(y).ok_or_else(|| RuntimeError::Trap)?,
+                                x.checked_div(y).ok_or_else(|| WasmError::RuntimeError)?,
                             )));
                         }
                         Instr::I32RemS => {
@@ -270,7 +270,7 @@ impl LabelStack {
                             let x = self.stack.pop().unwrap().unwrap_i32();
 
                             if y == 0 {
-                                return Err(RuntimeError::Trap);
+                                return Err(WasmError::RuntimeError);
                             }
 
                             self.stack.push(Val::I32(x.overflowing_rem(y).0));
@@ -283,7 +283,7 @@ impl LabelStack {
                             let y = i32_convert_u32(y);
 
                             if y == 0 {
-                                return Err(RuntimeError::Trap);
+                                return Err(WasmError::RuntimeError);
                             }
 
                             self.stack
@@ -350,10 +350,10 @@ impl LabelStack {
                             let y = self.stack.pop().unwrap().unwrap_i64();
                             let x = self.stack.pop().unwrap().unwrap_i64();
                             if y == 0 {
-                                return Err(RuntimeError::Trap);
+                                return Err(WasmError::RuntimeError);
                             }
                             self.stack.push(Val::I64(
-                                x.checked_div(y).ok_or_else(|| RuntimeError::Trap)?,
+                                x.checked_div(y).ok_or_else(|| WasmError::RuntimeError)?,
                             ));
                         }
                         Instr::I64DivU => {
@@ -363,10 +363,10 @@ impl LabelStack {
                             let x = i64_convert_u64(x);
                             let y = i64_convert_u64(y);
                             if y == 0 {
-                                return Err(RuntimeError::Trap);
+                                return Err(WasmError::RuntimeError);
                             }
                             self.stack.push(Val::I64(u64_convert_i64(
-                                x.checked_div(y).ok_or_else(|| RuntimeError::Trap)?,
+                                x.checked_div(y).ok_or_else(|| WasmError::RuntimeError)?,
                             )));
                         }
                         Instr::I64RemS => {
@@ -374,7 +374,7 @@ impl LabelStack {
                             let x = self.stack.pop().unwrap().unwrap_i64();
 
                             if y == 0 {
-                                return Err(RuntimeError::Trap);
+                                return Err(WasmError::RuntimeError);
                             }
 
                             self.stack.push(Val::I64(x.overflowing_rem(y).0));
@@ -387,7 +387,7 @@ impl LabelStack {
                             let y = i64_convert_u64(y);
 
                             if y == 0 {
-                                return Err(RuntimeError::Trap);
+                                return Err(WasmError::RuntimeError);
                             }
 
                             self.stack
@@ -787,7 +787,7 @@ impl LabelStack {
                                 cur.set_position((ptr + m.offset as usize) as u64);
                                 let x = cur
                                     .read_i32::<LittleEndian>()
-                                    .map_err(|_| RuntimeError::Trap)?;
+                                    .map_err(|_| WasmError::RuntimeError)?;
                                 self.stack.push(Val::I32(x));
                                 Ok(())
                             })?;
@@ -799,7 +799,7 @@ impl LabelStack {
                                 cur.set_position((ptr + m.offset as usize) as u64);
                                 let x = cur
                                     .read_i64::<LittleEndian>()
-                                    .map_err(|_| RuntimeError::Trap)?;
+                                    .map_err(|_| WasmError::RuntimeError)?;
                                 self.stack.push(Val::I64(x));
                                 Ok(())
                             })?;
@@ -811,7 +811,7 @@ impl LabelStack {
                                 cur.set_position((ptr + m.offset as usize) as u64);
                                 let x = cur
                                     .read_f32::<LittleEndian>()
-                                    .map_err(|_| RuntimeError::Trap)?;
+                                    .map_err(|_| WasmError::RuntimeError)?;
                                 self.stack.push(Val::F32(x));
                                 Ok(())
                             })?;
@@ -823,7 +823,7 @@ impl LabelStack {
                                 cur.set_position((ptr + m.offset as usize) as u64);
                                 let x = cur
                                     .read_f64::<LittleEndian>()
-                                    .map_err(|_| RuntimeError::Trap)?;
+                                    .map_err(|_| WasmError::RuntimeError)?;
                                 self.stack.push(Val::F64(x));
                                 Ok(())
                             })?;
@@ -877,7 +877,7 @@ impl LabelStack {
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             instance.mem.as_ref().unwrap().with_cursor(|mut cur| {
                                 cur.set_position((ptr + m.offset as usize) as u64);
-                                let x = cur.read_i8().map_err(|_| RuntimeError::Trap)?;
+                                let x = cur.read_i8().map_err(|_| WasmError::RuntimeError)?;
                                 self.stack.push(Val::I32(x as i32));
                                 Ok(())
                             })?;
@@ -887,7 +887,7 @@ impl LabelStack {
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             instance.mem.as_ref().unwrap().with_cursor(|mut cur| {
                                 cur.set_position((ptr + m.offset as usize) as u64);
-                                let x = cur.read_u8().map_err(|_| RuntimeError::Trap)?;
+                                let x = cur.read_u8().map_err(|_| WasmError::RuntimeError)?;
                                 self.stack.push(Val::I32(x as i32));
                                 Ok(())
                             })?;
@@ -897,7 +897,7 @@ impl LabelStack {
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             instance.mem.as_ref().unwrap().with_cursor(|mut cur| {
                                 cur.set_position((ptr + m.offset as usize) as u64);
-                                let x = cur.read_i8().map_err(|_| RuntimeError::Trap)?;
+                                let x = cur.read_i8().map_err(|_| WasmError::RuntimeError)?;
                                 self.stack.push(Val::I64(x as i64));
                                 Ok(())
                             })?;
@@ -907,7 +907,7 @@ impl LabelStack {
                             let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
                             instance.mem.as_ref().unwrap().with_cursor(|mut cur| {
                                 cur.set_position((ptr + m.offset as usize) as u64);
-                                let x = cur.read_u8().map_err(|_| RuntimeError::Trap)?;
+                                let x = cur.read_u8().map_err(|_| WasmError::RuntimeError)?;
                                 self.stack.push(Val::I64(x as i64));
                                 Ok(())
                             })?;
@@ -919,7 +919,7 @@ impl LabelStack {
                                 cur.set_position((ptr + m.offset as usize) as u64);
                                 let x = cur
                                     .read_i16::<LittleEndian>()
-                                    .map_err(|_| RuntimeError::Trap)?;
+                                    .map_err(|_| WasmError::RuntimeError)?;
                                 self.stack.push(Val::I32(x as i32));
                                 Ok(())
                             })?;
@@ -931,7 +931,7 @@ impl LabelStack {
                                 cur.set_position((ptr + m.offset as usize) as u64);
                                 let x = cur
                                     .read_u16::<LittleEndian>()
-                                    .map_err(|_| RuntimeError::Trap)?;
+                                    .map_err(|_| WasmError::RuntimeError)?;
                                 self.stack.push(Val::I32(x as i32));
                                 Ok(())
                             })?;
@@ -943,7 +943,7 @@ impl LabelStack {
                                 cur.set_position((ptr + m.offset as usize) as u64);
                                 let x = cur
                                     .read_i16::<LittleEndian>()
-                                    .map_err(|_| RuntimeError::Trap)?;
+                                    .map_err(|_| WasmError::RuntimeError)?;
                                 self.stack.push(Val::I64(x as i64));
                                 Ok(())
                             })?;
@@ -955,7 +955,7 @@ impl LabelStack {
                                 cur.set_position((ptr + m.offset as usize) as u64);
                                 let x = cur
                                     .read_u16::<LittleEndian>()
-                                    .map_err(|_| RuntimeError::Trap)?;
+                                    .map_err(|_| WasmError::RuntimeError)?;
                                 self.stack.push(Val::I64(x as i64));
                                 Ok(())
                             })?;
@@ -967,7 +967,7 @@ impl LabelStack {
                                 cur.set_position((ptr + m.offset as usize) as u64);
                                 let x = cur
                                     .read_i32::<LittleEndian>()
-                                    .map_err(|_| RuntimeError::Trap)?;
+                                    .map_err(|_| WasmError::RuntimeError)?;
                                 self.stack.push(Val::I64(x as i64));
                                 Ok(())
                             })?;
@@ -979,7 +979,7 @@ impl LabelStack {
                                 cur.set_position((ptr + m.offset as usize) as u64);
                                 let x = cur
                                     .read_u32::<LittleEndian>()
-                                    .map_err(|_| RuntimeError::Trap)?;
+                                    .map_err(|_| WasmError::RuntimeError)?;
                                 self.stack.push(Val::I64(x as i64));
                                 Ok(())
                             })?;
@@ -1053,7 +1053,7 @@ impl LabelStack {
                             ));
                         }
                         Instr::Nop => {}
-                        Instr::Unreachable => return Err(RuntimeError::Trap),
+                        Instr::Unreachable => return Err(WasmError::RuntimeError),
                         Instr::Block(rt, is) => {
                             self.instrs.push(AdminInstr::Label(
                                 Label {
@@ -1113,11 +1113,11 @@ impl LabelStack {
                                 if let Some(Some(func)) = table.elem.get(i) {
                                     func.clone()
                                 } else {
-                                    return Err(RuntimeError::Trap);
+                                    return Err(WasmError::RuntimeError);
                                 }
                             };
                             if func.0.borrow().type_() != instance.types.get_idx(t) {
-                                return Err(RuntimeError::Trap);
+                                return Err(WasmError::RuntimeError);
                             }
                             self.instrs.push(AdminInstr::Invoke(func.clone()));
                         }
@@ -1142,7 +1142,7 @@ pub struct Stack {
 }
 
 impl Stack {
-    pub fn step(&mut self) -> Result<(), RuntimeError> {
+    pub fn step(&mut self) -> Result<(), WasmError> {
         let cur_frame = self.stack.last_mut().unwrap();
         if let Some(instr) = cur_frame.step()? {
             let cur_label = cur_frame.stack.last_mut().unwrap();
