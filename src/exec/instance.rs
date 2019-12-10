@@ -5,19 +5,12 @@ use crate::structure::modules::{
     LocalIdx, Mem, Module, Table, TypeIdx, TypedIdx,
 };
 use crate::structure::types::{FuncType, Limits, MemType, Mut, ResultType, TableType, ValType};
-use std::collections::HashMap;
-
+use crate::WasmError;
 use maplit::hashmap;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::io::Cursor;
 use std::rc::{Rc, Weak};
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum WasmError {
-    RuntimeError,
-    LinkError,
-    CompileError,
-}
 
 pub type ExternalModule = HashMap<String, ExternalVal>;
 pub type ImportObjects = HashMap<String, ExternalModule>;

@@ -1,12 +1,13 @@
 use crate::binary::Decoder;
 use crate::exec::instance::{
     ExternalVal, FuncAddr, FuncInst, GlobalAddr, GlobalInst, ImportObjects, MemAddr, MemInst,
-    ModuleInst, TableAddr, TableInst, Val, WasmError,
+    ModuleInst, TableAddr, TableInst, Val,
 };
 use crate::lazy_static;
 use crate::structure::modules::{Mem, Module, Table};
 use crate::structure::types::{ElemType, Limits, MemType, Mut, TableType};
 use crate::structure::types::{FuncType, ValType};
+use crate::WasmError;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use maplit::hashmap;
 use serde_json::Value;
@@ -17,7 +18,6 @@ use std::panic;
 use std::panic::{catch_unwind, resume_unwind, AssertUnwindSafe};
 use std::path::Path;
 use std::rc::{Rc, Weak};
-
 #[derive(Debug, Clone, Copy)]
 struct SpecVal(Val);
 impl PartialEq for SpecVal {
