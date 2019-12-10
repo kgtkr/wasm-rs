@@ -120,8 +120,8 @@ impl TableInst {
     fn init_elem(&mut self, offset: usize, init: Vec<FuncIdx>) {
         let len = std::cmp::max(self.elem.len(), offset + init.len());
         self.elem.resize(len, None);
-        for i in 0..init.len() {
-            self.elem[offset + i] = Some(init[i].clone());
+        for (i, x) in init.into_iter().enumerate() {
+            self.elem[offset + i] = Some(x);
         }
     }
 }
