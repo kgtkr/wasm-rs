@@ -224,66 +224,46 @@ impl LabelStack {
                 AdminInstr::Instr(instr) => {
                     match instr {
                         Instr::I32Const(x) => {
-                            self.run(|hlist_pat![]: Hlist![]| -> Result<Hlist![i32], WasmError> {
-                                Ok(hlist![x])
-                            })?;
+                            self.run_const(|| -> Result<i32, WasmError> { Ok(x) })?;
                         }
                         Instr::I64Const(x) => {
-                            self.run(|hlist_pat![]: Hlist![]| -> Result<Hlist![i64], WasmError> {
-                                Ok(hlist![x])
-                            })?;
+                            self.run_const(|| -> Result<i64, WasmError> { Ok(x) })?;
                         }
                         Instr::F32Const(x) => {
-                            self.run(|hlist_pat![]: Hlist![]| -> Result<Hlist![f32], WasmError> {
-                                Ok(hlist![x])
-                            })?;
+                            self.run_const(|| -> Result<f32, WasmError> { Ok(x) })?;
                         }
                         Instr::F64Const(x) => {
-                            self.run(|hlist_pat![]: Hlist![]| -> Result<Hlist![f64], WasmError> {
-                                Ok(hlist![x])
-                            })?;
+                            self.run_const(|| -> Result<f64, WasmError> { Ok(x) })?;
                         }
                         Instr::I32Clz => {
-                            self.run(
-                                |hlist_pat![x]: Hlist![i32]| -> Result<Hlist![i32], WasmError> {
-                                    Ok(hlist![x.leading_zeros() as i32])
-                                },
-                            )?;
+                            self.run_unop(|x: i32| -> Result<i32, WasmError> {
+                                Ok(x.leading_zeros() as i32)
+                            })?;
                         }
                         Instr::I32Ctz => {
-                            self.run(
-                                |hlist_pat![x]: Hlist![i32]| -> Result<Hlist![i32], WasmError> {
-                                    Ok(hlist![x.trailing_zeros() as i32])
-                                },
-                            )?;
+                            self.run_unop(|x: i32| -> Result<i32, WasmError> {
+                                Ok(x.trailing_zeros() as i32)
+                            })?;
                         }
                         Instr::I32Popcnt => {
-                            self.run(
-                                |hlist_pat![x]: Hlist![i32]| -> Result<Hlist![i32], WasmError> {
-                                    Ok(hlist![x.count_ones() as i32])
-                                },
-                            )?;
+                            self.run_unop(|x: i32| -> Result<i32, WasmError> {
+                                Ok(x.count_ones() as i32)
+                            })?;
                         }
                         Instr::I64Clz => {
-                            self.run(
-                                |hlist_pat![x]: Hlist![i64]| -> Result<Hlist![i64], WasmError> {
-                                    Ok(hlist![x.leading_zeros() as i64])
-                                },
-                            )?;
+                            self.run_unop(|x: i64| -> Result<i64, WasmError> {
+                                Ok(x.leading_zeros() as i64)
+                            })?;
                         }
                         Instr::I64Ctz => {
-                            self.run(
-                                |hlist_pat![x]: Hlist![i64]| -> Result<Hlist![i64], WasmError> {
-                                    Ok(hlist![x.trailing_zeros() as i64])
-                                },
-                            )?;
+                            self.run_unop(|x: i64| -> Result<i64, WasmError> {
+                                Ok(x.trailing_zeros() as i64)
+                            })?;
                         }
                         Instr::I64Popcnt => {
-                            self.run(
-                                |hlist_pat![x]: Hlist![i64]| -> Result<Hlist![i64], WasmError> {
-                                    Ok(hlist![x.count_ones() as i64])
-                                },
-                            )?;
+                            self.run_unop(|x: i64| -> Result<i64, WasmError> {
+                                Ok(x.count_ones() as i64)
+                            })?;
                         }
                         Instr::F32Abs => {
                             self.run(
