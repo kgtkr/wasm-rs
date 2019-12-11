@@ -301,7 +301,8 @@ impl Command {
                 let module = ModuleInst::new(
                     &Module::decode_end(&std::fs::read(base_dir.join(filename)).unwrap()).unwrap(),
                     state.registers.clone(),
-                );
+                )
+                .unwrap();
                 state.instances.push(module.clone());
                 if let Some(name) = name {
                     state.instance_map.insert(name.clone(), module.clone());
@@ -320,6 +321,17 @@ impl Command {
             }
             CommandPayload::Action { action, expected } => {
                 assert_eq!(&action.run(state).unwrap(), expected);
+            }
+            CommandPayload::AssertUninstantiable { filename } => {
+                assert_eq!(
+                    ModuleInst::new(
+                        &Module::decode_end(&std::fs::read(base_dir.join(filename)).unwrap())
+                            .unwrap(),
+                        state.registers.clone(),
+                    )
+                    .unwrap_err(),
+                    WasmError::RuntimeError
+                );
             }
             CommandPayload::Skip { .. } => {}
         }
@@ -360,6 +372,9 @@ enum CommandPayload {
     },
     Skip {
         type_: String,
+    },
+    AssertUninstantiable {
+        filename: String,
     },
     Action {
         action: Action,
@@ -417,6 +432,14 @@ impl FromJSON for CommandPayload {
             "assert_trap" => CommandPayload::AssertTrap {
                 action: Action::from_json(json_obj.get("action").unwrap()),
             },
+            "assert_uninstantiable" => CommandPayload::AssertUninstantiable {
+                filename: json_obj
+                    .get("filename")
+                    .unwrap()
+                    .as_str()
+                    .unwrap()
+                    .to_string(),
+            },
             "assert_malformed" => CommandPayload::Skip {
                 type_: "assert_malformed".to_string(),
             },
@@ -434,9 +457,6 @@ impl FromJSON for CommandPayload {
             },
             "assert_return_arithmetic_nan" => CommandPayload::Skip {
                 type_: "assert_return_arithmetic_nan".to_string(),
-            },
-            "assert_uninstantiable" => CommandPayload::Skip {
-                type_: "assert_uninstantiable".to_string(),
             },
             ty => panic!("unknown type: {}", ty),
         }

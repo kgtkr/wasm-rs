@@ -346,7 +346,10 @@ pub struct ModuleInst {
 }
 
 impl ModuleInst {
-    pub fn new(module: &Module, imports_objects: ImportObjects) -> Rc<ModuleInst> {
+    pub fn new(
+        module: &Module,
+        imports_objects: ImportObjects,
+    ) -> Result<Rc<ModuleInst>, WasmError> {
         let mut result = ModuleInst {
             types: module.types.clone(),
             funcs: module
@@ -517,10 +520,10 @@ impl ModuleInst {
         }
 
         if let Some(start) = &module.start {
-            result.funcs.get_idx(start.func).clone().call(vec![]);
+            result.funcs.get_idx(start.func).clone().call(vec![])?;
         }
 
-        result
+        Ok(result)
     }
 
     fn dummy() -> ModuleInst {
@@ -572,7 +575,7 @@ mod tests {
     #[ignore]
     fn test_add() {
         let module = Module::decode_end(&std::fs::read("./example/add.wasm").unwrap()).unwrap();
-        let instance = ModuleInst::new(&module, HashMap::new());
+        let instance = ModuleInst::new(&module, HashMap::new()).unwrap();
         assert_eq!(
             instance
                 .export("add")
@@ -586,7 +589,7 @@ mod tests {
     #[ignore]
     fn test_gcd() {
         let module = Module::decode_end(&std::fs::read("./example/gcd.wasm").unwrap()).unwrap();
-        let instance = ModuleInst::new(&module, HashMap::new());
+        let instance = ModuleInst::new(&module, HashMap::new()).unwrap();
 
         assert_eq!(
             instance
@@ -601,7 +604,7 @@ mod tests {
     #[ignore]
     fn test_pow() {
         let module = Module::decode_end(&std::fs::read("./example/pow.wasm").unwrap()).unwrap();
-        let instance = ModuleInst::new(&module, HashMap::new());
+        let instance = ModuleInst::new(&module, HashMap::new()).unwrap();
         assert_eq!(
             instance
                 .export("pow")
@@ -616,7 +619,7 @@ mod tests {
     fn test_br_table() {
         let module =
             Module::decode_end(&std::fs::read("./example/br_table.wasm").unwrap()).unwrap();
-        let instance = ModuleInst::new(&module, HashMap::new());
+        let instance = ModuleInst::new(&module, HashMap::new()).unwrap();
 
         assert_eq!(
             instance
@@ -640,7 +643,7 @@ mod tests {
         use std::ffi::CString;
 
         let module = Module::decode_end(&std::fs::read("./example/md5.wasm").unwrap()).unwrap();
-        let instance = ModuleInst::new(&module, HashMap::new());
+        let instance = ModuleInst::new(&module, HashMap::new()).unwrap();
 
         let input_bytes = CString::new("abc").unwrap().into_bytes();
         let input_ptr = instance
@@ -709,7 +712,8 @@ mod tests {
                     "memory".to_string() => memory.clone()
                 }
             },
-        );
+        )
+        .unwrap();
 
         let main_module =
             Module::decode_end(&std::fs::read("./example/cl8w-gcd.wasm").unwrap()).unwrap();
@@ -724,7 +728,8 @@ mod tests {
                     "print".to_string() => print.clone()
                 }
             },
-        );
+        )
+        .unwrap();
 
         main_instance.export("main").unwrap_func().call(vec![]);
     }
@@ -755,7 +760,8 @@ mod tests {
                     "memory".to_string() => memory.clone()
                 }
             },
-        );
+        )
+        .unwrap();
 
         let main_module =
             Module::decode_end(&std::fs::read("./example/cl8w-ex.wasm").unwrap()).unwrap();
@@ -770,7 +776,8 @@ mod tests {
                     "print".to_string() => print.clone()
                 }
             },
-        );
+        )
+        .unwrap();
 
         main_instance.export("main").unwrap_func().call(vec![]);
     }
@@ -799,7 +806,8 @@ mod tests {
                     "print".to_string() => print
                 }
             },
-        );
+        )
+        .unwrap();
 
         instance.export("run").unwrap_func().call(vec![]);
     }
