@@ -747,6 +747,46 @@ impl LabelStack {
                             let x = self.stack.pop().unwrap().unwrap_i32();
                             self.stack.push(Val::I64(i32_convert_u32(x) as i64));
                         }
+                        Instr::I32ReinterpretF32 => {
+                            let x = self.stack.pop().unwrap().unwrap_f32();
+
+                            let mut wtr = vec![];
+                            wtr.write_f32::<LittleEndian>(x).unwrap();
+                            let mut rdr = Cursor::new(wtr);
+
+                            self.stack
+                                .push(Val::I32(rdr.read_i32::<LittleEndian>().unwrap()));
+                        }
+                        Instr::I64ReinterpretF64 => {
+                            let x = self.stack.pop().unwrap().unwrap_f64();
+
+                            let mut wtr = vec![];
+                            wtr.write_f64::<LittleEndian>(x).unwrap();
+                            let mut rdr = Cursor::new(wtr);
+
+                            self.stack
+                                .push(Val::I64(rdr.read_i64::<LittleEndian>().unwrap()));
+                        }
+                        Instr::F32ReinterpretI32 => {
+                            let x = self.stack.pop().unwrap().unwrap_i32();
+
+                            let mut wtr = vec![];
+                            wtr.write_i32::<LittleEndian>(x).unwrap();
+                            let mut rdr = Cursor::new(wtr);
+
+                            self.stack
+                                .push(Val::F32(rdr.read_f32::<LittleEndian>().unwrap()));
+                        }
+                        Instr::F64ReinterpretI64 => {
+                            let x = self.stack.pop().unwrap().unwrap_i64();
+
+                            let mut wtr = vec![];
+                            wtr.write_i64::<LittleEndian>(x).unwrap();
+                            let mut rdr = Cursor::new(wtr);
+
+                            self.stack
+                                .push(Val::F64(rdr.read_f64::<LittleEndian>().unwrap()));
+                        }
                         Instr::Drop => {
                             self.stack.pop().unwrap();
                         }
