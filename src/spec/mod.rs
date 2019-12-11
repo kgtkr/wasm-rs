@@ -333,6 +333,17 @@ impl Command {
                     WasmError::RuntimeError
                 );
             }
+            CommandPayload::AssertUnlinkable { filename } => {
+                assert_eq!(
+                    ModuleInst::new(
+                        &Module::decode_end(&std::fs::read(base_dir.join(filename)).unwrap())
+                            .unwrap(),
+                        state.registers.clone(),
+                    )
+                    .unwrap_err(),
+                    WasmError::LinkError
+                );
+            }
             CommandPayload::Skip { .. } => {}
         }
     }
@@ -372,6 +383,9 @@ enum CommandPayload {
     },
     Skip {
         type_: String,
+    },
+    AssertUnlinkable {
+        filename: String,
     },
     AssertUninstantiable {
         filename: String,
@@ -440,14 +454,19 @@ impl FromJSON for CommandPayload {
                     .unwrap()
                     .to_string(),
             },
+            "assert_unlinkable" => CommandPayload::AssertUnlinkable {
+                filename: json_obj
+                    .get("filename")
+                    .unwrap()
+                    .as_str()
+                    .unwrap()
+                    .to_string(),
+            },
             "assert_malformed" => CommandPayload::Skip {
                 type_: "assert_malformed".to_string(),
             },
             "assert_invalid" => CommandPayload::Skip {
                 type_: "assert_invalid".to_string(),
-            },
-            "assert_unlinkable" => CommandPayload::Skip {
-                type_: "assert_unlinkable".to_string(),
             },
             "assert_exhaustion" => CommandPayload::Skip {
                 type_: "assert_exhaustion".to_string(),
