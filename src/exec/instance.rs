@@ -8,10 +8,155 @@ use crate::structure::types::{
 };
 use crate::WasmError;
 
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::convert::{From, Into, TryFrom};
 use std::io::Cursor;
 use std::rc::{Rc, Weak};
+
+pub trait ValPrimitive: TryFrom<Val, Error = ()> + Into<Val> {}
+
+impl TryFrom<Val> for i32 {
+    type Error = ();
+
+    fn try_from(value: Val) -> Result<Self, ()> {
+        if let Val::I32(x) = value {
+            Ok(x)
+        } else {
+            Err(())
+        }
+    }
+}
+
+impl Into<Val> for i32 {
+    fn into(self) -> Val {
+        Val::I32(self)
+    }
+}
+
+impl ValPrimitive for i32 {}
+
+impl TryFrom<Val> for i64 {
+    type Error = ();
+
+    fn try_from(value: Val) -> Result<Self, ()> {
+        if let Val::I64(x) = value {
+            Ok(x)
+        } else {
+            Err(())
+        }
+    }
+}
+
+impl Into<Val> for i64 {
+    fn into(self) -> Val {
+        Val::I64(self)
+    }
+}
+
+impl ValPrimitive for i64 {}
+
+impl TryFrom<Val> for f32 {
+    type Error = ();
+
+    fn try_from(value: Val) -> Result<Self, ()> {
+        if let Val::F32(x) = value {
+            Ok(x)
+        } else {
+            Err(())
+        }
+    }
+}
+
+impl Into<Val> for f32 {
+    fn into(self) -> Val {
+        Val::F32(self)
+    }
+}
+
+impl ValPrimitive for f32 {}
+
+impl TryFrom<Val> for f64 {
+    type Error = ();
+
+    fn try_from(value: Val) -> Result<Self, ()> {
+        if let Val::F64(x) = value {
+            Ok(x)
+        } else {
+            Err(())
+        }
+    }
+}
+
+impl Into<Val> for f64 {
+    fn into(self) -> Val {
+        Val::F64(self)
+    }
+}
+
+impl ValPrimitive for f64 {}
+
+pub trait ValInterpret<T: ValPrimitive> {
+    fn to_primitive(self) -> T;
+    fn reinterpret(primitive: T) -> Self;
+}
+
+impl<T: ValPrimitive> ValInterpret<T> for T {
+    fn to_primitive(self) -> T {
+        self
+    }
+
+    fn reinterpret(primitive: T) -> Self {
+        primitive
+    }
+}
+
+impl ValInterpret<i32> for bool {
+    fn to_primitive(self) -> i32 {
+        if self {
+            1
+        } else {
+            0
+        }
+    }
+
+    fn reinterpret(primitive: i32) -> bool {
+        primitive != 0
+    }
+}
+
+impl ValInterpret<i32> for u32 {
+    fn to_primitive(self) -> i32 {
+        let mut wtr = vec![];
+        wtr.write_u32::<LittleEndian>(self).unwrap();
+        let mut rdr = Cursor::new(wtr);
+        rdr.read_i32::<LittleEndian>().unwrap()
+    }
+
+    fn reinterpret(primitive: i32) -> u32 {
+        let mut wtr = vec![];
+        wtr.write_i32::<LittleEndian>(primitive).unwrap();
+        let mut rdr = Cursor::new(wtr);
+        rdr.read_u32::<LittleEndian>().unwrap()
+    }
+}
+
+impl ValInterpret<i64> for u64 {
+    fn to_primitive(self) -> i64 {
+        let mut wtr = vec![];
+        wtr.write_u64::<LittleEndian>(self).unwrap();
+        let mut rdr = Cursor::new(wtr);
+        rdr.read_i64::<LittleEndian>().unwrap()
+    }
+
+    fn reinterpret(primitive: i64) -> u64 {
+        let mut wtr = vec![];
+        wtr.write_i64::<LittleEndian>(primitive).unwrap();
+        let mut rdr = Cursor::new(wtr);
+        rdr.read_u64::<LittleEndian>().unwrap()
+    }
+}
 
 pub type ExternalModule = HashMap<String, ExternalVal>;
 pub type ImportObjects = HashMap<String, ExternalModule>;
