@@ -3,7 +3,7 @@ use crate::exec::instance::{
     ExternalVal, FuncAddr, FuncInst, GlobalAddr, GlobalInst, ImportObjects, MemAddr, MemInst,
     ModuleInst, TableAddr, TableInst, Val,
 };
-use crate::lazy_static;
+
 use crate::structure::modules::{Mem, Module, Table};
 use crate::structure::types::{ElemType, Limits, MemType, Mut, TableType};
 use crate::structure::types::{FuncType, ValType};
@@ -15,9 +15,9 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::Cursor;
 use std::panic;
-use std::panic::{catch_unwind, resume_unwind, AssertUnwindSafe};
+use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::Path;
-use std::rc::{Rc, Weak};
+use std::rc::{Rc};
 #[derive(Debug, Clone, Copy)]
 struct SpecVal(Val);
 impl PartialEq for SpecVal {
