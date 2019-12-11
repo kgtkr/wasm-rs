@@ -78,7 +78,7 @@ pub struct GlobalType(pub Mut, pub ValType);
 
 impl GlobalType {
     pub fn is_match(&self, other: &GlobalType) -> bool {
-        self.1 == other.1
+        self == other
     }
 }
 
