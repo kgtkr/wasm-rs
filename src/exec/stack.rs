@@ -177,6 +177,47 @@ impl LabelStack {
         Ok(())
     }
 
+    fn run_const<T: ValInterpret>(
+        &mut self,
+        f: impl FnOnce() -> Result<T, WasmError>,
+    ) -> Result<(), WasmError> {
+        self.run(|hlist_pat![]: Hlist![]| -> Result<Hlist![T], WasmError> { Ok(hlist![f()?]) })
+    }
+
+    fn run_unop<T: ValInterpret>(
+        &mut self,
+        f: impl FnOnce(T) -> Result<T, WasmError>,
+    ) -> Result<(), WasmError> {
+        self.run(|hlist_pat![x]: Hlist![T]| -> Result<Hlist![T], WasmError> { Ok(hlist![f(x)?]) })
+    }
+
+    fn run_binop<T: ValInterpret>(
+        &mut self,
+        f: impl FnOnce(T, T) -> Result<T, WasmError>,
+    ) -> Result<(), WasmError> {
+        self.run(
+            |hlist_pat![a, b]: Hlist![T, T]| -> Result<Hlist![T], WasmError> {
+                Ok(hlist![f(a, b)?])
+            },
+        )
+    }
+
+    fn run_testop<T: ValInterpret>(
+        &mut self,
+        f: impl FnOnce(T) -> Result<bool, WasmError>,
+    ) -> Result<(), WasmError> {
+        self.run(
+            |hlist_pat![x]: Hlist![T]| -> Result<Hlist![bool], WasmError> { Ok(hlist![f(x)?]) },
+        )
+    }
+
+    fn run_reop<T: ValInterpret, R: ValInterpret>(
+        &mut self,
+        f: impl FnOnce(T) -> Result<R, WasmError>,
+    ) -> Result<(), WasmError> {
+        self.run(|hlist_pat![x]: Hlist![T]| -> Result<Hlist![R], WasmError> { Ok(hlist![f(x)?]) })
+    }
+
     fn step(&mut self, frame: &mut Frame) -> Result<Option<FrameLevelInstr>, WasmError> {
         Ok(match self.instrs.pop() {
             Some(instr) => match instr {
