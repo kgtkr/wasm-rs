@@ -17,7 +17,7 @@ use std::io::Cursor;
 use std::panic;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::Path;
-use std::rc::{Rc};
+use std::rc::Rc;
 #[derive(Debug, Clone, Copy)]
 struct SpecVal(Val);
 impl PartialEq for SpecVal {
@@ -485,7 +485,7 @@ impl FromJSON for CommandPayload {
 use std::sync::RwLock;
 
 lazy_static! {
-    pub static ref last_panic_msg: RwLock<Option<String>> = { RwLock::new(None) };
+    pub static ref LAST_PANIC_MSG: RwLock<Option<String>> = { RwLock::new(None) };
 }
 
 #[test]
@@ -493,7 +493,7 @@ fn test_specs() {
     let default_hook = panic::take_hook();
 
     panic::set_hook(Box::new(move |panic_info| {
-        *self::last_panic_msg.write().unwrap() = Some(format!(
+        *self::LAST_PANIC_MSG.write().unwrap() = Some(format!(
             "{}\n{}",
             panic_info,
             std::backtrace::Backtrace::capture()
@@ -531,7 +531,7 @@ fn test_specs() {
                         spec.source_filename,
                         line,
                         any_to_string(&*e),
-                        self::last_panic_msg.read().unwrap().as_ref().unwrap()
+                        self::LAST_PANIC_MSG.read().unwrap().as_ref().unwrap()
                     ));
                     println!("[failed]{}:{}", spec.source_filename, line);
                 }

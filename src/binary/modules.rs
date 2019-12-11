@@ -6,16 +6,12 @@ use crate::structure::modules::{
     Data, Elem, Export, ExportDesc, Func, FuncIdx, Global, GlobalIdx, Import, ImportDesc, LabelIdx,
     LocalIdx, Mem, MemIdx, Module, Start, Table, TableIdx, TypeIdx,
 };
-use crate::structure::types::{
-    ElemType, FuncType, GlobalType, Limits, MemType, Mut, ResultType, TableType, ValType,
-};
+use crate::structure::types::{FuncType, GlobalType, MemType, TableType, ValType};
 use crate::structure::values::{Byte, Name};
 
 use nom::{
     branch::alt,
-    bytes::complete::{tag, take, take_while_m_n},
-    combinator::{flat_map, map, map_res},
-    eof,
+    combinator::{flat_map, map},
     multi::{many0, many_m_n},
     sequence::tuple,
     IResult,

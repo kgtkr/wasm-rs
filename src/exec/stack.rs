@@ -1,9 +1,6 @@
 use super::instance::{FuncAddr, FuncInst, ModuleInst, TypedIdxAccess, Val};
 use crate::structure::instructions::Instr;
-use crate::structure::modules::{
-    Data, Elem, Export, ExportDesc, Func, FuncIdx, Global, GlobalIdx, LabelIdx, LocalIdx, Mem,
-    Module, Table, TypeIdx, TypedIdx,
-};
+use crate::structure::modules::{LabelIdx, TypedIdx};
 use crate::structure::types::ValType;
 use crate::WasmError;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};

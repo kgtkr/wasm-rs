@@ -4,14 +4,7 @@ use super::Encoder;
 use crate::structure::types::{
     ElemType, FuncType, GlobalType, Limits, MemType, Mut, ResultType, TableType, ValType,
 };
-use nom::{
-    branch::alt,
-    bytes::complete::{tag, take, take_while_m_n},
-    combinator::{flat_map, map, map_res},
-    multi::many_m_n,
-    sequence::tuple,
-    IResult,
-};
+use nom::{branch::alt, combinator::map, sequence::tuple, IResult};
 
 impl Encoder for ValType {
     fn encode(&self, bytes: &mut Vec<u8>) {

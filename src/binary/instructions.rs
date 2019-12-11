@@ -3,14 +3,11 @@ use super::util::loop_encode;
 use super::Encoder;
 use crate::structure::instructions::{Expr, Instr, Memarg};
 use crate::structure::modules::{FuncIdx, GlobalIdx, LabelIdx, LocalIdx, TypeIdx};
-use crate::structure::types::{
-    ElemType, FuncType, GlobalType, Limits, MemType, Mut, ResultType, TableType, ValType,
-};
+use crate::structure::types::ResultType;
 use nom::{
     branch::alt,
-    bytes::complete::{tag, take, take_while_m_n},
-    combinator::{map, map_res, opt},
-    multi::{many0, many_m_n},
+    combinator::{map, opt},
+    multi::many0,
     sequence::tuple,
     IResult,
 };

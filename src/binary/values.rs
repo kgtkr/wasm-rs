@@ -4,15 +4,8 @@ use super::{Decoder, Encoder};
 use crate::structure::values::{Byte, Name};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use leb128;
-use nom::{
-    bytes::complete::{tag, take, take_while_m_n},
-    combinator::{map, map_res},
-    multi::many_m_n,
-    sequence::tuple,
-    IResult,
-};
+use nom::{combinator::map, multi::many_m_n, IResult};
 use std::convert::TryFrom;
-use std::io::Read;
 
 impl Encoder for Byte {
     fn encode(&self, bytes: &mut Vec<u8>) {

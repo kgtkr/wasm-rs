@@ -1,8 +1,7 @@
 use super::stack::{AdminInstr, Frame, FrameStack, Label, LabelStack, Stack};
 use crate::structure::instructions::{Expr, Instr};
 use crate::structure::modules::{
-    Data, Elem, Export, ExportDesc, Func, FuncIdx, Global, GlobalIdx, ImportDesc, LabelIdx,
-    LocalIdx, Mem, Module, Table, TypeIdx, TypedIdx,
+    ExportDesc, Func, FuncIdx, GlobalIdx, ImportDesc, Mem, Module, Table, TypeIdx, TypedIdx,
 };
 use crate::structure::types::{
     ElemType, FuncType, GlobalType, Limits, MemType, Mut, TableType, ValType,
@@ -593,17 +592,6 @@ impl ModuleInst {
         Ok(result)
     }
 
-    fn dummy() -> ModuleInst {
-        ModuleInst {
-            types: Vec::new(),
-            funcs: Vec::new(),
-            table: None,
-            mem: None,
-            globals: Vec::new(),
-            exports: Vec::new(),
-        }
-    }
-
     fn eval_const_expr(&self, expr: &Expr) -> Val {
         match &expr.0[..] {
             &[Instr::I32Const(x)] => Val::I32(x),
@@ -799,7 +787,11 @@ mod tests {
         )
         .unwrap();
 
-        main_instance.export("main").unwrap_func().call(vec![]);
+        main_instance
+            .export("main")
+            .unwrap_func()
+            .call(vec![])
+            .unwrap();
     }
 
     #[test]
@@ -847,7 +839,11 @@ mod tests {
         )
         .unwrap();
 
-        main_instance.export("main").unwrap_func().call(vec![]);
+        main_instance
+            .export("main")
+            .unwrap_func()
+            .call(vec![])
+            .unwrap();
     }
 
     #[test]
@@ -877,6 +873,6 @@ mod tests {
         )
         .unwrap();
 
-        instance.export("run").unwrap_func().call(vec![]);
+        instance.export("run").unwrap_func().call(vec![]).unwrap();
     }
 }
