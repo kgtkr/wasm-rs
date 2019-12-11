@@ -5,10 +5,10 @@ use crate::structure::modules::{
     LocalIdx, Mem, Module, Table, TypeIdx, TypedIdx,
 };
 use crate::structure::types::{
-    ElemType, FuncType, GlobalType, Limits, MemType, Mut, ResultType, TableType, ValType,
+    ElemType, FuncType, GlobalType, Limits, MemType, Mut, TableType, ValType,
 };
 use crate::WasmError;
-use maplit::hashmap;
+
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::Cursor;
@@ -637,6 +637,7 @@ impl ModuleInst {
 mod tests {
     use super::*;
     use crate::binary::Decoder;
+    use maplit::hashmap;
 
     #[test]
     #[ignore]

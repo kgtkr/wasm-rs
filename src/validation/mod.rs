@@ -1,5 +1,5 @@
 use crate::structure::modules::Module;
 
-pub fn validation(module: &Module) -> bool {
+pub fn validation(_module: &Module) -> bool {
     true
 }
