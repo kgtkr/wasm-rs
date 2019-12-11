@@ -46,16 +46,6 @@ impl<H: ValInterpret, T: StackValues> StackValues for HCons<H, T> {
     }
 }
 
-fn stack_fn<I: StackValues, O: StackValues>(
-    stack: &mut Vec<Val>,
-    f: impl FnOnce(I) -> Result<O, WasmError>,
-) -> Result<(), WasmError> {
-    let input = I::pop_stack(stack).unwrap();
-    let output = f(input)?;
-    output.push_stack(stack);
-    Ok(())
-}
-
 #[derive(Debug, Clone)]
 pub enum FrameLevelInstr {
     Label(Label, /* 前から */ Vec<Instr>),
@@ -177,142 +167,127 @@ pub struct LabelStack {
 }
 
 impl LabelStack {
+    fn run<I: StackValues, O: StackValues>(
+        &mut self,
+        f: impl FnOnce(I) -> Result<O, WasmError>,
+    ) -> Result<(), WasmError> {
+        let input = I::pop_stack(&mut self.stack).unwrap();
+        let output = f(input)?;
+        output.push_stack(&mut self.stack);
+        Ok(())
+    }
+
     fn step(&mut self, frame: &mut Frame) -> Result<Option<FrameLevelInstr>, WasmError> {
         Ok(match self.instrs.pop() {
             Some(instr) => match instr {
                 AdminInstr::Instr(instr) => {
                     match instr {
                         Instr::I32Const(x) => {
-                            stack_fn(
-                                &mut self.stack,
-                                |hlist_pat![]: Hlist![]| -> Result<Hlist![i32], WasmError> {
-                                    Ok(hlist![x])
-                                },
-                            )?;
+                            self.run(|hlist_pat![]: Hlist![]| -> Result<Hlist![i32], WasmError> {
+                                Ok(hlist![x])
+                            })?;
                         }
                         Instr::I64Const(x) => {
-                            stack_fn(
-                                &mut self.stack,
-                                |hlist_pat![]: Hlist![]| -> Result<Hlist![i64], WasmError> {
-                                    Ok(hlist![x])
-                                },
-                            )?;
+                            self.run(|hlist_pat![]: Hlist![]| -> Result<Hlist![i64], WasmError> {
+                                Ok(hlist![x])
+                            })?;
                         }
                         Instr::F32Const(x) => {
-                            stack_fn(
-                                &mut self.stack,
-                                |hlist_pat![]: Hlist![]| -> Result<Hlist![f32], WasmError> {
-                                    Ok(hlist![x])
-                                },
-                            )?;
+                            self.run(|hlist_pat![]: Hlist![]| -> Result<Hlist![f32], WasmError> {
+                                Ok(hlist![x])
+                            })?;
                         }
                         Instr::F64Const(x) => {
-                            stack_fn(
-                                &mut self.stack,
-                                |hlist_pat![]: Hlist![]| -> Result<Hlist![f64], WasmError> {
-                                    Ok(hlist![x])
-                                },
-                            )?;
+                            self.run(|hlist_pat![]: Hlist![]| -> Result<Hlist![f64], WasmError> {
+                                Ok(hlist![x])
+                            })?;
                         }
                         Instr::I32Clz => {
-                            stack_fn(
-                                &mut self.stack,
+                            self.run(
                                 |hlist_pat![x]: Hlist![i32]| -> Result<Hlist![i32], WasmError> {
                                     Ok(hlist![x.leading_zeros() as i32])
                                 },
                             )?;
                         }
                         Instr::I32Ctz => {
-                            stack_fn(
-                                &mut self.stack,
+                            self.run(
                                 |hlist_pat![x]: Hlist![i32]| -> Result<Hlist![i32], WasmError> {
                                     Ok(hlist![x.trailing_zeros() as i32])
                                 },
                             )?;
                         }
                         Instr::I32Popcnt => {
-                            stack_fn(
-                                &mut self.stack,
+                            self.run(
                                 |hlist_pat![x]: Hlist![i32]| -> Result<Hlist![i32], WasmError> {
                                     Ok(hlist![x.count_ones() as i32])
                                 },
                             )?;
                         }
                         Instr::I64Clz => {
-                            stack_fn(
-                                &mut self.stack,
+                            self.run(
                                 |hlist_pat![x]: Hlist![i64]| -> Result<Hlist![i64], WasmError> {
                                     Ok(hlist![x.leading_zeros() as i64])
                                 },
                             )?;
                         }
                         Instr::I64Ctz => {
-                            stack_fn(
-                                &mut self.stack,
+                            self.run(
                                 |hlist_pat![x]: Hlist![i64]| -> Result<Hlist![i64], WasmError> {
                                     Ok(hlist![x.trailing_zeros() as i64])
                                 },
                             )?;
                         }
                         Instr::I64Popcnt => {
-                            stack_fn(
-                                &mut self.stack,
+                            self.run(
                                 |hlist_pat![x]: Hlist![i64]| -> Result<Hlist![i64], WasmError> {
                                     Ok(hlist![x.count_ones() as i64])
                                 },
                             )?;
                         }
                         Instr::F32Abs => {
-                            stack_fn(
-                                &mut self.stack,
+                            self.run(
                                 |hlist_pat![x]: Hlist![f32]| -> Result<Hlist![f32], WasmError> {
                                     Ok(hlist![x.abs()])
                                 },
                             )?;
                         }
                         Instr::F32Neg => {
-                            stack_fn(
-                                &mut self.stack,
+                            self.run(
                                 |hlist_pat![x]: Hlist![f32]| -> Result<Hlist![f32], WasmError> {
                                     Ok(hlist![-x])
                                 },
                             )?;
                         }
                         Instr::F32Sqrt => {
-                            stack_fn(
-                                &mut self.stack,
+                            self.run(
                                 |hlist_pat![x]: Hlist![f32]| -> Result<Hlist![f32], WasmError> {
                                     Ok(hlist![x.sqrt()])
                                 },
                             )?;
                         }
                         Instr::F32Ceil => {
-                            stack_fn(
-                                &mut self.stack,
+                            self.run(
                                 |hlist_pat![x]: Hlist![f32]| -> Result<Hlist![f32], WasmError> {
                                     Ok(hlist![x.ceil()])
                                 },
                             )?;
                         }
                         Instr::F32Floor => {
-                            stack_fn(
-                                &mut self.stack,
+                            self.run(
                                 |hlist_pat![x]: Hlist![f32]| -> Result<Hlist![f32], WasmError> {
                                     Ok(hlist![x.floor()])
                                 },
                             )?;
                         }
                         Instr::F32Trunc => {
-                            stack_fn(
-                                &mut self.stack,
+                            self.run(
                                 |hlist_pat![x]: Hlist![f32]| -> Result<Hlist![f32], WasmError> {
                                     Ok(hlist![x.trunc()])
                                 },
                             )?;
                         }
                         Instr::F32Nearest => {
-                            stack_fn(
-                                &mut self.stack,
+                            self.run(
                                 |hlist_pat![x]: Hlist![f32]| -> Result<Hlist![f32], WasmError> {
                                     let x_mod2 = x % 2.0;
                                     Ok(hlist![if x_mod2 == 0.5 {
@@ -326,56 +301,49 @@ impl LabelStack {
                             )?;
                         }
                         Instr::F64Abs => {
-                            stack_fn(
-                                &mut self.stack,
+                            self.run(
                                 |hlist_pat![x]: Hlist![f64]| -> Result<Hlist![f64], WasmError> {
                                     Ok(hlist![x.abs()])
                                 },
                             )?;
                         }
                         Instr::F64Neg => {
-                            stack_fn(
-                                &mut self.stack,
+                            self.run(
                                 |hlist_pat![x]: Hlist![f64]| -> Result<Hlist![f64], WasmError> {
                                     Ok(hlist![-x])
                                 },
                             )?;
                         }
                         Instr::F64Sqrt => {
-                            stack_fn(
-                                &mut self.stack,
+                            self.run(
                                 |hlist_pat![x]: Hlist![f64]| -> Result<Hlist![f64], WasmError> {
                                     Ok(hlist![x.sqrt()])
                                 },
                             )?;
                         }
                         Instr::F64Ceil => {
-                            stack_fn(
-                                &mut self.stack,
+                            self.run(
                                 |hlist_pat![x]: Hlist![f64]| -> Result<Hlist![f64], WasmError> {
                                     Ok(hlist![x.ceil()])
                                 },
                             )?;
                         }
                         Instr::F64Floor => {
-                            stack_fn(
-                                &mut self.stack,
+                            self.run(
                                 |hlist_pat![x]: Hlist![f64]| -> Result<Hlist![f64], WasmError> {
                                     Ok(hlist![x.floor()])
                                 },
                             )?;
                         }
                         Instr::F64Trunc => {
-                            stack_fn(
-                                &mut self.stack,
+                            self.run(
                                 |hlist_pat![x]: Hlist![f64]| -> Result<Hlist![f64], WasmError> {
                                     Ok(hlist![x.trunc()])
                                 },
                             )?;
                         }
                         Instr::F64Nearest => {
-                            stack_fn(
-                                &mut self.stack,
+                            self.run(
                                 |hlist_pat![x]: Hlist![f64]| -> Result<Hlist![f64], WasmError> {
                                     let x_mod2 = x % 2.0;
                                     Ok(hlist![if x_mod2 == 0.5 {
@@ -389,8 +357,7 @@ impl LabelStack {
                             )?;
                         }
                         Instr::I32Add => {
-                            stack_fn(
-                                &mut self.stack,
+                            self.run(
                                 |hlist_pat![x, y]: Hlist![i32, i32]| -> Result<Hlist![i32], WasmError> {
                                     Ok(hlist![x.overflowing_add(y).0])
                                 },
