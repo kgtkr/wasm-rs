@@ -352,84 +352,35 @@ impl ModuleInst {
     ) -> Result<Rc<ModuleInst>, WasmError> {
         let mut result = ModuleInst {
             types: module.types.clone(),
-            funcs: module
-                .imports
-                .iter()
-                .flat_map(|import| {
-                    if let ImportDesc::Func(idx) = &import.desc {
-                        Some(
-                            imports_objects
-                                .get(&import.module.0)
-                                .unwrap()
-                                .get(&import.name.0)
-                                .unwrap()
-                                .clone()
-                                .unwrap_func(),
-                        )
-                    } else {
-                        None
-                    }
-                })
-                .collect(),
-            table: module
-                .imports
-                .iter()
-                .flat_map(|import| {
-                    if let ImportDesc::Table(idx) = &import.desc {
-                        Some(
-                            imports_objects
-                                .get(&import.module.0)
-                                .unwrap()
-                                .get(&import.name.0)
-                                .unwrap()
-                                .clone()
-                                .unwrap_table(),
-                        )
-                    } else {
-                        None
-                    }
-                })
-                .next(),
-            mem: module
-                .imports
-                .iter()
-                .flat_map(|import| {
-                    if let ImportDesc::Mem(idx) = &import.desc {
-                        Some(
-                            imports_objects
-                                .get(&import.module.0)
-                                .unwrap()
-                                .get(&import.name.0)
-                                .unwrap()
-                                .clone()
-                                .unwrap_mem(),
-                        )
-                    } else {
-                        None
-                    }
-                })
-                .next(),
-            globals: module
-                .imports
-                .iter()
-                .flat_map(|import| {
-                    if let ImportDesc::Global(idx) = &import.desc {
-                        Some(
-                            imports_objects
-                                .get(&import.module.0)
-                                .unwrap()
-                                .get(&import.name.0)
-                                .unwrap()
-                                .clone()
-                                .unwrap_global(),
-                        )
-                    } else {
-                        None
-                    }
-                })
-                .collect(),
+            funcs: Vec::new(),
+            table: None,
+            mem: None,
+            globals: Vec::new(),
             exports: Vec::new(),
         };
+
+        for import in &module.imports {
+            let val = imports_objects
+                .get(&import.module.0)
+                .unwrap()
+                .get(&import.name.0)
+                .unwrap()
+                .clone();
+            match &import.desc {
+                ImportDesc::Func(idx) => {
+                    result.funcs.push(val.unwrap_func());
+                }
+                ImportDesc::Table(idx) => {
+                    let _ = result.table.replace(val.unwrap_table());
+                }
+                ImportDesc::Mem(idx) => {
+                    let _ = result.mem.replace(val.unwrap_mem());
+                }
+                ImportDesc::Global(idx) => {
+                    result.globals.push(val.unwrap_global());
+                }
+            }
+        }
 
         for _ in &module.funcs {
             let dummy_func = FuncInst::RuntimeFunc {
