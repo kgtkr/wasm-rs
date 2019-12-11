@@ -145,7 +145,11 @@ impl TableInst {
     }
 
     fn instantiation_valid(&self, offset: usize, init: Vec<FuncIdx>) -> Result<(), WasmError> {
-        if offset + init.len() > self.elem.len() {
+        if offset
+            .checked_add(init.len())
+            .map(|x| x > self.elem.len())
+            .unwrap_or(true)
+        {
             Err(WasmError::LinkError)
         } else {
             Ok(())
@@ -189,7 +193,11 @@ impl MemInst {
     }
 
     fn instantiation_valid(&self, offset: usize, init: Vec<u8>) -> Result<(), WasmError> {
-        if offset + init.len() > self.data.len() {
+        if offset
+            .checked_add(init.len())
+            .map(|x| x > self.data.len())
+            .unwrap_or(true)
+        {
             Err(WasmError::LinkError)
         } else {
             Ok(())
