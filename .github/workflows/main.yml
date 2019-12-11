@@ -13,6 +13,7 @@ jobs:
       - run: |
           git clone --recursive https://github.com/WebAssembly/wabt
           cd wabt
+          git checkout 1.0.12
           make
           echo ::add-path::$PWD/bin
       - uses: actions-rs/toolchain@v1
