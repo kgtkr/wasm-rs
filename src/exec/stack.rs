@@ -1263,7 +1263,7 @@ impl LabelStack {
                                     return Err(WasmError::RuntimeError);
                                 }
                             };
-                            if func.0.borrow().type_() != instance.types.get_idx(t) {
+                            if &func.0.borrow().type_() != instance.types.get_idx(t) {
                                 return Err(WasmError::RuntimeError);
                             }
                             self.instrs.push(AdminInstr::Invoke(func.clone()));

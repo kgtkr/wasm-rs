@@ -4,7 +4,9 @@ use crate::structure::modules::{
     Data, Elem, Export, ExportDesc, Func, FuncIdx, Global, GlobalIdx, ImportDesc, LabelIdx,
     LocalIdx, Mem, Module, Table, TypeIdx, TypedIdx,
 };
-use crate::structure::types::{FuncType, Limits, MemType, Mut, ResultType, TableType, ValType};
+use crate::structure::types::{
+    ElemType, FuncType, GlobalType, Limits, MemType, Mut, ResultType, TableType, ValType,
+};
 use crate::WasmError;
 use maplit::hashmap;
 use std::cell::RefCell;
@@ -24,36 +26,52 @@ pub enum ExternalVal {
 }
 
 impl ExternalVal {
-    pub fn unwrap_func(self) -> FuncAddr {
+    pub fn as_func(self) -> Option<FuncAddr> {
         if let ExternalVal::Func(x) = self {
-            x
+            Some(x)
         } else {
-            panic!();
+            None
+        }
+    }
+
+    pub fn unwrap_func(self) -> FuncAddr {
+        self.as_func().unwrap()
+    }
+
+    pub fn as_table(self) -> Option<TableAddr> {
+        if let ExternalVal::Table(x) = self {
+            Some(x)
+        } else {
+            None
         }
     }
 
     pub fn unwrap_table(self) -> TableAddr {
-        if let ExternalVal::Table(x) = self {
-            x
+        self.as_table().unwrap()
+    }
+
+    pub fn as_mem(self) -> Option<MemAddr> {
+        if let ExternalVal::Mem(x) = self {
+            Some(x)
         } else {
-            panic!();
+            None
         }
     }
 
     pub fn unwrap_mem(self) -> MemAddr {
-        if let ExternalVal::Mem(x) = self {
-            x
+        self.as_mem().unwrap()
+    }
+
+    pub fn as_global(self) -> Option<GlobalAddr> {
+        if let ExternalVal::Global(x) = self {
+            Some(x)
         } else {
-            panic!();
+            None
         }
     }
 
     pub fn unwrap_global(self) -> GlobalAddr {
-        if let ExternalVal::Global(x) = self {
-            x
-        } else {
-            panic!();
-        }
+        self.as_global().unwrap()
     }
 }
 
@@ -85,10 +103,14 @@ impl FuncInst {
         }
     }
 
-    pub fn type_(&self) -> &FuncType {
+    pub fn is_match(&self, type_: &FuncType) -> bool {
+        &self.type_() == type_
+    }
+
+    pub fn type_(&self) -> FuncType {
         match self {
-            FuncInst::RuntimeFunc { type_, .. } => type_,
-            FuncInst::HostFunc { type_, .. } => type_,
+            FuncInst::RuntimeFunc { type_, .. } => type_.clone(),
+            FuncInst::HostFunc { type_, .. } => type_.clone(),
         }
     }
 }
@@ -110,6 +132,16 @@ impl TableInst {
                 vec
             },
         }
+    }
+
+    pub fn type_(&self) -> TableType {
+        TableType(
+            Limits {
+                min: self.elem.len() as u32,
+                max: self.max.map(|x| x as u32),
+            },
+            ElemType::FuncRef,
+        )
     }
 
     fn init_elem(&mut self, funcs: &Vec<FuncAddr>, offset: usize, init: Vec<FuncIdx>) {
@@ -150,12 +182,14 @@ impl MemInst {
         }
     }
 
-    fn init_data(&mut self, offset: usize, init: Vec<u8>) {
-        let len = std::cmp::max(self.data.len(), offset + init.len());
-        self.data.resize(len, 0);
-        for i in 0..init.len() {
-            self.data[offset + i] = init[i];
+    fn init_data(&mut self, offset: usize, init: Vec<u8>) -> Result<(), WasmError> {
+        if offset + init.len() > self.data.len() {
+            return Err(WasmError::LinkError);
         }
+        for (i, x) in init.into_iter().enumerate() {
+            self.data[offset + i] = x;
+        }
+        Ok(())
     }
 
     pub fn page_size(&self) -> i32 {
@@ -182,12 +216,25 @@ impl MemInst {
     pub fn buffer(&self) -> &[u8] {
         &self.data[..]
     }
+
+    pub fn type_(&self) -> MemType {
+        MemType(Limits {
+            min: self.page_size() as u32,
+            max: self.max.map(|x| x as u32),
+        })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GlobalInst {
     pub value: Val,
     pub mut_: Mut,
+}
+
+impl GlobalInst {
+    pub fn type_(&self) -> GlobalType {
+        GlobalType(self.mut_.clone(), self.value.val_type())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Copy)]
@@ -199,6 +246,15 @@ pub enum Val {
 }
 
 impl Val {
+    pub fn val_type(&self) -> ValType {
+        match self {
+            Val::I32(_) => ValType::I32,
+            Val::I64(_) => ValType::I64,
+            Val::F32(_) => ValType::F32,
+            Val::F64(_) => ValType::F64,
+        }
+    }
+
     pub fn unwrap_i32(&self) -> i32 {
         if let Val::I32(x) = self {
             *x
@@ -367,16 +423,34 @@ impl ModuleInst {
                 .ok_or_else(|| WasmError::LinkError)?;
             match &import.desc {
                 ImportDesc::Func(idx) => {
-                    result.funcs.push(val.unwrap_func());
+                    result.funcs.push(
+                        val.as_func()
+                            .filter(|func| {
+                                func.0.borrow().type_().is_match(result.types.get_idx(*idx))
+                            })
+                            .ok_or_else(|| WasmError::LinkError)?,
+                    );
                 }
-                ImportDesc::Table(idx) => {
-                    let _ = result.table.replace(val.unwrap_table());
+                ImportDesc::Table(type_) => {
+                    let _ = result.table.replace(
+                        val.as_table()
+                            .filter(|table| table.0.borrow().type_().is_match(type_))
+                            .ok_or_else(|| WasmError::LinkError)?,
+                    );
                 }
-                ImportDesc::Mem(idx) => {
-                    let _ = result.mem.replace(val.unwrap_mem());
+                ImportDesc::Mem(type_) => {
+                    let _ = result.mem.replace(
+                        val.as_mem()
+                            .filter(|mem| mem.0.borrow().type_().is_match(type_))
+                            .ok_or_else(|| WasmError::LinkError)?,
+                    );
                 }
-                ImportDesc::Global(idx) => {
-                    result.globals.push(val.unwrap_global());
+                ImportDesc::Global(type_) => {
+                    result.globals.push(
+                        val.as_global()
+                            .filter(|global| global.0.borrow().type_().is_match(type_))
+                            .ok_or_else(|| WasmError::LinkError)?,
+                    );
                 }
             }
         }
@@ -432,7 +506,7 @@ impl ModuleInst {
                 .unwrap()
                 .0
                 .borrow_mut()
-                .init_data(offset, data.init.clone().into_iter().map(|x| x.0).collect());
+                .init_data(offset, data.init.clone().into_iter().map(|x| x.0).collect())?;
         }
 
         for export in &module.exports {
