@@ -144,19 +144,18 @@ impl TableInst {
         )
     }
 
-    fn init_elem(
-        &mut self,
-        funcs: &Vec<FuncAddr>,
-        offset: usize,
-        init: Vec<FuncIdx>,
-    ) -> Result<(), WasmError> {
+    fn instantiation_valid(&self, offset: usize, init: Vec<FuncIdx>) -> Result<(), WasmError> {
         if offset + init.len() > self.elem.len() {
-            return Err(WasmError::LinkError);
+            Err(WasmError::LinkError)
+        } else {
+            Ok(())
         }
+    }
+
+    fn init_elem(&mut self, funcs: &Vec<FuncAddr>, offset: usize, init: Vec<FuncIdx>) {
         for (i, x) in init.into_iter().enumerate() {
             self.elem[offset + i] = Some(funcs.get_idx(x).clone());
         }
-        Ok(())
     }
 }
 
@@ -189,14 +188,18 @@ impl MemInst {
         }
     }
 
-    fn init_data(&mut self, offset: usize, init: Vec<u8>) -> Result<(), WasmError> {
+    fn instantiation_valid(&self, offset: usize, init: Vec<u8>) -> Result<(), WasmError> {
         if offset + init.len() > self.data.len() {
-            return Err(WasmError::LinkError);
+            Err(WasmError::LinkError)
+        } else {
+            Ok(())
         }
+    }
+
+    fn init_data(&mut self, offset: usize, init: Vec<u8>) {
         for (i, x) in init.into_iter().enumerate() {
             self.data[offset + i] = x;
         }
-        Ok(())
     }
 
     pub fn page_size(&self) -> i32 {
@@ -497,13 +500,38 @@ impl ModuleInst {
                     mut_: global.type_.0,
                 }))));
         }
+
+        for elem in &module.elem {
+            let offset = result.eval_const_expr(&elem.offset).unwrap_i32() as usize;
+            result
+                .table
+                .as_ref()
+                .unwrap()
+                .0
+                .borrow()
+                .instantiation_valid(offset, elem.init.clone())?;
+        }
+        for data in &module.data {
+            let offset = result.eval_const_expr(&data.offset).unwrap_i32() as usize;
+            result
+                .mem
+                .as_ref()
+                .unwrap()
+                .0
+                .borrow()
+                .instantiation_valid(
+                    offset,
+                    data.init.clone().into_iter().map(|x| x.0).collect(),
+                )?;
+        }
+
         for elem in &module.elem {
             let offset = result.eval_const_expr(&elem.offset).unwrap_i32() as usize;
             result.table.as_ref().unwrap().0.borrow_mut().init_elem(
                 &result.funcs,
                 offset,
                 elem.init.clone(),
-            )?;
+            );
         }
         for data in &module.data {
             let offset = result.eval_const_expr(&data.offset).unwrap_i32() as usize;
@@ -513,7 +541,7 @@ impl ModuleInst {
                 .unwrap()
                 .0
                 .borrow_mut()
-                .init_data(offset, data.init.clone().into_iter().map(|x| x.0).collect())?;
+                .init_data(offset, data.init.clone().into_iter().map(|x| x.0).collect());
         }
 
         for export in &module.exports {
