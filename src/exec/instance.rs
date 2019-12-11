@@ -97,12 +97,16 @@ impl Into<Val> for f64 {
 
 impl ValPrimitive for f64 {}
 
-pub trait ValInterpret<T: ValPrimitive> {
-    fn to_primitive(self) -> T;
-    fn reinterpret(primitive: T) -> Self;
+pub trait ValInterpret {
+    type Primitive: ValPrimitive;
+
+    fn to_primitive(self) -> Self::Primitive;
+    fn reinterpret(primitive: Self::Primitive) -> Self;
 }
 
-impl<T: ValPrimitive> ValInterpret<T> for T {
+impl<T: ValPrimitive> ValInterpret for T {
+    type Primitive = T;
+
     fn to_primitive(self) -> T {
         self
     }
@@ -112,7 +116,9 @@ impl<T: ValPrimitive> ValInterpret<T> for T {
     }
 }
 
-impl ValInterpret<i32> for bool {
+impl ValInterpret for bool {
+    type Primitive = i32;
+
     fn to_primitive(self) -> i32 {
         if self {
             1
@@ -126,7 +132,9 @@ impl ValInterpret<i32> for bool {
     }
 }
 
-impl ValInterpret<i32> for u32 {
+impl ValInterpret for u32 {
+    type Primitive = i32;
+
     fn to_primitive(self) -> i32 {
         let mut wtr = vec![];
         wtr.write_u32::<LittleEndian>(self).unwrap();
@@ -142,7 +150,9 @@ impl ValInterpret<i32> for u32 {
     }
 }
 
-impl ValInterpret<i64> for u64 {
+impl ValInterpret for u64 {
+    type Primitive = i64;
+
     fn to_primitive(self) -> i64 {
         let mut wtr = vec![];
         wtr.write_u64::<LittleEndian>(self).unwrap();

@@ -1,12 +1,60 @@
 use super::instance::{FuncAddr, FuncInst, ModuleInst, TypedIdxAccess, Val};
+use super::instance::{ValInterpret, ValPrimitive};
 use crate::structure::instructions::Instr;
 use crate::structure::modules::{LabelIdx, TypedIdx};
 use crate::structure::types::ValType;
 use crate::WasmError;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use frunk::{hlist, hlist_pat, HCons, HNil, Hlist};
 use num::NumCast;
+use std::convert::{From, Into, TryFrom};
 use std::io::Cursor;
 use std::rc::Weak;
+
+pub trait StackValues: Sized {
+    fn pop_stack(stack: &mut Vec<Val>) -> Option<Self>;
+    fn push_stack(self, stack: &mut Vec<Val>);
+}
+
+impl<T: ValInterpret> StackValues for T {
+    fn pop_stack(stack: &mut Vec<Val>) -> Option<Self> {
+        let val = stack.pop()?;
+        let primitive = <T::Primitive as TryFrom<Val>>::try_from(val).ok()?;
+        Some(T::reinterpret(primitive))
+    }
+    fn push_stack(self, stack: &mut Vec<Val>) {
+        stack.push(self.to_primitive().into());
+    }
+}
+
+impl StackValues for HNil {
+    fn pop_stack(_: &mut Vec<Val>) -> Option<Self> {
+        Some(HNil)
+    }
+    fn push_stack(self, _: &mut Vec<Val>) {}
+}
+
+impl<H: ValInterpret, T: StackValues> StackValues for HCons<H, T> {
+    fn pop_stack(stack: &mut Vec<Val>) -> Option<Self> {
+        let tail = T::pop_stack(stack)?;
+        let head = H::pop_stack(stack)?;
+        Some(HCons { head, tail })
+    }
+    fn push_stack(self, stack: &mut Vec<Val>) {
+        self.head.push_stack(stack);
+        self.tail.push_stack(stack);
+    }
+}
+
+fn stack_fn<I: StackValues, O: StackValues>(
+    stack: &mut Vec<Val>,
+    f: impl FnOnce(I) -> Result<O, WasmError>,
+) -> Result<(), WasmError> {
+    let input = I::pop_stack(stack).unwrap();
+    let output = f(input)?;
+    output.push_stack(stack);
+    Ok(())
+}
 
 #[derive(Debug, Clone)]
 pub enum FrameLevelInstr {
@@ -243,9 +291,12 @@ impl LabelStack {
                             }));
                         }
                         Instr::I32Add => {
-                            let y = self.stack.pop().unwrap().unwrap_i32();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(x.overflowing_add(y).0));
+                            stack_fn(
+                                &mut self.stack,
+                                |hlist_pat![x, y]: Hlist![i32, i32]| -> Result<Hlist![i32], WasmError> {
+                                    Ok(hlist![x.overflowing_add(y).0])
+                                },
+                            )?;
                         }
                         Instr::I32Sub => {
                             let y = self.stack.pop().unwrap().unwrap_i32();
