@@ -362,10 +362,9 @@ impl ModuleInst {
         for import in &module.imports {
             let val = imports_objects
                 .get(&import.module.0)
-                .unwrap()
-                .get(&import.name.0)
-                .unwrap()
-                .clone();
+                .and_then(|module| module.get(&import.name.0))
+                .cloned()
+                .ok_or_else(|| WasmError::LinkError)?;
             match &import.desc {
                 ImportDesc::Func(idx) => {
                     result.funcs.push(val.unwrap_func());
