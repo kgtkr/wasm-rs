@@ -797,6 +797,14 @@ impl LabelStack {
                                 <u64 as NumCast>::from(x).ok_or_else(|| WasmError::RuntimeError)?,
                             )));
                         }
+                        Instr::F32DemoteF64 => {
+                            let x = self.stack.pop().unwrap().unwrap_f64();
+                            self.stack.push(Val::F32(x as f32));
+                        }
+                        Instr::F64PromoteF32 => {
+                            let x = self.stack.pop().unwrap().unwrap_f32();
+                            self.stack.push(Val::F64(x as f64));
+                        }
                         Instr::I32ReinterpretF32 => {
                             let x = self.stack.pop().unwrap().unwrap_f32();
 
