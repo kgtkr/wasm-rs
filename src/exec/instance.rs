@@ -171,7 +171,7 @@ pub struct MemInst {
 
 impl MemInst {
     const PAGE_SIZE: usize = 65536;
-    const MAX_PAGE_SIZE: i32 = 16384;
+    const MAX_PAGE_SIZE: i32 = 65536;
 
     pub fn new(mem: &Mem) -> MemInst {
         let min = mem.type_.0.min;
