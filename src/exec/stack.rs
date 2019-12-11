@@ -198,7 +198,16 @@ impl LabelStack {
                             self.stack.push(Val::F32(x.trunc()));
                         }
                         Instr::F32Nearest => {
-                            unimplemented!();
+                            let x = self.stack.pop().unwrap().unwrap_f32();
+                            let x_mod2 = x % 2.0;
+
+                            self.stack.push(Val::F32(if x_mod2 == 0.5 {
+                                x.floor()
+                            } else if x_mod2 == -0.5 {
+                                x.ceil()
+                            } else {
+                                x.round()
+                            }));
                         }
                         Instr::F64Abs => {
                             let x = self.stack.pop().unwrap().unwrap_f64();
@@ -225,7 +234,16 @@ impl LabelStack {
                             self.stack.push(Val::F64(x.trunc()));
                         }
                         Instr::F64Nearest => {
-                            unimplemented!();
+                            let x = self.stack.pop().unwrap().unwrap_f64();
+                            let x_mod2 = x % 2.0;
+
+                            self.stack.push(Val::F64(if x_mod2 == 0.5 {
+                                x.floor()
+                            } else if x_mod2 == -0.5 {
+                                x.ceil()
+                            } else {
+                                x.round()
+                            }));
                         }
                         Instr::I32Add => {
                             let y = self.stack.pop().unwrap().unwrap_i32();
@@ -1250,7 +1268,6 @@ impl LabelStack {
                             }
                             self.instrs.push(AdminInstr::Invoke(func.clone()));
                         }
-                        x => unimplemented!("{:?}", x),
                     }
                     None
                 }
