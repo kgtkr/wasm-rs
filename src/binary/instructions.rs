@@ -428,10 +428,10 @@ impl Encoder for Instr {
             Instr::F64ConvertI64S => bytes.push(0xb9),
             Instr::F64ConvertI64U => bytes.push(0xba),
             Instr::F64PromoteF32 => bytes.push(0xbb),
-            Instr::I32ReinteretF32 => bytes.push(0xbc),
-            Instr::I64ReinteretF64 => bytes.push(0xbd),
-            Instr::F32ReinteretI32 => bytes.push(0xbe),
-            Instr::F64ReinteretI64 => bytes.push(0xbf),
+            Instr::I32ReinterpretF32 => bytes.push(0xbc),
+            Instr::I64ReinterpretF64 => bytes.push(0xbd),
+            Instr::F32ReinterpretI32 => bytes.push(0xbe),
+            Instr::F64ReinterpretI64 => bytes.push(0xbf),
         }
     }
 }
@@ -720,10 +720,10 @@ impl Decoder for Instr {
             map(parser::token(0xb9), |_| Instr::F64ConvertI64S),
             map(parser::token(0xba), |_| Instr::F64ConvertI64U),
             map(parser::token(0xbb), |_| Instr::F64PromoteF32),
-            map(parser::token(0xbc), |_| Instr::I32ReinteretF32),
-            map(parser::token(0xbd), |_| Instr::I64ReinteretF64),
-            map(parser::token(0xbe), |_| Instr::F32ReinteretI32),
-            map(parser::token(0xbf), |_| Instr::F64ReinteretI64),
+            map(parser::token(0xbc), |_| Instr::I32ReinterpretF32),
+            map(parser::token(0xbd), |_| Instr::I64ReinterpretF64),
+            map(parser::token(0xbe), |_| Instr::F32ReinterpretI32),
+            map(parser::token(0xbf), |_| Instr::F64ReinterpretI64),
         )(input)
     }
 }
