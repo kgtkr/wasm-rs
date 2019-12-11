@@ -144,12 +144,19 @@ impl TableInst {
         )
     }
 
-    fn init_elem(&mut self, funcs: &Vec<FuncAddr>, offset: usize, init: Vec<FuncIdx>) {
-        let len = std::cmp::max(self.elem.len(), offset + init.len());
-        self.elem.resize(len, None);
+    fn init_elem(
+        &mut self,
+        funcs: &Vec<FuncAddr>,
+        offset: usize,
+        init: Vec<FuncIdx>,
+    ) -> Result<(), WasmError> {
+        if offset + init.len() > self.elem.len() {
+            return Err(WasmError::LinkError);
+        }
         for (i, x) in init.into_iter().enumerate() {
             self.elem[offset + i] = Some(funcs.get_idx(x).clone());
         }
+        Ok(())
     }
 }
 
@@ -496,7 +503,7 @@ impl ModuleInst {
                 &result.funcs,
                 offset,
                 elem.init.clone(),
-            );
+            )?;
         }
         for data in &module.data {
             let offset = result.eval_const_expr(&data.offset).unwrap_i32() as usize;
