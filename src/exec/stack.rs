@@ -46,13 +46,7 @@ impl<H: ValInterpret, T: StackValues> StackValues for HCons<H, T> {
     }
 }
 
-fn stack_fn<I: StackValues, O: StackValues>(stack: &mut Vec<Val>, f: impl FnOnce(I) -> O) {
-    let input = I::pop_stack(stack).unwrap();
-    let output = f(input);
-    output.push_stack(stack);
-}
-
-fn stack_fn_result<I: StackValues, O: StackValues>(
+fn stack_fn<I: StackValues, O: StackValues>(
     stack: &mut Vec<Val>,
     f: impl FnOnce(I) -> Result<O, WasmError>,
 ) -> Result<(), WasmError> {
@@ -299,10 +293,10 @@ impl LabelStack {
                         Instr::I32Add => {
                             stack_fn(
                                 &mut self.stack,
-                                |hlist_pat![x, y]: Hlist![i32, i32]| -> Hlist![i32] {
-                                    hlist![x.overflowing_add(y).0]
+                                |hlist_pat![x, y]: Hlist![i32, i32]| -> Result<Hlist![i32], WasmError> {
+                                    Ok(hlist![x.overflowing_add(y).0])
                                 },
-                            );
+                            )?;
                         }
                         Instr::I32Sub => {
                             let y = self.stack.pop().unwrap().unwrap_i32();
