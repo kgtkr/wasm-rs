@@ -631,71 +631,31 @@ impl LabelStack {
                             self.run_reop(|x: i64, y: i64| -> bool { x == y });
                         }
                         Instr::I64Ne => {
-                            let y = self.stack.pop().unwrap().unwrap_i64();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I32(if x != y { 1 } else { 0 }));
+                            self.run_reop(|x: i64, y: i64| -> bool { x != y });
                         }
                         Instr::I64LtS => {
-                            let y = self.stack.pop().unwrap().unwrap_i64();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I32(if x < y { 1 } else { 0 }));
+                            self.run_reop(|x: i64, y: i64| -> bool { x < y });
                         }
                         Instr::I64LtU => {
-                            let y = self.stack.pop().unwrap().unwrap_i64();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack
-                                .push(Val::I32(if i64_convert_u64(x) < i64_convert_u64(y) {
-                                    1
-                                } else {
-                                    0
-                                }));
+                            self.run_reop(|x: u64, y: u64| -> bool { x < y });
                         }
                         Instr::I64GtS => {
-                            let y = self.stack.pop().unwrap().unwrap_i64();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I32(if x > y { 1 } else { 0 }));
+                            self.run_reop(|x: i64, y: i64| -> bool { x > y });
                         }
                         Instr::I64GtU => {
-                            let y = self.stack.pop().unwrap().unwrap_i64();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack
-                                .push(Val::I32(if i64_convert_u64(x) > i64_convert_u64(y) {
-                                    1
-                                } else {
-                                    0
-                                }));
+                            self.run_reop(|x: u64, y: u64| -> bool { x > y });
                         }
                         Instr::I64LeS => {
-                            let y = self.stack.pop().unwrap().unwrap_i64();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I32(if x <= y { 1 } else { 0 }));
+                            self.run_reop(|x: i64, y: i64| -> bool { x <= y });
                         }
                         Instr::I64LeU => {
-                            let y = self.stack.pop().unwrap().unwrap_i64();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I32(
-                                if i64_convert_u64(x) <= i64_convert_u64(y) {
-                                    1
-                                } else {
-                                    0
-                                },
-                            ));
+                            self.run_reop(|x: u64, y: u64| -> bool { x <= y });
                         }
                         Instr::I64GeS => {
-                            let y = self.stack.pop().unwrap().unwrap_i64();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I32(if x >= y { 1 } else { 0 }));
+                            self.run_reop(|x: i64, y: i64| -> bool { x >= y });
                         }
                         Instr::I64GeU => {
-                            let y = self.stack.pop().unwrap().unwrap_i64();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I32(
-                                if i64_convert_u64(x) >= i64_convert_u64(y) {
-                                    1
-                                } else {
-                                    0
-                                },
-                            ));
+                            self.run_reop(|x: u64, y: u64| -> bool { x >= y });
                         }
                         Instr::F32Eq => {
                             let y = self.stack.pop().unwrap().unwrap_f32();
