@@ -1,4 +1,4 @@
-use super::instance::ValInterpret;
+use super::instance::InterpretVal;
 use super::instance::{FuncAddr, FuncInst, ModuleInst, TypedIdxAccess, Val};
 use crate::structure::instructions::Instr;
 use crate::structure::modules::{LabelIdx, TypedIdx};
@@ -16,14 +16,13 @@ pub trait StackValues: Sized {
     fn push_stack(self, stack: &mut Vec<Val>);
 }
 
-impl<T: ValInterpret> StackValues for T {
+impl<T: InterpretVal> StackValues for T {
     fn pop_stack(stack: &mut Vec<Val>) -> Option<Self> {
         let val = stack.pop()?;
-        let primitive = <T::Primitive as TryFrom<Val>>::try_from(val).ok()?;
-        Some(T::reinterpret(primitive))
+        T::try_interpret_val(val)
     }
     fn push_stack(self, stack: &mut Vec<Val>) {
-        stack.push(self.to_primitive().into());
+        stack.push(self.to_val());
     }
 }
 
@@ -34,7 +33,7 @@ impl StackValues for HNil {
     fn push_stack(self, _: &mut Vec<Val>) {}
 }
 
-impl<H: ValInterpret, T: StackValues> StackValues for HCons<H, T> {
+impl<H: StackValues, T: StackValues> StackValues for HCons<H, T> {
     fn pop_stack(stack: &mut Vec<Val>) -> Option<Self> {
         let tail = T::pop_stack(stack)?;
         let head = H::pop_stack(stack)?;
@@ -190,33 +189,33 @@ impl LabelStack {
         Ok(())
     }
 
-    fn run_const<T: ValInterpret>(&mut self, f: impl FnOnce() -> T) {
+    fn run_const<T: InterpretVal>(&mut self, f: impl FnOnce() -> T) {
         self.run_ok(|(): ()| -> (T,) { (f(),) })
     }
 
-    fn run_unop<T: ValInterpret>(
+    fn run_unop<T: InterpretVal>(
         &mut self,
         f: impl FnOnce(T) -> Result<T, WasmError>,
     ) -> Result<(), WasmError> {
         self.run(|(x,): (T,)| -> Result<(T,), _> { Ok((f(x)?,)) })
     }
 
-    fn run_binop<T: ValInterpret>(
+    fn run_binop<T: InterpretVal>(
         &mut self,
         f: impl FnOnce(T, T) -> Result<T, WasmError>,
     ) -> Result<(), WasmError> {
         self.run(|(a, b): (T, T)| -> Result<(T,), _> { Ok((f(a, b)?,)) })
     }
 
-    fn run_testop<T: ValInterpret>(&mut self, f: impl FnOnce(T) -> bool) {
+    fn run_testop<T: InterpretVal>(&mut self, f: impl FnOnce(T) -> bool) {
         self.run_ok(|(x,): (T,)| -> (bool,) { (f(x),) })
     }
 
-    fn run_reop<T: ValInterpret>(&mut self, f: impl FnOnce(T, T) -> bool) {
+    fn run_reop<T: InterpretVal>(&mut self, f: impl FnOnce(T, T) -> bool) {
         self.run_ok(|(x, y): (T, T)| -> (bool,) { (f(x, y),) })
     }
 
-    fn run_cvtop<T: ValInterpret, R: ValInterpret>(
+    fn run_cvtop<T: InterpretVal, R: InterpretVal>(
         &mut self,
         f: impl FnOnce(T) -> Result<R, WasmError>,
     ) -> Result<(), WasmError> {

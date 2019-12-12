@@ -15,108 +15,86 @@ use std::convert::{From, Into, TryFrom};
 use std::io::Cursor;
 use std::rc::{Rc, Weak};
 
-pub trait PrimitiveVal: TryFrom<Val, Error = ()> + Into<Val> {}
-
-impl TryFrom<Val> for i32 {
-    type Error = ();
-
-    fn try_from(value: Val) -> Result<Self, ()> {
-        if let Val::I32(x) = value {
-            Ok(x)
-        } else {
-            Err(())
-        }
-    }
+pub trait PrimitiveVal: Sized {
+    fn try_from_val(val: Val) -> Option<Self>;
+    fn wrap_val(self) -> Val;
 }
 
-impl Into<Val> for i32 {
-    fn into(self) -> Val {
+impl PrimitiveVal for i32 {
+    fn try_from_val(value: Val) -> Option<i32> {
+        if let Val::I32(x) = value {
+            Some(x)
+        } else {
+            None
+        }
+    }
+
+    fn wrap_val(self) -> Val {
         Val::I32(self)
     }
 }
 
-impl PrimitiveVal for i32 {}
-
-impl TryFrom<Val> for i64 {
-    type Error = ();
-
-    fn try_from(value: Val) -> Result<Self, ()> {
+impl PrimitiveVal for i64 {
+    fn try_from_val(value: Val) -> Option<i64> {
         if let Val::I64(x) = value {
-            Ok(x)
+            Some(x)
         } else {
-            Err(())
+            None
         }
     }
-}
 
-impl Into<Val> for i64 {
-    fn into(self) -> Val {
+    fn wrap_val(self) -> Val {
         Val::I64(self)
     }
 }
 
-impl PrimitiveVal for i64 {}
-
-impl TryFrom<Val> for f32 {
-    type Error = ();
-
-    fn try_from(value: Val) -> Result<Self, ()> {
+impl PrimitiveVal for f32 {
+    fn try_from_val(value: Val) -> Option<f32> {
         if let Val::F32(x) = value {
-            Ok(x)
+            Some(x)
         } else {
-            Err(())
+            None
         }
     }
-}
 
-impl Into<Val> for f32 {
-    fn into(self) -> Val {
+    fn wrap_val(self) -> Val {
         Val::F32(self)
     }
 }
 
-impl PrimitiveVal for f32 {}
-
-impl TryFrom<Val> for f64 {
-    type Error = ();
-
-    fn try_from(value: Val) -> Result<Self, ()> {
+impl PrimitiveVal for f64 {
+    fn try_from_val(value: Val) -> Option<f64> {
         if let Val::F64(x) = value {
-            Ok(x)
+            Some(x)
         } else {
-            Err(())
+            None
         }
     }
-}
 
-impl Into<Val> for f64 {
-    fn into(self) -> Val {
+    fn wrap_val(self) -> Val {
         Val::F64(self)
     }
 }
 
-impl PrimitiveVal for f64 {}
-
-pub trait ValInterpret {
+pub trait InterpretPrimitive {
     type Primitive: PrimitiveVal;
 
     fn to_primitive(self) -> Self::Primitive;
     fn reinterpret(primitive: Self::Primitive) -> Self;
 }
 
-impl<T: PrimitiveVal> ValInterpret for T {
+impl<T: PrimitiveVal> InterpretPrimitive for T {
     type Primitive = T;
 
     fn to_primitive(self) -> T {
         self
     }
-
-    fn reinterpret(primitive: T) -> Self {
+    fn reinterpret(primitive: T) -> T {
         primitive
     }
 }
 
-impl ValInterpret for bool {
+impl InterpretPrimitive for bool {
     type Primitive = i32;
 
     fn to_primitive(self) -> i32 {
@@ -132,7 +110,7 @@ impl ValInterpret for bool {
     }
 }
 
-impl ValInterpret for u32 {
+impl InterpretPrimitive for u32 {
     type Primitive = i32;
 
     fn to_primitive(self) -> i32 {
@@ -150,7 +128,7 @@ impl ValInterpret for u32 {
     }
 }
 
-impl ValInterpret for u64 {
+impl InterpretPrimitive for u64 {
     type Primitive = i64;
 
     fn to_primitive(self) -> i64 {
@@ -165,6 +143,29 @@ impl ValInterpret for u64 {
         wtr.write_i64::<LittleEndian>(primitive).unwrap();
         let mut rdr = Cursor::new(wtr);
         rdr.read_u64::<LittleEndian>().unwrap()
+    }
+}
+
+pub trait InterpretVal: Sized {
+    fn try_interpret_val(val: Val) -> Option<Self>;
+    fn to_val(self) -> Val;
+}
+
+impl<T: InterpretPrimitive> InterpretVal for T {
+    fn try_interpret_val(val: Val) -> Option<T> {
+        Some(T::reinterpret(T::Primitive::try_from_val(val)?))
+    }
+    fn to_val(self) -> Val {
+        self.to_primitive().wrap_val()
+    }
+}
+
+impl InterpretVal for Val {
+    fn try_interpret_val(val: Val) -> Option<Val> {
+        Some(val)
+    }
+    fn to_val(self) -> Val {
+        self
     }
 }
 
