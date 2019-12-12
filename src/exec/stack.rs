@@ -1,5 +1,5 @@
+use super::instance::ValInterpret;
 use super::instance::{FuncAddr, FuncInst, ModuleInst, TypedIdxAccess, Val};
-use super::instance::{ValInterpret, ValPrimitive};
 use crate::structure::instructions::Instr;
 use crate::structure::modules::{LabelIdx, TypedIdx};
 use crate::structure::types::ValType;
@@ -7,7 +7,7 @@ use crate::WasmError;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use frunk::{from_generic, into_generic, Generic, HCons, HNil};
 use num::NumCast;
-use std::convert::{From, Into, TryFrom};
+use std::convert::{Into, TryFrom};
 use std::io::Cursor;
 use std::rc::Weak;
 
@@ -782,7 +782,7 @@ impl LabelStack {
                                 wtr.write_i64::<LittleEndian>(x).unwrap();
                                 let mut rdr = Cursor::new(wtr);
                                 Ok(rdr.read_f64::<LittleEndian>().unwrap())
-                            })?;                          
+                            })?;
                         }
                         Instr::Drop => {
                             self.stack.pop().unwrap();
