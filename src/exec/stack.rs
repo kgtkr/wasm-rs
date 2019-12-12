@@ -395,21 +395,19 @@ impl LabelStack {
                             })?;
                         }
                         Instr::I32ShrU => {
-                            let y = self.stack.pop().unwrap().unwrap_i32();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(u32_convert_i32(
-                                i32_convert_u32(x).overflowing_shr(i32_convert_u32(y)).0,
-                            )));
+                            self.run_binop(|x: u32, y: u32| -> Result<u32, WasmError> {
+                                Ok(x.overflowing_shr(y).0)
+                            })?;
                         }
                         Instr::I32Rotl => {
-                            let y = self.stack.pop().unwrap().unwrap_i32();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(x.rotate_left(y as u32)));
+                            self.run_binop(|x: i32, y: i32| -> Result<i32, WasmError> {
+                                Ok(x.rotate_left(y as u32))
+                            })?;
                         }
                         Instr::I32Rotr => {
-                            let y = self.stack.pop().unwrap().unwrap_i32();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(x.rotate_right(y as u32)));
+                            self.run_binop(|x: i32, y: i32| -> Result<i32, WasmError> {
+                                Ok(x.rotate_right(y as u32))
+                            })?;
                         }
                         Instr::I64Add => {
                             let y = self.stack.pop().unwrap().unwrap_i64();
