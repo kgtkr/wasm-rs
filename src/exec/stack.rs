@@ -723,44 +723,34 @@ impl LabelStack {
                             })?;
                         }
                         Instr::F32DemoteF64 => {
-                            let x = self.stack.pop().unwrap().unwrap_f64();
-                            self.stack.push(Val::F32(x as f32));
+                            self.run_cvtop(|x: f64| -> Result<f32, _> { Ok(x as f32) })?;
                         }
                         Instr::F64PromoteF32 => {
-                            let x = self.stack.pop().unwrap().unwrap_f32();
-                            self.stack.push(Val::F64(x as f64));
+                            self.run_cvtop(|x: f32| -> Result<f64, _> { Ok(x as f64) })?;
                         }
                         Instr::F32ConvertI32S => {
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::F32(x as f32));
+                            self.run_cvtop(|x: i32| -> Result<f32, _> { Ok(x as f32) })?;
                         }
                         Instr::F32ConvertI32U => {
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::F32(i32_convert_u32(x) as f32));
+                            self.run_cvtop(|x: u32| -> Result<f32, _> { Ok(x as f32) })?;
                         }
                         Instr::F32ConvertI64S => {
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::F32(x as f32));
+                            self.run_cvtop(|x: i64| -> Result<f32, _> { Ok(x as f32) })?;
                         }
                         Instr::F32ConvertI64U => {
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::F32(i64_convert_u64(x) as f32));
+                            self.run_cvtop(|x: u64| -> Result<f32, _> { Ok(x as f32) })?;
                         }
                         Instr::F64ConvertI32S => {
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::F64(x as f64));
+                            self.run_cvtop(|x: i32| -> Result<f64, _> { Ok(x as f64) })?;
                         }
                         Instr::F64ConvertI32U => {
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::F64(i32_convert_u32(x) as f64));
+                            self.run_cvtop(|x: u32| -> Result<f64, _> { Ok(x as f64) })?;
                         }
                         Instr::F64ConvertI64S => {
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::F64(x as f64));
+                            self.run_cvtop(|x: i64| -> Result<f64, _> { Ok(x as f64) })?;
                         }
                         Instr::F64ConvertI64U => {
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::F64(i64_convert_u64(x) as f64));
+                            self.run_cvtop(|x: u64| -> Result<f64, _> { Ok(x as f64) })?;
                         }
                         Instr::I32ReinterpretF32 => {
                             let x = self.stack.pop().unwrap().unwrap_f32();
