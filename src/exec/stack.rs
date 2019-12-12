@@ -753,44 +753,36 @@ impl LabelStack {
                             self.run_cvtop(|x: u64| -> Result<f64, _> { Ok(x as f64) })?;
                         }
                         Instr::I32ReinterpretF32 => {
-                            let x = self.stack.pop().unwrap().unwrap_f32();
-
-                            let mut wtr = vec![];
-                            wtr.write_f32::<LittleEndian>(x).unwrap();
-                            let mut rdr = Cursor::new(wtr);
-
-                            self.stack
-                                .push(Val::I32(rdr.read_i32::<LittleEndian>().unwrap()));
+                            self.run_cvtop(|x: f32| -> Result<i32, _> {
+                                let mut wtr = vec![];
+                                wtr.write_f32::<LittleEndian>(x).unwrap();
+                                let mut rdr = Cursor::new(wtr);
+                                Ok(rdr.read_i32::<LittleEndian>().unwrap())
+                            })?;
                         }
                         Instr::I64ReinterpretF64 => {
-                            let x = self.stack.pop().unwrap().unwrap_f64();
-
-                            let mut wtr = vec![];
-                            wtr.write_f64::<LittleEndian>(x).unwrap();
-                            let mut rdr = Cursor::new(wtr);
-
-                            self.stack
-                                .push(Val::I64(rdr.read_i64::<LittleEndian>().unwrap()));
+                            self.run_cvtop(|x: f64| -> Result<i64, _> {
+                                let mut wtr = vec![];
+                                wtr.write_f64::<LittleEndian>(x).unwrap();
+                                let mut rdr = Cursor::new(wtr);
+                                Ok(rdr.read_i64::<LittleEndian>().unwrap())
+                            })?;
                         }
                         Instr::F32ReinterpretI32 => {
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-
-                            let mut wtr = vec![];
-                            wtr.write_i32::<LittleEndian>(x).unwrap();
-                            let mut rdr = Cursor::new(wtr);
-
-                            self.stack
-                                .push(Val::F32(rdr.read_f32::<LittleEndian>().unwrap()));
+                            self.run_cvtop(|x: i32| -> Result<f32, _> {
+                                let mut wtr = vec![];
+                                wtr.write_i32::<LittleEndian>(x).unwrap();
+                                let mut rdr = Cursor::new(wtr);
+                                Ok(rdr.read_f32::<LittleEndian>().unwrap())
+                            })?;
                         }
                         Instr::F64ReinterpretI64 => {
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-
-                            let mut wtr = vec![];
-                            wtr.write_i64::<LittleEndian>(x).unwrap();
-                            let mut rdr = Cursor::new(wtr);
-
-                            self.stack
-                                .push(Val::F64(rdr.read_f64::<LittleEndian>().unwrap()));
+                            self.run_cvtop(|x: i64| -> Result<f64, _> {
+                                let mut wtr = vec![];
+                                wtr.write_i64::<LittleEndian>(x).unwrap();
+                                let mut rdr = Cursor::new(wtr);
+                                Ok(rdr.read_f64::<LittleEndian>().unwrap())
+                            })?;                          
                         }
                         Instr::Drop => {
                             self.stack.pop().unwrap();
