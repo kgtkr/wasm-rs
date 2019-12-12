@@ -658,64 +658,40 @@ impl LabelStack {
                             self.run_reop(|x: u64, y: u64| -> bool { x >= y });
                         }
                         Instr::F32Eq => {
-                            let y = self.stack.pop().unwrap().unwrap_f32();
-                            let x = self.stack.pop().unwrap().unwrap_f32();
-                            self.stack.push(Val::I32(if x == y { 1 } else { 0 }));
+                            self.run_reop(|x: f32, y: f32| -> bool { x == y });
                         }
                         Instr::F32Ne => {
-                            let y = self.stack.pop().unwrap().unwrap_f32();
-                            let x = self.stack.pop().unwrap().unwrap_f32();
-                            self.stack.push(Val::I32(if x != y { 1 } else { 0 }));
+                            self.run_reop(|x: f32, y: f32| -> bool { x != y });
                         }
                         Instr::F32Lt => {
-                            let y = self.stack.pop().unwrap().unwrap_f32();
-                            let x = self.stack.pop().unwrap().unwrap_f32();
-                            self.stack.push(Val::I32(if x < y { 1 } else { 0 }));
+                            self.run_reop(|x: f32, y: f32| -> bool { x < y });
                         }
                         Instr::F32Gt => {
-                            let y = self.stack.pop().unwrap().unwrap_f32();
-                            let x = self.stack.pop().unwrap().unwrap_f32();
-                            self.stack.push(Val::I32(if x > y { 1 } else { 0 }));
+                            self.run_reop(|x: f32, y: f32| -> bool { x > y });
                         }
                         Instr::F32Le => {
-                            let y = self.stack.pop().unwrap().unwrap_f32();
-                            let x = self.stack.pop().unwrap().unwrap_f32();
-                            self.stack.push(Val::I32(if x <= y { 1 } else { 0 }));
+                            self.run_reop(|x: f32, y: f32| -> bool { x <= y });
                         }
                         Instr::F32Ge => {
-                            let y = self.stack.pop().unwrap().unwrap_f32();
-                            let x = self.stack.pop().unwrap().unwrap_f32();
-                            self.stack.push(Val::I32(if x >= y { 1 } else { 0 }));
+                            self.run_reop(|x: f32, y: f32| -> bool { x >= y });
                         }
                         Instr::F64Eq => {
-                            let y = self.stack.pop().unwrap().unwrap_f64();
-                            let x = self.stack.pop().unwrap().unwrap_f64();
-                            self.stack.push(Val::I32(if x == y { 1 } else { 0 }));
+                            self.run_reop(|x: f64, y: f64| -> bool { x == y });
                         }
                         Instr::F64Ne => {
-                            let y = self.stack.pop().unwrap().unwrap_f64();
-                            let x = self.stack.pop().unwrap().unwrap_f64();
-                            self.stack.push(Val::I32(if x != y { 1 } else { 0 }));
+                            self.run_reop(|x: f64, y: f64| -> bool { x != y });
                         }
                         Instr::F64Lt => {
-                            let y = self.stack.pop().unwrap().unwrap_f64();
-                            let x = self.stack.pop().unwrap().unwrap_f64();
-                            self.stack.push(Val::I32(if x < y { 1 } else { 0 }));
+                            self.run_reop(|x: f64, y: f64| -> bool { x < y });
                         }
                         Instr::F64Gt => {
-                            let y = self.stack.pop().unwrap().unwrap_f64();
-                            let x = self.stack.pop().unwrap().unwrap_f64();
-                            self.stack.push(Val::I32(if x > y { 1 } else { 0 }));
+                            self.run_reop(|x: f64, y: f64| -> bool { x > y });
                         }
                         Instr::F64Le => {
-                            let y = self.stack.pop().unwrap().unwrap_f64();
-                            let x = self.stack.pop().unwrap().unwrap_f64();
-                            self.stack.push(Val::I32(if x <= y { 1 } else { 0 }));
+                            self.run_reop(|x: f64, y: f64| -> bool { x <= y });
                         }
                         Instr::F64Ge => {
-                            let y = self.stack.pop().unwrap().unwrap_f64();
-                            let x = self.stack.pop().unwrap().unwrap_f64();
-                            self.stack.push(Val::I32(if x >= y { 1 } else { 0 }));
+                            self.run_reop(|x: f64, y: f64| -> bool { x >= y });
                         }
                         Instr::I32WrapI64 => {
                             let x = self.stack.pop().unwrap().unwrap_i64();
