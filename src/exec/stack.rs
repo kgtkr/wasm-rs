@@ -936,58 +936,58 @@ impl LabelStack {
                         }
                         Instr::I32Store8(m) => {
                             let instance = frame.module.upgrade().unwrap();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            instance.mem.as_ref().unwrap().write_with_cursor(
-                                ptr + m.offset as usize,
-                                |mut cur| {
-                                    cur.write_i8(x as i8).unwrap();
-                                },
-                            )?;
+                            self.run(|(ptr, x): (i32, i32)| -> Result<(), _> {
+                                instance
+                                    .mem
+                                    .as_ref()
+                                    .unwrap()
+                                    .write::<i8>(&m, ptr, x as i8)?;
+                                Ok(())
+                            })?;
                         }
                         Instr::I64Store8(m) => {
                             let instance = frame.module.upgrade().unwrap();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            instance.mem.as_ref().unwrap().write_with_cursor(
-                                ptr + m.offset as usize,
-                                |mut cur| {
-                                    cur.write_i8(x as i8).unwrap();
-                                },
-                            )?;
+                            self.run(|(ptr, x): (i32, i64)| -> Result<(), _> {
+                                instance
+                                    .mem
+                                    .as_ref()
+                                    .unwrap()
+                                    .write::<i8>(&m, ptr, x as i8)?;
+                                Ok(())
+                            })?;
                         }
                         Instr::I32Store16(m) => {
                             let instance = frame.module.upgrade().unwrap();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            instance.mem.as_ref().unwrap().write_with_cursor(
-                                ptr + m.offset as usize,
-                                |mut cur| {
-                                    cur.write_i16::<LittleEndian>(x as i16).unwrap();
-                                },
-                            )?;
+                            self.run(|(ptr, x): (i32, i32)| -> Result<(), _> {
+                                instance
+                                    .mem
+                                    .as_ref()
+                                    .unwrap()
+                                    .write::<i16>(&m, ptr, x as i16)?;
+                                Ok(())
+                            })?;
                         }
                         Instr::I64Store16(m) => {
                             let instance = frame.module.upgrade().unwrap();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            instance.mem.as_ref().unwrap().write_with_cursor(
-                                ptr + m.offset as usize,
-                                |mut cur| {
-                                    cur.write_i16::<LittleEndian>(x as i16).unwrap();
-                                },
-                            )?;
+                            self.run(|(ptr, x): (i32, i64)| -> Result<(), _> {
+                                instance
+                                    .mem
+                                    .as_ref()
+                                    .unwrap()
+                                    .write::<i16>(&m, ptr, x as i16)?;
+                                Ok(())
+                            })?;
                         }
                         Instr::I64Store32(m) => {
                             let instance = frame.module.upgrade().unwrap();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            let ptr = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            instance.mem.as_ref().unwrap().write_with_cursor(
-                                ptr + m.offset as usize,
-                                |mut cur| {
-                                    cur.write_i32::<LittleEndian>(x as i32).unwrap();
-                                },
-                            )?;
+                            self.run(|(ptr, x): (i32, i64)| -> Result<(), _> {
+                                instance
+                                    .mem
+                                    .as_ref()
+                                    .unwrap()
+                                    .write::<i32>(&m, ptr, x as i32)?;
+                                Ok(())
+                            })?;
                         }
                         Instr::MemorySize => {
                             let instance = frame.module.upgrade().unwrap();
