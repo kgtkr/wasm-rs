@@ -8,10 +8,12 @@ edition = "2018"
 byteorder = "1"
 leb128 = "0.2"
 nom = "5.0.1"
-serde_json = "*"
-maplit = "*"
-num = "*"
-frunk = "*"
+serde_json = "1.0.44"
+maplit = "1.0.2"
+num = "0.2.0"
+frunk = "0.3.0"
+generic-array = "0.13.2"
+typenum = "1.11.2"
 
 
 [dev-dependencies]
