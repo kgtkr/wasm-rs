@@ -15,7 +15,7 @@ use std::convert::{From, Into, TryFrom};
 use std::io::Cursor;
 use std::rc::{Rc, Weak};
 
-pub trait StackPrimitiveVal: TryFrom<Val, Error = ()> + Into<Val> {}
+pub trait PrimitiveVal: TryFrom<Val, Error = ()> + Into<Val> {}
 
 impl TryFrom<Val> for i32 {
     type Error = ();
@@ -35,7 +35,7 @@ impl Into<Val> for i32 {
     }
 }
 
-impl StackPrimitiveVal for i32 {}
+impl PrimitiveVal for i32 {}
 
 impl TryFrom<Val> for i64 {
     type Error = ();
@@ -55,7 +55,7 @@ impl Into<Val> for i64 {
     }
 }
 
-impl StackPrimitiveVal for i64 {}
+impl PrimitiveVal for i64 {}
 
 impl TryFrom<Val> for f32 {
     type Error = ();
@@ -75,7 +75,7 @@ impl Into<Val> for f32 {
     }
 }
 
-impl StackPrimitiveVal for f32 {}
+impl PrimitiveVal for f32 {}
 
 impl TryFrom<Val> for f64 {
     type Error = ();
@@ -95,16 +95,16 @@ impl Into<Val> for f64 {
     }
 }
 
-impl StackPrimitiveVal for f64 {}
+impl PrimitiveVal for f64 {}
 
 pub trait ValInterpret {
-    type Primitive: ValPrimitive;
+    type Primitive: PrimitiveVal;
 
     fn to_primitive(self) -> Self::Primitive;
     fn reinterpret(primitive: Self::Primitive) -> Self;
 }
 
-impl<T: StackPrimitiveVal> ValInterpret for T {
+impl<T: PrimitiveVal> ValInterpret for T {
     type Primitive = T;
 
     fn to_primitive(self) -> T {
