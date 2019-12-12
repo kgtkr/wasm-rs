@@ -669,60 +669,58 @@ impl LabelStack {
                             self.run_cvtop(|x: i64| -> Result<i32, _> { Ok(x as i32) })?;
                         }
                         Instr::I64ExtendI32S => {
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I64(x as i64));
+                            self.run_cvtop(|x: i32| -> Result<i64, _> { Ok(x as i64) })?;
                         }
                         Instr::I64ExtendI32U => {
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I64(i32_convert_u32(x) as i64));
+                            self.run_cvtop(|x: u32| -> Result<i64, _> { Ok(x as i64) })?;
                         }
                         Instr::I32TruncF32S => {
-                            let x = self.stack.pop().unwrap().unwrap_f32();
-                            self.stack.push(Val::I32(
-                                <i32 as NumCast>::from(x).ok_or_else(|| WasmError::RuntimeError)?,
-                            ));
+                            self.run_cvtop(|x: f32| -> Result<i32, _> {
+                                Ok(<i32 as NumCast>::from(x)
+                                    .ok_or_else(|| WasmError::RuntimeError)?)
+                            })?;
                         }
                         Instr::I32TruncF32U => {
-                            let x = self.stack.pop().unwrap().unwrap_f32();
-                            self.stack.push(Val::I32(u32_convert_i32(
-                                <u32 as NumCast>::from(x).ok_or_else(|| WasmError::RuntimeError)?,
-                            )));
+                            self.run_cvtop(|x: f32| -> Result<u32, _> {
+                                Ok(<u32 as NumCast>::from(x)
+                                    .ok_or_else(|| WasmError::RuntimeError)?)
+                            })?;
                         }
                         Instr::I32TruncF64S => {
-                            let x = self.stack.pop().unwrap().unwrap_f64();
-                            self.stack.push(Val::I32(
-                                <i32 as NumCast>::from(x).ok_or_else(|| WasmError::RuntimeError)?,
-                            ));
+                            self.run_cvtop(|x: f64| -> Result<i32, _> {
+                                Ok(<i32 as NumCast>::from(x)
+                                    .ok_or_else(|| WasmError::RuntimeError)?)
+                            })?;
                         }
                         Instr::I32TruncF64U => {
-                            let x = self.stack.pop().unwrap().unwrap_f64();
-                            self.stack.push(Val::I32(u32_convert_i32(
-                                <u32 as NumCast>::from(x).ok_or_else(|| WasmError::RuntimeError)?,
-                            )));
+                            self.run_cvtop(|x: f64| -> Result<u32, _> {
+                                Ok(<u32 as NumCast>::from(x)
+                                    .ok_or_else(|| WasmError::RuntimeError)?)
+                            })?;
                         }
                         Instr::I64TruncF32S => {
-                            let x = self.stack.pop().unwrap().unwrap_f32();
-                            self.stack.push(Val::I64(
-                                <i64 as NumCast>::from(x).ok_or_else(|| WasmError::RuntimeError)?,
-                            ));
+                            self.run_cvtop(|x: f32| -> Result<i64, _> {
+                                Ok(<i64 as NumCast>::from(x)
+                                    .ok_or_else(|| WasmError::RuntimeError)?)
+                            })?;
                         }
                         Instr::I64TruncF32U => {
-                            let x = self.stack.pop().unwrap().unwrap_f32();
-                            self.stack.push(Val::I64(u64_convert_i64(
-                                <u64 as NumCast>::from(x).ok_or_else(|| WasmError::RuntimeError)?,
-                            )));
+                            self.run_cvtop(|x: f32| -> Result<u64, _> {
+                                Ok(<u64 as NumCast>::from(x)
+                                    .ok_or_else(|| WasmError::RuntimeError)?)
+                            })?;
                         }
                         Instr::I64TruncF64S => {
-                            let x = self.stack.pop().unwrap().unwrap_f64();
-                            self.stack.push(Val::I64(
-                                <i64 as NumCast>::from(x).ok_or_else(|| WasmError::RuntimeError)?,
-                            ));
+                            self.run_cvtop(|x: f64| -> Result<i64, _> {
+                                Ok(<i64 as NumCast>::from(x)
+                                    .ok_or_else(|| WasmError::RuntimeError)?)
+                            })?;
                         }
                         Instr::I64TruncF64U => {
-                            let x = self.stack.pop().unwrap().unwrap_f64();
-                            self.stack.push(Val::I64(u64_convert_i64(
-                                <u64 as NumCast>::from(x).ok_or_else(|| WasmError::RuntimeError)?,
-                            )));
+                            self.run_cvtop(|x: f64| -> Result<u64, _> {
+                                Ok(<u64 as NumCast>::from(x)
+                                    .ok_or_else(|| WasmError::RuntimeError)?)
+                            })?;
                         }
                         Instr::F32DemoteF64 => {
                             let x = self.stack.pop().unwrap().unwrap_f64();
