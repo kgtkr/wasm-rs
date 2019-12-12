@@ -198,14 +198,14 @@ impl LabelStack {
         &mut self,
         f: impl FnOnce(T) -> Result<T, WasmError>,
     ) -> Result<(), WasmError> {
-        self.run(|(x,): (T,)| -> Result<(T,), WasmError> { Ok((f(x)?,)) })
+        self.run(|(x,): (T,)| -> Result<(T,), _> { Ok((f(x)?,)) })
     }
 
     fn run_binop<T: ValInterpret>(
         &mut self,
         f: impl FnOnce(T, T) -> Result<T, WasmError>,
     ) -> Result<(), WasmError> {
-        self.run(|(a, b): (T, T)| -> Result<(T,), WasmError> { Ok((f(a, b)?,)) })
+        self.run(|(a, b): (T, T)| -> Result<(T,), _> { Ok((f(a, b)?,)) })
     }
 
     fn run_testop<T: ValInterpret>(&mut self, f: impl FnOnce(T) -> bool) {
@@ -220,7 +220,7 @@ impl LabelStack {
         &mut self,
         f: impl FnOnce(T) -> Result<R, WasmError>,
     ) -> Result<(), WasmError> {
-        self.run(|(x,): (T,)| -> Result<(R,), WasmError> { Ok((f(x)?,)) })
+        self.run(|(x,): (T,)| -> Result<(R,), _> { Ok((f(x)?,)) })
     }
 
     fn step(&mut self, frame: &mut Frame) -> Result<Option<FrameLevelInstr>, WasmError> {
@@ -241,55 +241,55 @@ impl LabelStack {
                             self.run_const(|| -> f64 { x });
                         }
                         Instr::I32Clz => {
-                            self.run_unop(|x: i32| -> Result<i32, WasmError> {
+                            self.run_unop(|x: i32| -> Result<i32, _> {
                                 Ok(x.leading_zeros() as i32)
                             })?;
                         }
                         Instr::I32Ctz => {
-                            self.run_unop(|x: i32| -> Result<i32, WasmError> {
+                            self.run_unop(|x: i32| -> Result<i32, _> {
                                 Ok(x.trailing_zeros() as i32)
                             })?;
                         }
                         Instr::I32Popcnt => {
-                            self.run_unop(|x: i32| -> Result<i32, WasmError> {
+                            self.run_unop(|x: i32| -> Result<i32, _> {
                                 Ok(x.count_ones() as i32)
                             })?;
                         }
                         Instr::I64Clz => {
-                            self.run_unop(|x: i64| -> Result<i64, WasmError> {
+                            self.run_unop(|x: i64| -> Result<i64, _> {
                                 Ok(x.leading_zeros() as i64)
                             })?;
                         }
                         Instr::I64Ctz => {
-                            self.run_unop(|x: i64| -> Result<i64, WasmError> {
+                            self.run_unop(|x: i64| -> Result<i64, _> {
                                 Ok(x.trailing_zeros() as i64)
                             })?;
                         }
                         Instr::I64Popcnt => {
-                            self.run_unop(|x: i64| -> Result<i64, WasmError> {
+                            self.run_unop(|x: i64| -> Result<i64, _> {
                                 Ok(x.count_ones() as i64)
                             })?;
                         }
                         Instr::F32Abs => {
-                            self.run_unop(|x: f32| -> Result<f32, WasmError> { Ok(x.abs()) })?;
+                            self.run_unop(|x: f32| -> Result<f32, _> { Ok(x.abs()) })?;
                         }
                         Instr::F32Neg => {
-                            self.run_unop(|x: f32| -> Result<f32, WasmError> { Ok(-x) })?;
+                            self.run_unop(|x: f32| -> Result<f32, _> { Ok(-x) })?;
                         }
                         Instr::F32Sqrt => {
-                            self.run_unop(|x: f32| -> Result<f32, WasmError> { Ok(x.sqrt()) })?;
+                            self.run_unop(|x: f32| -> Result<f32, _> { Ok(x.sqrt()) })?;
                         }
                         Instr::F32Ceil => {
-                            self.run_unop(|x: f32| -> Result<f32, WasmError> { Ok(x.ceil()) })?;
+                            self.run_unop(|x: f32| -> Result<f32, _> { Ok(x.ceil()) })?;
                         }
                         Instr::F32Floor => {
-                            self.run_unop(|x: f32| -> Result<f32, WasmError> { Ok(x.floor()) })?;
+                            self.run_unop(|x: f32| -> Result<f32, _> { Ok(x.floor()) })?;
                         }
                         Instr::F32Trunc => {
-                            self.run_unop(|x: f32| -> Result<f32, WasmError> { Ok(x.trunc()) })?;
+                            self.run_unop(|x: f32| -> Result<f32, _> { Ok(x.trunc()) })?;
                         }
                         Instr::F32Nearest => {
-                            self.run_unop(|x: f32| -> Result<f32, WasmError> {
+                            self.run_unop(|x: f32| -> Result<f32, _> {
                                 let x_mod2 = x % 2.0;
                                 Ok(if x_mod2 == 0.5 {
                                     x.floor()
@@ -301,25 +301,25 @@ impl LabelStack {
                             })?;
                         }
                         Instr::F64Abs => {
-                            self.run_unop(|x: f64| -> Result<f64, WasmError> { Ok(x.abs()) })?;
+                            self.run_unop(|x: f64| -> Result<f64, _> { Ok(x.abs()) })?;
                         }
                         Instr::F64Neg => {
-                            self.run_unop(|x: f64| -> Result<f64, WasmError> { Ok(-x) })?;
+                            self.run_unop(|x: f64| -> Result<f64, _> { Ok(-x) })?;
                         }
                         Instr::F64Sqrt => {
-                            self.run_unop(|x: f64| -> Result<f64, WasmError> { Ok(x.sqrt()) })?;
+                            self.run_unop(|x: f64| -> Result<f64, _> { Ok(x.sqrt()) })?;
                         }
                         Instr::F64Ceil => {
-                            self.run_unop(|x: f64| -> Result<f64, WasmError> { Ok(x.ceil()) })?;
+                            self.run_unop(|x: f64| -> Result<f64, _> { Ok(x.ceil()) })?;
                         }
                         Instr::F64Floor => {
-                            self.run_unop(|x: f64| -> Result<f64, WasmError> { Ok(x.floor()) })?;
+                            self.run_unop(|x: f64| -> Result<f64, _> { Ok(x.floor()) })?;
                         }
                         Instr::F64Trunc => {
-                            self.run_unop(|x: f64| -> Result<f64, WasmError> { Ok(x.trunc()) })?;
+                            self.run_unop(|x: f64| -> Result<f64, _> { Ok(x.trunc()) })?;
                         }
                         Instr::F64Nearest => {
-                            self.run_unop(|x: f64| -> Result<f64, WasmError> {
+                            self.run_unop(|x: f64| -> Result<f64, _> {
                                 let x_mod2 = x % 2.0;
                                 Ok(if x_mod2 == 0.5 {
                                     x.floor()
@@ -331,22 +331,22 @@ impl LabelStack {
                             })?;
                         }
                         Instr::I32Add => {
-                            self.run_binop(|x: i32, y: i32| -> Result<i32, WasmError> {
+                            self.run_binop(|x: i32, y: i32| -> Result<i32, _> {
                                 Ok(x.overflowing_add(y).0)
                             })?;
                         }
                         Instr::I32Sub => {
-                            self.run_binop(|x: i32, y: i32| -> Result<i32, WasmError> {
+                            self.run_binop(|x: i32, y: i32| -> Result<i32, _> {
                                 Ok(x.overflowing_sub(y).0)
                             })?;
                         }
                         Instr::I32Mul => {
-                            self.run_binop(|x: i32, y: i32| -> Result<i32, WasmError> {
+                            self.run_binop(|x: i32, y: i32| -> Result<i32, _> {
                                 Ok(x.overflowing_mul(y).0)
                             })?;
                         }
                         Instr::I32DivS => {
-                            self.run_binop(|x: i32, y: i32| -> Result<i32, WasmError> {
+                            self.run_binop(|x: i32, y: i32| -> Result<i32, _> {
                                 if y == 0 {
                                     return Err(WasmError::RuntimeError);
                                 }
@@ -354,7 +354,7 @@ impl LabelStack {
                             })?;
                         }
                         Instr::I32DivU => {
-                            self.run_binop(|x: u32, y: u32| -> Result<u32, WasmError> {
+                            self.run_binop(|x: u32, y: u32| -> Result<u32, _> {
                                 if y == 0 {
                                     return Err(WasmError::RuntimeError);
                                 }
@@ -362,7 +362,7 @@ impl LabelStack {
                             })?;
                         }
                         Instr::I32RemS => {
-                            self.run_binop(|x: i32, y: i32| -> Result<i32, WasmError> {
+                            self.run_binop(|x: i32, y: i32| -> Result<i32, _> {
                                 if y == 0 {
                                     return Err(WasmError::RuntimeError);
                                 }
@@ -370,7 +370,7 @@ impl LabelStack {
                             })?;
                         }
                         Instr::I32RemU => {
-                            self.run_binop(|x: u32, y: u32| -> Result<u32, WasmError> {
+                            self.run_binop(|x: u32, y: u32| -> Result<u32, _> {
                                 if y == 0 {
                                     return Err(WasmError::RuntimeError);
                                 }
@@ -378,62 +378,56 @@ impl LabelStack {
                             })?;
                         }
                         Instr::I32And => {
-                            self.run_binop(|x: i32, y: i32| -> Result<i32, WasmError> {
-                                Ok(x & y)
-                            })?;
+                            self.run_binop(|x: i32, y: i32| -> Result<i32, _> { Ok(x & y) })?;
                         }
                         Instr::I32Or => {
-                            self.run_binop(|x: i32, y: i32| -> Result<i32, WasmError> {
-                                Ok(x | y)
-                            })?;
+                            self.run_binop(|x: i32, y: i32| -> Result<i32, _> { Ok(x | y) })?;
                         }
                         Instr::I32Xor => {
-                            self.run_binop(|x: i32, y: i32| -> Result<i32, WasmError> {
-                                Ok(x ^ y)
-                            })?;
+                            self.run_binop(|x: i32, y: i32| -> Result<i32, _> { Ok(x ^ y) })?;
                         }
                         Instr::I32ShL => {
-                            self.run_binop(|x: i32, y: i32| -> Result<i32, WasmError> {
+                            self.run_binop(|x: i32, y: i32| -> Result<i32, _> {
                                 Ok(x.overflowing_shl(y as u32).0)
                             })?;
                         }
                         Instr::I32ShrS => {
-                            self.run_binop(|x: i32, y: i32| -> Result<i32, WasmError> {
+                            self.run_binop(|x: i32, y: i32| -> Result<i32, _> {
                                 Ok(x.overflowing_shr(y as u32).0)
                             })?;
                         }
                         Instr::I32ShrU => {
-                            self.run_binop(|x: u32, y: u32| -> Result<u32, WasmError> {
+                            self.run_binop(|x: u32, y: u32| -> Result<u32, _> {
                                 Ok(x.overflowing_shr(y).0)
                             })?;
                         }
                         Instr::I32Rotl => {
-                            self.run_binop(|x: i32, y: i32| -> Result<i32, WasmError> {
+                            self.run_binop(|x: i32, y: i32| -> Result<i32, _> {
                                 Ok(x.rotate_left(y as u32))
                             })?;
                         }
                         Instr::I32Rotr => {
-                            self.run_binop(|x: i32, y: i32| -> Result<i32, WasmError> {
+                            self.run_binop(|x: i32, y: i32| -> Result<i32, _> {
                                 Ok(x.rotate_right(y as u32))
                             })?;
                         }
                         Instr::I64Add => {
-                            self.run_binop(|x: i64, y: i64| -> Result<i64, WasmError> {
+                            self.run_binop(|x: i64, y: i64| -> Result<i64, _> {
                                 Ok(x.overflowing_add(y).0)
                             })?;
                         }
                         Instr::I64Sub => {
-                            self.run_binop(|x: i64, y: i64| -> Result<i64, WasmError> {
+                            self.run_binop(|x: i64, y: i64| -> Result<i64, _> {
                                 Ok(x.overflowing_sub(y).0)
                             })?;
                         }
                         Instr::I64Mul => {
-                            self.run_binop(|x: i64, y: i64| -> Result<i64, WasmError> {
+                            self.run_binop(|x: i64, y: i64| -> Result<i64, _> {
                                 Ok(x.overflowing_mul(y).0)
                             })?;
                         }
                         Instr::I64DivS => {
-                            self.run_binop(|x: i64, y: i64| -> Result<i64, WasmError> {
+                            self.run_binop(|x: i64, y: i64| -> Result<i64, _> {
                                 if y == 0 {
                                     return Err(WasmError::RuntimeError);
                                 }
@@ -441,7 +435,7 @@ impl LabelStack {
                             })?;
                         }
                         Instr::I64DivU => {
-                            self.run_binop(|x: u64, y: u64| -> Result<u64, WasmError> {
+                            self.run_binop(|x: u64, y: u64| -> Result<u64, _> {
                                 if y == 0 {
                                     return Err(WasmError::RuntimeError);
                                 }
@@ -449,7 +443,7 @@ impl LabelStack {
                             })?;
                         }
                         Instr::I64RemS => {
-                            self.run_binop(|x: i64, y: i64| -> Result<i64, WasmError> {
+                            self.run_binop(|x: i64, y: i64| -> Result<i64, _> {
                                 if y == 0 {
                                     return Err(WasmError::RuntimeError);
                                 }
@@ -457,7 +451,7 @@ impl LabelStack {
                             })?;
                         }
                         Instr::I64RemU => {
-                            self.run_binop(|x: u64, y: u64| -> Result<u64, WasmError> {
+                            self.run_binop(|x: u64, y: u64| -> Result<u64, _> {
                                 if y == 0 {
                                     return Err(WasmError::RuntimeError);
                                 }
@@ -465,67 +459,53 @@ impl LabelStack {
                             })?;
                         }
                         Instr::I64And => {
-                            self.run_binop(|x: i64, y: i64| -> Result<i64, WasmError> {
-                                Ok(x & y)
-                            })?;
+                            self.run_binop(|x: i64, y: i64| -> Result<i64, _> { Ok(x & y) })?;
                         }
                         Instr::I64Or => {
-                            self.run_binop(|x: i64, y: i64| -> Result<i64, WasmError> {
-                                Ok(x | y)
-                            })?;
+                            self.run_binop(|x: i64, y: i64| -> Result<i64, _> { Ok(x | y) })?;
                         }
                         Instr::I64Xor => {
-                            self.run_binop(|x: i64, y: i64| -> Result<i64, WasmError> {
-                                Ok(x ^ y)
-                            })?;
+                            self.run_binop(|x: i64, y: i64| -> Result<i64, _> { Ok(x ^ y) })?;
                         }
                         Instr::I64ShL => {
-                            self.run_binop(|x: i64, y: i64| -> Result<i64, WasmError> {
+                            self.run_binop(|x: i64, y: i64| -> Result<i64, _> {
                                 Ok(x.overflowing_shl(y as u32).0)
                             })?;
                         }
                         Instr::I64ShrS => {
-                            self.run_binop(|x: i64, y: i64| -> Result<i64, WasmError> {
+                            self.run_binop(|x: i64, y: i64| -> Result<i64, _> {
                                 Ok(x.overflowing_shr(y as u32).0)
                             })?;
                         }
                         Instr::I64ShrU => {
-                            self.run_binop(|x: u64, y: u64| -> Result<u64, WasmError> {
+                            self.run_binop(|x: u64, y: u64| -> Result<u64, _> {
                                 Ok(x.overflowing_shr(y as u32).0)
                             })?;
                         }
                         Instr::I64Rotl => {
-                            self.run_binop(|x: i64, y: i64| -> Result<i64, WasmError> {
+                            self.run_binop(|x: i64, y: i64| -> Result<i64, _> {
                                 Ok(x.rotate_left(y as u32))
                             })?;
                         }
                         Instr::I64Rotr => {
-                            self.run_binop(|x: i64, y: i64| -> Result<i64, WasmError> {
+                            self.run_binop(|x: i64, y: i64| -> Result<i64, _> {
                                 Ok(x.rotate_right(y as u32))
                             })?;
                         }
                         Instr::F32Add => {
-                            self.run_binop(|x: f32, y: f32| -> Result<f32, WasmError> {
-                                Ok(x + y)
-                            })?;
+                            self.run_binop(|x: f32, y: f32| -> Result<f32, _> { Ok(x + y) })?;
                         }
                         Instr::F32Sub => {
-                            self.run_binop(|x: f32, y: f32| -> Result<f32, WasmError> {
-                                Ok(x - y)
-                            })?;
+                            self.run_binop(|x: f32, y: f32| -> Result<f32, _> { Ok(x - y) })?;
                         }
                         Instr::F32Mul => {
-                            self.run_binop(|x: f32, y: f32| -> Result<f32, WasmError> {
-                                Ok(x * y)
-                            })?;
+                            self.run_binop(|x: f32, y: f32| -> Result<f32, _> { Ok(x * y) })?;
                         }
                         Instr::F32Div => {
-                            self.run_binop(|x: f32, y: f32| -> Result<f32, WasmError> {
-                                Ok(x / y)
-                            })?;
+                            self.run_binop(|x: f32, y: f32| -> Result<f32, _> { Ok(x / y) })?;
                         }
                         Instr::F32Min => {
-                            self.run_binop(|x: f32, y: f32| -> Result<f32, WasmError> {
+                            self.run_binop(|x: f32, y: f32| -> Result<f32, _> {
                                 // 0.0, -0.0対策
                                 Ok(match (sign_f32(x), sign_f32(y)) {
                                     (Some(Sign::Positive), Some(Sign::Negative)) => y,
@@ -535,7 +515,7 @@ impl LabelStack {
                             })?;
                         }
                         Instr::F32Max => {
-                            self.run_binop(|x: f32, y: f32| -> Result<f32, WasmError> {
+                            self.run_binop(|x: f32, y: f32| -> Result<f32, _> {
                                 Ok(match (sign_f32(x), sign_f32(y)) {
                                     (Some(Sign::Positive), Some(Sign::Negative)) => x,
                                     (Some(Sign::Negative), Some(Sign::Positive)) => y,
@@ -544,32 +524,24 @@ impl LabelStack {
                             })?;
                         }
                         Instr::F32CopySign => {
-                            self.run_binop(|x: f32, y: f32| -> Result<f32, WasmError> {
+                            self.run_binop(|x: f32, y: f32| -> Result<f32, _> {
                                 Ok(x.copysign(y))
                             })?;
                         }
                         Instr::F64Add => {
-                            self.run_binop(|x: f64, y: f64| -> Result<f64, WasmError> {
-                                Ok(x + y)
-                            })?;
+                            self.run_binop(|x: f64, y: f64| -> Result<f64, _> { Ok(x + y) })?;
                         }
                         Instr::F64Sub => {
-                            self.run_binop(|x: f64, y: f64| -> Result<f64, WasmError> {
-                                Ok(x - y)
-                            })?;
+                            self.run_binop(|x: f64, y: f64| -> Result<f64, _> { Ok(x - y) })?;
                         }
                         Instr::F64Mul => {
-                            self.run_binop(|x: f64, y: f64| -> Result<f64, WasmError> {
-                                Ok(x * y)
-                            })?;
+                            self.run_binop(|x: f64, y: f64| -> Result<f64, _> { Ok(x * y) })?;
                         }
                         Instr::F64Div => {
-                            self.run_binop(|x: f64, y: f64| -> Result<f64, WasmError> {
-                                Ok(x / y)
-                            })?;
+                            self.run_binop(|x: f64, y: f64| -> Result<f64, _> { Ok(x / y) })?;
                         }
                         Instr::F64Min => {
-                            self.run_binop(|x: f64, y: f64| -> Result<f64, WasmError> {
+                            self.run_binop(|x: f64, y: f64| -> Result<f64, _> {
                                 Ok(match (sign_f64(x), sign_f64(y)) {
                                     (Some(Sign::Positive), Some(Sign::Negative)) => y,
                                     (Some(Sign::Negative), Some(Sign::Positive)) => x,
@@ -578,7 +550,7 @@ impl LabelStack {
                             })?;
                         }
                         Instr::F64Max => {
-                            self.run_binop(|x: f64, y: f64| -> Result<f64, WasmError> {
+                            self.run_binop(|x: f64, y: f64| -> Result<f64, _> {
                                 Ok(match (sign_f64(x), sign_f64(y)) {
                                     (Some(Sign::Positive), Some(Sign::Negative)) => x,
                                     (Some(Sign::Negative), Some(Sign::Positive)) => y,
@@ -587,7 +559,7 @@ impl LabelStack {
                             })?;
                         }
                         Instr::F64CopySign => {
-                            self.run_binop(|x: f64, y: f64| -> Result<f64, WasmError> {
+                            self.run_binop(|x: f64, y: f64| -> Result<f64, _> {
                                 Ok(x.copysign(y))
                             })?;
                         }
@@ -694,8 +666,7 @@ impl LabelStack {
                             self.run_reop(|x: f64, y: f64| -> bool { x >= y });
                         }
                         Instr::I32WrapI64 => {
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I32(x as i32));
+                            self.run_cvtop(|x: i64| -> Result<i32, _> { Ok(x as i32) })?;
                         }
                         Instr::I64ExtendI32S => {
                             let x = self.stack.pop().unwrap().unwrap_i32();
