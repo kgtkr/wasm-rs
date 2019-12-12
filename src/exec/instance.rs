@@ -532,32 +532,6 @@ pub struct TableAddr(pub Rc<RefCell<TableInst>>);
 pub struct MemAddr(pub Rc<RefCell<MemInst>>);
 
 impl MemAddr {
-    pub fn write_with_cursor<T>(
-        &self,
-        position: usize,
-        f: impl FnOnce(Cursor<&mut Vec<u8>>) -> T,
-    ) -> Result<T, WasmError> {
-        let mut buf = Vec::new();
-        let cur = Cursor::new(&mut buf);
-        let res = f(cur);
-
-        let raw = &mut self.0.borrow_mut().data;
-        if raw.len()
-            < buf
-                .len()
-                .checked_add(position)
-                .ok_or_else(|| WasmError::RuntimeError)?
-        {
-            return Err(WasmError::RuntimeError);
-        }
-
-        for (i, x) in buf.into_iter().enumerate() {
-            raw[i + position] = x;
-        }
-
-        Ok(res)
-    }
-
     pub fn read<T: Byteable>(&self, memarg: &Memarg, ptr: i32) -> Result<T, WasmError> {
         let pos = ptr as usize + memarg.offset as usize;
         let len = T::N::to_usize();
@@ -581,11 +555,6 @@ impl MemAddr {
             raw[pos + i] = x;
         }
         Ok(())
-    }
-
-    pub fn with_cursor<T>(&self, f: impl FnOnce(Cursor<&Vec<u8>>) -> T) -> T {
-        let raw = &self.0.borrow().data;
-        f(Cursor::new(raw))
     }
 }
 
