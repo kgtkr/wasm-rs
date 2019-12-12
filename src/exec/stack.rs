@@ -266,60 +266,34 @@ impl LabelStack {
                             })?;
                         }
                         Instr::F32Abs => {
-                            self.run(
-                                |hlist_pat![x]: Hlist![f32]| -> Result<Hlist![f32], WasmError> {
-                                    Ok(hlist![x.abs()])
-                                },
-                            )?;
+                            self.run_unop(|x: f32| -> Result<f32, WasmError> { Ok(x.abs()) })?;
                         }
                         Instr::F32Neg => {
-                            self.run(
-                                |hlist_pat![x]: Hlist![f32]| -> Result<Hlist![f32], WasmError> {
-                                    Ok(hlist![-x])
-                                },
-                            )?;
+                            self.run_unop(|x: f32| -> Result<f32, WasmError> { Ok(-x) })?;
                         }
                         Instr::F32Sqrt => {
-                            self.run(
-                                |hlist_pat![x]: Hlist![f32]| -> Result<Hlist![f32], WasmError> {
-                                    Ok(hlist![x.sqrt()])
-                                },
-                            )?;
+                            self.run_unop(|x: f32| -> Result<f32, WasmError> { Ok(x.sqrt()) })?;
                         }
                         Instr::F32Ceil => {
-                            self.run(
-                                |hlist_pat![x]: Hlist![f32]| -> Result<Hlist![f32], WasmError> {
-                                    Ok(hlist![x.ceil()])
-                                },
-                            )?;
+                            self.run_unop(|x: f32| -> Result<f32, WasmError> { Ok(x.ceil()) })?;
                         }
                         Instr::F32Floor => {
-                            self.run(
-                                |hlist_pat![x]: Hlist![f32]| -> Result<Hlist![f32], WasmError> {
-                                    Ok(hlist![x.floor()])
-                                },
-                            )?;
+                            self.run_unop(|x: f32| -> Result<f32, WasmError> { Ok(x.floor()) })?;
                         }
                         Instr::F32Trunc => {
-                            self.run(
-                                |hlist_pat![x]: Hlist![f32]| -> Result<Hlist![f32], WasmError> {
-                                    Ok(hlist![x.trunc()])
-                                },
-                            )?;
+                            self.run_unop(|x: f32| -> Result<f32, WasmError> { Ok(x.trunc()) })?;
                         }
                         Instr::F32Nearest => {
-                            self.run(
-                                |hlist_pat![x]: Hlist![f32]| -> Result<Hlist![f32], WasmError> {
-                                    let x_mod2 = x % 2.0;
-                                    Ok(hlist![if x_mod2 == 0.5 {
-                                        x.floor()
-                                    } else if x_mod2 == -0.5 {
-                                        x.ceil()
-                                    } else {
-                                        x.round()
-                                    }])
-                                },
-                            )?;
+                            self.run_unop(|x: f32| -> Result<f32, WasmError> {
+                                let x_mod2 = x % 2.0;
+                                Ok(if x_mod2 == 0.5 {
+                                    x.floor()
+                                } else if x_mod2 == -0.5 {
+                                    x.ceil()
+                                } else {
+                                    x.round()
+                                })
+                            })?;
                         }
                         Instr::F64Abs => {
                             self.run(
