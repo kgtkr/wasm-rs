@@ -167,6 +167,16 @@ pub struct LabelStack {
 }
 
 impl LabelStack {
+    fn run_ok<I, O>(&mut self, f: impl FnOnce(I) -> O) -> ()
+    where
+        I: Generic,
+        I::Repr: StackValues,
+        O: Generic,
+        O::Repr: StackValues,
+    {
+        self.run(|i| Ok(f(i))).unwrap();
+    }
+
     fn run<I, O>(&mut self, f: impl FnOnce(I) -> Result<O, WasmError>) -> Result<(), WasmError>
     where
         I: Generic,
@@ -180,11 +190,8 @@ impl LabelStack {
         Ok(())
     }
 
-    fn run_const<T: ValInterpret>(
-        &mut self,
-        f: impl FnOnce() -> Result<T, WasmError>,
-    ) -> Result<(), WasmError> {
-        self.run(|(): ()| -> Result<(T,), WasmError> { Ok((f()?,)) })
+    fn run_const<T: ValInterpret>(&mut self, f: impl FnOnce() -> T) {
+        self.run_ok(|(): ()| -> (T,) { (f(),) })
     }
 
     fn run_unop<T: ValInterpret>(
@@ -201,18 +208,12 @@ impl LabelStack {
         self.run(|(a, b): (T, T)| -> Result<(T,), WasmError> { Ok((f(a, b)?,)) })
     }
 
-    fn run_testop<T: ValInterpret>(
-        &mut self,
-        f: impl FnOnce(T) -> Result<bool, WasmError>,
-    ) -> Result<(), WasmError> {
-        self.run(|(x,): (T,)| -> Result<(bool,), WasmError> { Ok((f(x)?,)) })
+    fn run_testop<T: ValInterpret>(&mut self, f: impl FnOnce(T) -> bool) {
+        self.run_ok(|(x,): (T,)| -> (bool,) { (f(x),) })
     }
 
-    fn run_reop<T: ValInterpret>(
-        &mut self,
-        f: impl FnOnce(T, T) -> Result<bool, WasmError>,
-    ) -> Result<(), WasmError> {
-        self.run(|(x, y): (T, T)| -> Result<(bool,), WasmError> { Ok((f(x, y)?,)) })
+    fn run_reop<T: ValInterpret>(&mut self, f: impl FnOnce(T, T) -> bool) {
+        self.run_ok(|(x, y): (T, T)| -> (bool,) { (f(x, y),) })
     }
 
     fn run_cvtop<T: ValInterpret, R: ValInterpret>(
@@ -228,16 +229,16 @@ impl LabelStack {
                 AdminInstr::Instr(instr) => {
                     match instr {
                         Instr::I32Const(x) => {
-                            self.run_const(|| -> Result<i32, WasmError> { Ok(x) })?;
+                            self.run_const(|| -> i32 { x });
                         }
                         Instr::I64Const(x) => {
-                            self.run_const(|| -> Result<i64, WasmError> { Ok(x) })?;
+                            self.run_const(|| -> i64 { x });
                         }
                         Instr::F32Const(x) => {
-                            self.run_const(|| -> Result<f32, WasmError> { Ok(x) })?;
+                            self.run_const(|| -> f32 { x });
                         }
                         Instr::F64Const(x) => {
-                            self.run_const(|| -> Result<f64, WasmError> { Ok(x) })?;
+                            self.run_const(|| -> f64 { x });
                         }
                         Instr::I32Clz => {
                             self.run_unop(|x: i32| -> Result<i32, WasmError> {
@@ -591,87 +592,43 @@ impl LabelStack {
                             })?;
                         }
                         Instr::I32Eqz => {
-                            self.run_testop(|x: i32| -> Result<bool, WasmError> { Ok(x == 0) })?;
+                            self.run_testop(|x: i32| -> bool { x == 0 });
                         }
                         Instr::I64Eqz => {
-                            self.run_testop(|x: i64| -> Result<bool, WasmError> { Ok(x == 0) })?;
+                            self.run_testop(|x: i64| -> bool { x == 0 });
                         }
                         Instr::I32Eq => {
-                            let y = self.stack.pop().unwrap().unwrap_i32();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(if x == y { 1 } else { 0 }));
+                            self.run_reop(|x: i32, y: i32| -> bool { x == y });
                         }
                         Instr::I32Ne => {
-                            let y = self.stack.pop().unwrap().unwrap_i32();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(if x != y { 1 } else { 0 }));
+                            self.run_reop(|x: i32, y: i32| -> bool { x != y });
                         }
                         Instr::I32LtS => {
-                            let y = self.stack.pop().unwrap().unwrap_i32();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(if x < y { 1 } else { 0 }));
+                            self.run_reop(|x: i32, y: i32| -> bool { x < y });
                         }
                         Instr::I32LtU => {
-                            let y = self.stack.pop().unwrap().unwrap_i32();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack
-                                .push(Val::I32(if i32_convert_u32(x) < i32_convert_u32(y) {
-                                    1
-                                } else {
-                                    0
-                                }));
+                            self.run_reop(|x: u32, y: u32| -> bool { x < y });
                         }
                         Instr::I32GtS => {
-                            let y = self.stack.pop().unwrap().unwrap_i32();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(if x > y { 1 } else { 0 }));
+                            self.run_reop(|x: i32, y: i32| -> bool { x > y });
                         }
                         Instr::I32GtU => {
-                            let y = self.stack.pop().unwrap().unwrap_i32();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack
-                                .push(Val::I32(if i32_convert_u32(x) > i32_convert_u32(y) {
-                                    1
-                                } else {
-                                    0
-                                }));
+                            self.run_reop(|x: u32, y: u32| -> bool { x > y });
                         }
                         Instr::I32LeS => {
-                            let y = self.stack.pop().unwrap().unwrap_i32();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(if x <= y { 1 } else { 0 }));
+                            self.run_reop(|x: i32, y: i32| -> bool { x <= y });
                         }
                         Instr::I32LeU => {
-                            let y = self.stack.pop().unwrap().unwrap_i32();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(
-                                if i32_convert_u32(x) <= i32_convert_u32(y) {
-                                    1
-                                } else {
-                                    0
-                                },
-                            ));
+                            self.run_reop(|x: u32, y: u32| -> bool { x <= y });
                         }
                         Instr::I32GeS => {
-                            let y = self.stack.pop().unwrap().unwrap_i32();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(if x >= y { 1 } else { 0 }));
+                            self.run_reop(|x: i32, y: i32| -> bool { x >= y });
                         }
                         Instr::I32GeU => {
-                            let y = self.stack.pop().unwrap().unwrap_i32();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(
-                                if i32_convert_u32(x) >= i32_convert_u32(y) {
-                                    1
-                                } else {
-                                    0
-                                },
-                            ));
+                            self.run_reop(|x: u32, y: u32| -> bool { x >= y });
                         }
                         Instr::I64Eq => {
-                            let y = self.stack.pop().unwrap().unwrap_i64();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I32(if x == y { 1 } else { 0 }));
+                            self.run_reop(|x: i64, y: i64| -> bool { x == y });
                         }
                         Instr::I64Ne => {
                             let y = self.stack.pop().unwrap().unwrap_i64();
