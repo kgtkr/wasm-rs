@@ -5,7 +5,7 @@ use crate::structure::modules::{LabelIdx, TypedIdx};
 use crate::structure::types::ValType;
 use crate::WasmError;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use frunk::{hlist, hlist_pat, HCons, HNil, Hlist};
+use frunk::{from_generic, into_generic, Generic, HCons, HNil};
 use num::NumCast;
 use std::convert::{From, Into, TryFrom};
 use std::io::Cursor;
@@ -167,13 +167,16 @@ pub struct LabelStack {
 }
 
 impl LabelStack {
-    fn run<I: StackValues, O: StackValues>(
-        &mut self,
-        f: impl FnOnce(I) -> Result<O, WasmError>,
-    ) -> Result<(), WasmError> {
-        let input = I::pop_stack(&mut self.stack).unwrap();
-        let output = f(input)?;
-        output.push_stack(&mut self.stack);
+    fn run<I, O>(&mut self, f: impl FnOnce(I) -> Result<O, WasmError>) -> Result<(), WasmError>
+    where
+        I: Generic,
+        I::Repr: StackValues,
+        O: Generic,
+        O::Repr: StackValues,
+    {
+        let input = I::Repr::pop_stack(&mut self.stack).unwrap();
+        let output = f(from_generic(input))?;
+        into_generic(output).push_stack(&mut self.stack);
         Ok(())
     }
 
@@ -181,41 +184,35 @@ impl LabelStack {
         &mut self,
         f: impl FnOnce() -> Result<T, WasmError>,
     ) -> Result<(), WasmError> {
-        self.run(|hlist_pat![]: Hlist![]| -> Result<Hlist![T], WasmError> { Ok(hlist![f()?]) })
+        self.run(|(): ()| -> Result<(T,), WasmError> { Ok((f()?,)) })
     }
 
     fn run_unop<T: ValInterpret>(
         &mut self,
         f: impl FnOnce(T) -> Result<T, WasmError>,
     ) -> Result<(), WasmError> {
-        self.run(|hlist_pat![x]: Hlist![T]| -> Result<Hlist![T], WasmError> { Ok(hlist![f(x)?]) })
+        self.run(|(x,): (T,)| -> Result<(T,), WasmError> { Ok((f(x)?,)) })
     }
 
     fn run_binop<T: ValInterpret>(
         &mut self,
         f: impl FnOnce(T, T) -> Result<T, WasmError>,
     ) -> Result<(), WasmError> {
-        self.run(
-            |hlist_pat![a, b]: Hlist![T, T]| -> Result<Hlist![T], WasmError> {
-                Ok(hlist![f(a, b)?])
-            },
-        )
+        self.run(|(a, b): (T, T)| -> Result<(T,), WasmError> { Ok((f(a, b)?,)) })
     }
 
     fn run_testop<T: ValInterpret>(
         &mut self,
         f: impl FnOnce(T) -> Result<bool, WasmError>,
     ) -> Result<(), WasmError> {
-        self.run(
-            |hlist_pat![x]: Hlist![T]| -> Result<Hlist![bool], WasmError> { Ok(hlist![f(x)?]) },
-        )
+        self.run(|(x,): (T,)| -> Result<(bool,), WasmError> { Ok((f(x)?,)) })
     }
 
     fn run_reop<T: ValInterpret, R: ValInterpret>(
         &mut self,
         f: impl FnOnce(T) -> Result<R, WasmError>,
     ) -> Result<(), WasmError> {
-        self.run(|hlist_pat![x]: Hlist![T]| -> Result<Hlist![R], WasmError> { Ok(hlist![f(x)?]) })
+        self.run(|(x,): (T,)| -> Result<(R,), WasmError> { Ok((f(x)?,)) })
     }
 
     fn step(&mut self, frame: &mut Frame) -> Result<Option<FrameLevelInstr>, WasmError> {
@@ -326,94 +323,76 @@ impl LabelStack {
                             })?;
                         }
                         Instr::I32Add => {
-                            self.run(
-                                |hlist_pat![x, y]: Hlist![i32, i32]| -> Result<Hlist![i32], WasmError> {
-                                    Ok(hlist![x.overflowing_add(y).0])
-                                },
-                            )?;
+                            self.run_binop(|x: i32, y: i32| -> Result<i32, WasmError> {
+                                Ok(x.overflowing_add(y).0)
+                            })?;
                         }
                         Instr::I32Sub => {
-                            let y = self.stack.pop().unwrap().unwrap_i32();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(x.overflowing_sub(y).0));
+                            self.run_binop(|x: i32, y: i32| -> Result<i32, WasmError> {
+                                Ok(x.overflowing_sub(y).0)
+                            })?;
                         }
                         Instr::I32Mul => {
-                            let y = self.stack.pop().unwrap().unwrap_i32();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(x.overflowing_mul(y).0));
+                            self.run_binop(|x: i32, y: i32| -> Result<i32, WasmError> {
+                                Ok(x.overflowing_mul(y).0)
+                            })?;
                         }
                         Instr::I32DivS => {
-                            let y = self.stack.pop().unwrap().unwrap_i32();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            if y == 0 {
-                                return Err(WasmError::RuntimeError);
-                            }
-                            self.stack.push(Val::I32(
-                                x.checked_div(y).ok_or_else(|| WasmError::RuntimeError)?,
-                            ));
+                            self.run_binop(|x: i32, y: i32| -> Result<i32, WasmError> {
+                                if y == 0 {
+                                    return Err(WasmError::RuntimeError);
+                                }
+                                Ok(x.checked_div(y).ok_or_else(|| WasmError::RuntimeError)?)
+                            })?;
                         }
                         Instr::I32DivU => {
-                            let y = self.stack.pop().unwrap().unwrap_i32();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-
-                            let x = i32_convert_u32(x);
-                            let y = i32_convert_u32(y);
-
-                            if y == 0 {
-                                return Err(WasmError::RuntimeError);
-                            }
-                            self.stack.push(Val::I32(u32_convert_i32(
-                                x.checked_div(y).ok_or_else(|| WasmError::RuntimeError)?,
-                            )));
+                            self.run_binop(|x: u32, y: u32| -> Result<u32, WasmError> {
+                                if y == 0 {
+                                    return Err(WasmError::RuntimeError);
+                                }
+                                Ok(x.checked_div(y).ok_or_else(|| WasmError::RuntimeError)?)
+                            })?;
                         }
                         Instr::I32RemS => {
-                            let y = self.stack.pop().unwrap().unwrap_i32();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-
-                            if y == 0 {
-                                return Err(WasmError::RuntimeError);
-                            }
-
-                            self.stack.push(Val::I32(x.overflowing_rem(y).0));
+                            self.run_binop(|x: i32, y: i32| -> Result<i32, WasmError> {
+                                if y == 0 {
+                                    return Err(WasmError::RuntimeError);
+                                }
+                                Ok(x.overflowing_rem(y).0)
+                            })?;
                         }
                         Instr::I32RemU => {
-                            let y = self.stack.pop().unwrap().unwrap_i32();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-
-                            let x = i32_convert_u32(x);
-                            let y = i32_convert_u32(y);
-
-                            if y == 0 {
-                                return Err(WasmError::RuntimeError);
-                            }
-
-                            self.stack
-                                .push(Val::I32(u32_convert_i32(x.overflowing_rem(y).0)));
+                            self.run_binop(|x: u32, y: u32| -> Result<u32, WasmError> {
+                                if y == 0 {
+                                    return Err(WasmError::RuntimeError);
+                                }
+                                Ok(x.overflowing_rem(y).0)
+                            })?;
                         }
                         Instr::I32And => {
-                            let y = self.stack.pop().unwrap().unwrap_i32();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(x & y));
+                            self.run_binop(|x: i32, y: i32| -> Result<i32, WasmError> {
+                                Ok(x & y)
+                            })?;
                         }
                         Instr::I32Or => {
-                            let y = self.stack.pop().unwrap().unwrap_i32();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(x | y));
+                            self.run_binop(|x: i32, y: i32| -> Result<i32, WasmError> {
+                                Ok(x | y)
+                            })?;
                         }
                         Instr::I32Xor => {
-                            let y = self.stack.pop().unwrap().unwrap_i32();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(x ^ y));
+                            self.run_binop(|x: i32, y: i32| -> Result<i32, WasmError> {
+                                Ok(x ^ y)
+                            })?;
                         }
                         Instr::I32ShL => {
-                            let y = self.stack.pop().unwrap().unwrap_i32();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(x.overflowing_shl(y as u32).0));
+                            self.run_binop(|x: i32, y: i32| -> Result<i32, WasmError> {
+                                Ok(x.overflowing_shl(y as u32).0)
+                            })?;
                         }
                         Instr::I32ShrS => {
-                            let y = self.stack.pop().unwrap().unwrap_i32();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(x.overflowing_shr(y as u32).0));
+                            self.run_binop(|x: i32, y: i32| -> Result<i32, WasmError> {
+                                Ok(x.overflowing_shr(y as u32).0)
+                            })?;
                         }
                         Instr::I32ShrU => {
                             let y = self.stack.pop().unwrap().unwrap_i32();
