@@ -784,36 +784,43 @@ impl LabelStack {
                             })?;
                         }
                         Instr::Drop => {
-                            self.stack.pop().unwrap();
+                            self.run_ok(|(_,): (Val,)| -> () {});
                         }
                         Instr::Select => {
-                            let c = self.stack.pop().unwrap().unwrap_i32();
-                            let y = self.stack.pop().unwrap();
-                            let x = self.stack.pop().unwrap();
-                            self.stack.push(if c != 0 { x } else { y });
+                            self.run_ok(|(x, y, c): (Val, Val, bool)| -> (Val,) {
+                                (if c { x } else { y },)
+                            });
                         }
                         Instr::LocalGet(idx) => {
-                            self.stack.push(frame.locals[idx.to_idx()]);
+                            self.run_ok(|(): ()| -> (Val,) { (frame.locals[idx.to_idx()],) });
                         }
                         Instr::LocalSet(idx) => {
-                            let x = self.stack.pop().unwrap();
-                            frame.locals[idx.to_idx()] = x;
+                            self.run_ok(|(x,): (Val,)| -> () {
+                                frame.locals[idx.to_idx()] = x;
+                                ()
+                            });
                         }
                         Instr::LocalTee(idx) => {
-                            let x = *self.stack.last().unwrap();
-                            frame.locals[idx.to_idx()] = x;
+                            self.run_ok(|(x,): (Val,)| -> (Val,) {
+                                frame.locals[idx.to_idx()] = x;
+                                (x,)
+                            });
                         }
                         Instr::GlobalGet(idx) => {
                             let instance = frame.module.upgrade().unwrap();
 
-                            self.stack
-                                .push(instance.globals[idx.to_idx()].0.borrow().value);
+                            self.run_ok(|(): ()| -> (Val,) {
+                                (instance.globals[idx.to_idx()].0.borrow().value,)
+                            });
                         }
                         Instr::GlobalSet(idx) => {
                             let instance = frame.module.upgrade().unwrap();
-                            let x = self.stack.pop().unwrap();
-                            let mut global = instance.globals[idx.to_idx()].0.borrow_mut();
-                            global.value = x;
+
+                            self.run_ok(|(x,): (Val,)| -> () {
+                                let mut global = instance.globals[idx.to_idx()].0.borrow_mut();
+                                global.value = x;
+                                ()
+                            });
                         }
                         Instr::I32Load(m) => {
                             let instance = frame.module.upgrade().unwrap();
