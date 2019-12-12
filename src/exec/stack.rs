@@ -831,81 +831,47 @@ impl LabelStack {
                         Instr::I64Load(m) => {
                             let instance = frame.module.upgrade().unwrap();
                             self.run(|(ptr,): (i32,)| -> Result<(i64,), _> {
-                                instance.mem.as_ref().unwrap().with_cursor(|mut cur| {
-                                    cur.set_position((ptr as usize + m.offset as usize) as u64);
-                                    let x = cur
-                                        .read_i64::<LittleEndian>()
-                                        .map_err(|_| WasmError::RuntimeError)?;
-                                    Ok((x,))
-                                })
+                                Ok((instance.mem.as_ref().unwrap().read::<i64>(&m, ptr)?,))
                             })?;
                         }
                         Instr::F32Load(m) => {
                             let instance = frame.module.upgrade().unwrap();
                             self.run(|(ptr,): (i32,)| -> Result<(f32,), _> {
-                                instance.mem.as_ref().unwrap().with_cursor(|mut cur| {
-                                    cur.set_position((ptr as usize + m.offset as usize) as u64);
-                                    let x = cur
-                                        .read_f32::<LittleEndian>()
-                                        .map_err(|_| WasmError::RuntimeError)?;
-                                    Ok((x,))
-                                })
+                                Ok((instance.mem.as_ref().unwrap().read::<f32>(&m, ptr)?,))
                             })?;
                         }
                         Instr::F64Load(m) => {
                             let instance = frame.module.upgrade().unwrap();
                             self.run(|(ptr,): (i32,)| -> Result<(f64,), _> {
-                                instance.mem.as_ref().unwrap().with_cursor(|mut cur| {
-                                    cur.set_position((ptr as usize + m.offset as usize) as u64);
-                                    let x = cur
-                                        .read_f64::<LittleEndian>()
-                                        .map_err(|_| WasmError::RuntimeError)?;
-                                    Ok((x,))
-                                })
+                                Ok((instance.mem.as_ref().unwrap().read::<f64>(&m, ptr)?,))
                             })?;
                         }
                         Instr::I32Store(m) => {
                             let instance = frame.module.upgrade().unwrap();
                             self.run(|(ptr, x): (i32, i32)| -> Result<(), _> {
-                                instance.mem.as_ref().unwrap().write_with_cursor(
-                                    ptr as usize + m.offset as usize,
-                                    |mut cur| {
-                                        cur.write_i32::<LittleEndian>(x).unwrap();
-                                    },
-                                )
+                                instance.mem.as_ref().unwrap().write::<i32>(&m, ptr, x)?;
+                                Ok(())
                             })?;
                         }
                         Instr::I64Store(m) => {
                             let instance = frame.module.upgrade().unwrap();
                             self.run(|(ptr, x): (i32, i64)| -> Result<(), _> {
-                                instance.mem.as_ref().unwrap().write_with_cursor(
-                                    ptr as usize + m.offset as usize,
-                                    |mut cur| {
-                                        cur.write_i64::<LittleEndian>(x).unwrap();
-                                    },
-                                )
+                                instance.mem.as_ref().unwrap().write::<i64>(&m, ptr, x)?;
+                                Ok(())
                             })?;
                         }
                         Instr::F32Store(m) => {
                             let instance = frame.module.upgrade().unwrap();
                             self.run(|(ptr, x): (i32, f32)| -> Result<(), _> {
-                                instance.mem.as_ref().unwrap().write_with_cursor(
-                                    ptr as usize + m.offset as usize,
-                                    |mut cur| {
-                                        cur.write_f32::<LittleEndian>(x).unwrap();
-                                    },
-                                )
+                                instance.mem.as_ref().unwrap().write::<f32>(&m, ptr, x)?;
+                                Ok(())
                             })?;
                         }
                         Instr::F64Store(m) => {
                             let instance = frame.module.upgrade().unwrap();
                             self.run(|(ptr, x): (i32, f64)| -> Result<(), _> {
-                                instance.mem.as_ref().unwrap().write_with_cursor(
-                                    ptr as usize + m.offset as usize,
-                                    |mut cur| {
-                                        cur.write_f64::<LittleEndian>(x).unwrap();
-                                    },
-                                )
+                                instance.mem.as_ref().unwrap().write::<f64>(&m, ptr, x)?;
+                                Ok(())
                             })?;
                         }
                         Instr::I32Load8S(m) => {
