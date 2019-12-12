@@ -991,16 +991,15 @@ impl LabelStack {
                         }
                         Instr::MemorySize => {
                             let instance = frame.module.upgrade().unwrap();
-                            self.stack.push(Val::I32(
-                                instance.mem.as_ref().unwrap().0.borrow().page_size(),
-                            ));
+                            self.run_ok(|(): ()| -> (i32,) {
+                                (instance.mem.as_ref().unwrap().0.borrow().page_size(),)
+                            });
                         }
                         Instr::MemoryGrow => {
                             let instance = frame.module.upgrade().unwrap();
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(
-                                instance.mem.as_ref().unwrap().0.borrow_mut().grow(x),
-                            ));
+                            self.run_ok(|(x,): (i32,)| -> (i32,) {
+                                (instance.mem.as_ref().unwrap().0.borrow_mut().grow(x),)
+                            });
                         }
                         Instr::Nop => {}
                         Instr::Unreachable => return Err(WasmError::RuntimeError),
