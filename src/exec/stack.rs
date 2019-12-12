@@ -208,7 +208,14 @@ impl LabelStack {
         self.run(|(x,): (T,)| -> Result<(bool,), WasmError> { Ok((f(x)?,)) })
     }
 
-    fn run_reop<T: ValInterpret, R: ValInterpret>(
+    fn run_reop<T: ValInterpret>(
+        &mut self,
+        f: impl FnOnce(T) -> Result<bool, WasmError>,
+    ) -> Result<(), WasmError> {
+        self.run(|(x,): (T,)| -> Result<(bool,), WasmError> { Ok((f(x)?,)) })
+    }
+
+    fn run_cvtop<T: ValInterpret, R: ValInterpret>(
         &mut self,
         f: impl FnOnce(T) -> Result<R, WasmError>,
     ) -> Result<(), WasmError> {
