@@ -1,5 +1,5 @@
 use super::stack::{AdminInstr, Frame, FrameStack, Label, LabelStack, Stack};
-use crate::structure::instructions::{Expr, Instr};
+use crate::structure::instructions::{Expr, Instr, Memarg};
 use crate::structure::modules::{
     ExportDesc, Func, FuncIdx, GlobalIdx, ImportDesc, Mem, Module, Table, TypeIdx, TypedIdx,
 };
@@ -7,8 +7,11 @@ use crate::structure::types::{
     ElemType, FuncType, GlobalType, Limits, MemType, Mut, TableType, ValType,
 };
 use crate::WasmError;
+use typenum::Unsigned;
 
+use super::numerics::Byteable;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use generic_array::{ArrayLength, GenericArray};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::convert::{From, Into, TryFrom};
@@ -553,6 +556,31 @@ impl MemAddr {
         }
 
         Ok(res)
+    }
+
+    pub fn read<T: Byteable>(&self, memarg: &Memarg, ptr: i32) -> Result<T, WasmError> {
+        let pos = ptr as usize + memarg.offset as usize;
+        let len = T::N::to_usize();
+        let raw = &self.0.borrow().data;
+        if pos.checked_add(len).map(|x| raw.len() < x).unwrap_or(true) {
+            return Err(WasmError::RuntimeError);
+        }
+        Ok(T::from_bytes(GenericArray::from_slice(
+            &raw[pos..pos + len],
+        )))
+    }
+
+    pub fn write<T: Byteable>(&self, memarg: &Memarg, ptr: i32, x: T) -> Result<(), WasmError> {
+        let pos = ptr as usize + memarg.offset as usize;
+        let len = T::N::to_usize();
+        let raw = &mut self.0.borrow_mut().data;
+        if pos.checked_add(len).map(|x| raw.len() < x).unwrap_or(true) {
+            return Err(WasmError::RuntimeError);
+        }
+        for (i, x) in x.to_bytes().into_iter().enumerate() {
+            raw[pos + i] = x;
+        }
+        Ok(())
     }
 
     pub fn with_cursor<T>(&self, f: impl FnOnce(Cursor<&Vec<u8>>) -> T) -> T {

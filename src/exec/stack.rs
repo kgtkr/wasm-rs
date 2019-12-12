@@ -824,15 +824,8 @@ impl LabelStack {
                         }
                         Instr::I32Load(m) => {
                             let instance = frame.module.upgrade().unwrap();
-
                             self.run(|(ptr,): (i32,)| -> Result<(i32,), _> {
-                                instance.mem.as_ref().unwrap().with_cursor(|mut cur| {
-                                    cur.set_position((ptr as usize + m.offset as usize) as u64);
-                                    let x = cur
-                                        .read_i32::<LittleEndian>()
-                                        .map_err(|_| WasmError::RuntimeError)?;
-                                    Ok((x,))
-                                })
+                                Ok((instance.mem.as_ref().unwrap().read::<i32>(&m, ptr)?,))
                             })?;
                         }
                         Instr::I64Load(m) => {
