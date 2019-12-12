@@ -176,6 +176,22 @@ impl LabelStack {
         self.run(|i| Ok(f(i))).unwrap();
     }
 
+    fn pop_values<T>(&mut self) -> T
+    where
+        T: Generic,
+        T::Repr: StackValues,
+    {
+        from_generic(T::Repr::pop_stack(&mut self.stack).unwrap())
+    }
+
+    fn push_values<T>(&mut self, x: T)
+    where
+        T: Generic,
+        T::Repr: StackValues,
+    {
+        into_generic(x).push_stack(&mut self.stack)
+    }
+
     fn run<I, O>(&mut self, f: impl FnOnce(I) -> Result<O, WasmError>) -> Result<(), WasmError>
     where
         I: Generic,
@@ -183,9 +199,9 @@ impl LabelStack {
         O: Generic,
         O::Repr: StackValues,
     {
-        let input = I::Repr::pop_stack(&mut self.stack).unwrap();
-        let output = f(from_generic(input))?;
-        into_generic(output).push_stack(&mut self.stack);
+        let input = self.pop_values::<I>();
+        let output = f(input)?;
+        self.push_values(output);
         Ok(())
     }
 
@@ -1022,19 +1038,19 @@ impl LabelStack {
                             ));
                         }
                         Instr::If(rt, is1, is2) => {
-                            let x = self.stack.pop().unwrap().unwrap_i32();
+                            let (x,) = self.pop_values::<(bool,)>();
                             self.instrs.push(AdminInstr::Label(
                                 Label {
                                     instrs: vec![],
                                     n: rt.0.iter().count(),
                                 },
-                                if x != 0 { is1 } else { is2 },
+                                if x { is1 } else { is2 },
                             ));
                         }
                         Instr::Br(l) => self.instrs.push(AdminInstr::Br(l)),
                         Instr::BrIf(l) => {
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            if x != 0 {
+                            let (x,) = self.pop_values::<(bool,)>();
+                            if x {
                                 self.instrs.push(AdminInstr::Br(l));
                             }
                         }
