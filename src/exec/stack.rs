@@ -410,110 +410,91 @@ impl LabelStack {
                             })?;
                         }
                         Instr::I64Add => {
-                            let y = self.stack.pop().unwrap().unwrap_i64();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I64(x.overflowing_add(y).0));
+                            self.run_binop(|x: i64, y: i64| -> Result<i64, WasmError> {
+                                Ok(x.overflowing_add(y).0)
+                            })?;
                         }
                         Instr::I64Sub => {
-                            let y = self.stack.pop().unwrap().unwrap_i64();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I64(x.overflowing_sub(y).0));
+                            self.run_binop(|x: i64, y: i64| -> Result<i64, WasmError> {
+                                Ok(x.overflowing_sub(y).0)
+                            })?;
                         }
                         Instr::I64Mul => {
-                            let y = self.stack.pop().unwrap().unwrap_i64();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I64(x.overflowing_mul(y).0));
+                            self.run_binop(|x: i64, y: i64| -> Result<i64, WasmError> {
+                                Ok(x.overflowing_mul(y).0)
+                            })?;
                         }
                         Instr::I64DivS => {
-                            let y = self.stack.pop().unwrap().unwrap_i64();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            if y == 0 {
-                                return Err(WasmError::RuntimeError);
-                            }
-                            self.stack.push(Val::I64(
-                                x.checked_div(y).ok_or_else(|| WasmError::RuntimeError)?,
-                            ));
+                            self.run_binop(|x: i64, y: i64| -> Result<i64, WasmError> {
+                                if y == 0 {
+                                    return Err(WasmError::RuntimeError);
+                                }
+                                Ok(x.checked_div(y).ok_or_else(|| WasmError::RuntimeError)?)
+                            })?;
                         }
                         Instr::I64DivU => {
-                            let y = self.stack.pop().unwrap().unwrap_i64();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-
-                            let x = i64_convert_u64(x);
-                            let y = i64_convert_u64(y);
-                            if y == 0 {
-                                return Err(WasmError::RuntimeError);
-                            }
-                            self.stack.push(Val::I64(u64_convert_i64(
-                                x.checked_div(y).ok_or_else(|| WasmError::RuntimeError)?,
-                            )));
+                            self.run_binop(|x: u64, y: u64| -> Result<u64, WasmError> {
+                                if y == 0 {
+                                    return Err(WasmError::RuntimeError);
+                                }
+                                Ok(x.checked_div(y).ok_or_else(|| WasmError::RuntimeError)?)
+                            })?;
                         }
                         Instr::I64RemS => {
-                            let y = self.stack.pop().unwrap().unwrap_i64();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-
-                            if y == 0 {
-                                return Err(WasmError::RuntimeError);
-                            }
-
-                            self.stack.push(Val::I64(x.overflowing_rem(y).0));
+                            self.run_binop(|x: i64, y: i64| -> Result<i64, WasmError> {
+                                if y == 0 {
+                                    return Err(WasmError::RuntimeError);
+                                }
+                                Ok(x.overflowing_rem(y).0)
+                            })?;
                         }
                         Instr::I64RemU => {
-                            let y = self.stack.pop().unwrap().unwrap_i64();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-
-                            let x = i64_convert_u64(x);
-                            let y = i64_convert_u64(y);
-
-                            if y == 0 {
-                                return Err(WasmError::RuntimeError);
-                            }
-
-                            self.stack
-                                .push(Val::I64(u64_convert_i64(x.overflowing_rem(y).0)));
+                            self.run_binop(|x: u64, y: u64| -> Result<u64, WasmError> {
+                                if y == 0 {
+                                    return Err(WasmError::RuntimeError);
+                                }
+                                Ok(x.overflowing_rem(y).0)
+                            })?;
                         }
                         Instr::I64And => {
-                            let y = self.stack.pop().unwrap().unwrap_i64();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I64(x & y));
+                            self.run_binop(|x: i64, y: i64| -> Result<i64, WasmError> {
+                                Ok(x & y)
+                            })?;
                         }
                         Instr::I64Or => {
-                            let y = self.stack.pop().unwrap().unwrap_i64();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I64(x | y));
+                            self.run_binop(|x: i64, y: i64| -> Result<i64, WasmError> {
+                                Ok(x | y)
+                            })?;
                         }
                         Instr::I64Xor => {
-                            let y = self.stack.pop().unwrap().unwrap_i64();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I64(x ^ y));
+                            self.run_binop(|x: i64, y: i64| -> Result<i64, WasmError> {
+                                Ok(x ^ y)
+                            })?;
                         }
                         Instr::I64ShL => {
-                            let y = self.stack.pop().unwrap().unwrap_i64();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I64(x.overflowing_shl(y as u32).0));
+                            self.run_binop(|x: i64, y: i64| -> Result<i64, WasmError> {
+                                Ok(x.overflowing_shl(y as u32).0)
+                            })?;
                         }
                         Instr::I64ShrS => {
-                            let y = self.stack.pop().unwrap().unwrap_i64();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I64(x.overflowing_shr(y as u32).0));
+                            self.run_binop(|x: i64, y: i64| -> Result<i64, WasmError> {
+                                Ok(x.overflowing_shr(y as u32).0)
+                            })?;
                         }
                         Instr::I64ShrU => {
-                            let y = self.stack.pop().unwrap().unwrap_i64();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I64(u64_convert_i64(
-                                i64_convert_u64(x)
-                                    .overflowing_shr(i64_convert_u64(y) as u32)
-                                    .0,
-                            )));
+                            self.run_binop(|x: u64, y: u64| -> Result<u64, WasmError> {
+                                Ok(x.overflowing_shr(y as u32).0)
+                            })?;
                         }
                         Instr::I64Rotl => {
-                            let y = self.stack.pop().unwrap().unwrap_i64();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I64(x.rotate_left(y as u32)));
+                            self.run_binop(|x: i64, y: i64| -> Result<i64, WasmError> {
+                                Ok(x.rotate_left(y as u32))
+                            })?;
                         }
                         Instr::I64Rotr => {
-                            let y = self.stack.pop().unwrap().unwrap_i64();
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I64(x.rotate_right(y as u32)));
+                            self.run_binop(|x: i64, y: i64| -> Result<i64, WasmError> {
+                                Ok(x.rotate_right(y as u32))
+                            })?;
                         }
                         Instr::F32Add => {
                             let y = self.stack.pop().unwrap().unwrap_f32();
