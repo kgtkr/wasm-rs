@@ -584,12 +584,10 @@ impl LabelStack {
                             })?;
                         }
                         Instr::I32Eqz => {
-                            let x = self.stack.pop().unwrap().unwrap_i32();
-                            self.stack.push(Val::I32(if x == 0 { 1 } else { 0 }));
+                            self.run_testop(|x: i32| -> Result<bool, WasmError> { Ok(x == 0) })?;
                         }
                         Instr::I64Eqz => {
-                            let x = self.stack.pop().unwrap().unwrap_i64();
-                            self.stack.push(Val::I32(if x == 0 { 1 } else { 0 }));
+                            self.run_testop(|x: i64| -> Result<bool, WasmError> { Ok(x == 0) })?;
                         }
                         Instr::I32Eq => {
                             let y = self.stack.pop().unwrap().unwrap_i32();
