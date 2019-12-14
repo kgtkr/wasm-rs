@@ -11,10 +11,9 @@ use typenum::Unsigned;
 
 use super::numerics::Byteable;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use generic_array::{ArrayLength, GenericArray};
+use generic_array::GenericArray;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::convert::{From, Into, TryFrom};
 use std::io::Cursor;
 use std::rc::{Rc, Weak};
 

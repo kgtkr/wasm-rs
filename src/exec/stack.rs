@@ -7,7 +7,6 @@ use crate::WasmError;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use frunk::{from_generic, hlist::HList, into_generic, Generic, HCons, HNil};
 use num::NumCast;
-use std::convert::{Into, TryFrom};
 use std::io::Cursor;
 use std::rc::Weak;
 
@@ -1185,34 +1184,6 @@ impl Stack {
         }
         Ok(())
     }
-}
-
-fn i32_convert_u32(x: i32) -> u32 {
-    let mut wtr = vec![];
-    wtr.write_i32::<LittleEndian>(x).unwrap();
-    let mut rdr = Cursor::new(wtr);
-    rdr.read_u32::<LittleEndian>().unwrap()
-}
-
-fn u32_convert_i32(x: u32) -> i32 {
-    let mut wtr = vec![];
-    wtr.write_u32::<LittleEndian>(x).unwrap();
-    let mut rdr = Cursor::new(wtr);
-    rdr.read_i32::<LittleEndian>().unwrap()
-}
-
-fn i64_convert_u64(x: i64) -> u64 {
-    let mut wtr = vec![];
-    wtr.write_i64::<LittleEndian>(x).unwrap();
-    let mut rdr = Cursor::new(wtr);
-    rdr.read_u64::<LittleEndian>().unwrap()
-}
-
-fn u64_convert_i64(x: u64) -> i64 {
-    let mut wtr = vec![];
-    wtr.write_u64::<LittleEndian>(x).unwrap();
-    let mut rdr = Cursor::new(wtr);
-    rdr.read_i64::<LittleEndian>().unwrap()
 }
 
 fn pop_n<T>(vec: &mut Vec<T>, n: usize) -> Vec<T> {
