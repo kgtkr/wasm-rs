@@ -1055,9 +1055,9 @@ impl LabelStack {
                             }
                         }
                         Instr::BrTable(ls, l) => {
-                            let i = self.stack.pop().unwrap().unwrap_i32() as usize;
-                            if i < ls.len() {
-                                self.instrs.push(AdminInstr::Br(ls[i]));
+                            let (i,) = self.pop_values::<(i32,)>();
+                            if (i as usize) < ls.len() {
+                                self.instrs.push(AdminInstr::Br(ls[i as usize]));
                             } else {
                                 self.instrs.push(AdminInstr::Br(l));
                             }
@@ -1072,10 +1072,10 @@ impl LabelStack {
                         }
                         Instr::CallIndirect(t) => {
                             let instance = frame.module.upgrade().unwrap();
-                            let i = self.stack.pop().unwrap().unwrap_i32() as usize;
+                            let (i,) = self.pop_values::<(bool,)>();
                             let func = {
                                 let table = instance.table.as_ref().unwrap().0.borrow();
-                                if let Some(Some(func)) = table.elem.get(i) {
+                                if let Some(Some(func)) = table.elem.get(i as usize) {
                                     func.clone()
                                 } else {
                                     return Err(WasmError::RuntimeError);
