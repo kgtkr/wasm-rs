@@ -5,7 +5,7 @@ use crate::structure::modules::{LabelIdx, TypedIdx};
 use crate::structure::types::ValType;
 use crate::WasmError;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use frunk::{from_generic, into_generic, Generic, HCons, HNil};
+use frunk::{from_generic, hlist::HList, into_generic, Generic, HCons, HNil};
 use num::NumCast;
 use std::convert::{Into, TryFrom};
 use std::io::Cursor;
@@ -33,11 +33,11 @@ impl StackValues for HNil {
     fn push_stack(self, _: &mut Vec<Val>) {}
 }
 
-impl<H: StackValues, T: StackValues> StackValues for HCons<H, T> {
+impl<H: StackValues, T: HList + StackValues> StackValues for HCons<H, T> {
     fn pop_stack(stack: &mut Vec<Val>) -> Option<Self> {
         let tail = T::pop_stack(stack)?;
         let head = H::pop_stack(stack)?;
-        Some(HCons { head, tail })
+        Some(tail.prepend(head))
     }
     fn push_stack(self, stack: &mut Vec<Val>) {
         self.head.push_stack(stack);
