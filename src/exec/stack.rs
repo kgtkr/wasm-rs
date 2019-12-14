@@ -1072,7 +1072,7 @@ impl LabelStack {
                         }
                         Instr::CallIndirect(t) => {
                             let instance = frame.module.upgrade().unwrap();
-                            let (i,) = self.pop_values::<(bool,)>();
+                            let (i,) = self.pop_values::<(i32,)>();
                             let func = {
                                 let table = instance.table.as_ref().unwrap().0.borrow();
                                 if let Some(Some(func)) = table.elem.get(i as usize) {
