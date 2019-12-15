@@ -44,6 +44,58 @@ impl<H: ValTypeable, T: HList + ValTypeable> ValTypeable for HCons<H, T> {
     }
 }
 
+pub trait ToOptionVal {
+    fn to_option_val(self) -> Option<Val>;
+}
+
+impl ToOptionVal for HNil {
+    fn to_option_val(self) -> Option<Val> {
+        None
+    }
+}
+
+impl<T: ToOptionVal> ToOptionVal for HCons<T, HNil> {
+    fn to_option_val(self) -> Option<Val> {
+        self.head.to_option_val()
+    }
+}
+
+impl<T: InterpretPrimitive> ToOptionVal for T {
+    fn to_option_val(self) -> Option<Val> {
+        Some(self.to_primitive().wrap_val())
+    }
+}
+
+pub trait FromVecVal: Sized {
+    fn from_vec_val_pop_tail(vals: &mut Vec<Val>) -> Self;
+
+    fn from_vec_val(mut vals: Vec<Val>) -> Self {
+        let res = Self::from_vec_val_pop_tail(&mut vals);
+        assert_eq!(vals.len(), 0);
+        res
+    }
+}
+
+impl FromVecVal for HNil {
+    fn from_vec_val_pop_tail(vals: &mut Vec<Val>) -> Self {
+        HNil
+    }
+}
+
+impl<H: FromVecVal, T: HList + FromVecVal> FromVecVal for HCons<H, T> {
+    fn from_vec_val_pop_tail(vals: &mut Vec<Val>) -> Self {
+        let t = T::from_vec_val_pop_tail(vals);
+        let h = H::from_vec_val_pop_tail(vals);
+        HCons { head: h, tail: t }
+    }
+}
+
+impl<T: InterpretPrimitive> FromVecVal for T {
+    fn from_vec_val_pop_tail(vals: &mut Vec<Val>) -> Self {
+        T::reinterpret(T::Primitive::try_from_val(vals.pop().unwrap()).unwrap())
+    }
+}
+
 pub trait PrimitiveVal: Sized {
     fn try_from_val(val: Val) -> Option<Self>;
     fn wrap_val(self) -> Val;
@@ -310,9 +362,22 @@ impl FuncInst {
         }
     }
 
-    pub fn new_typed_host() -> FuncInst {
-        // FuncInst::HostFunc {}
-        unimplemented!();
+    pub fn new_typed_host<P: Generic, R: Generic>(
+        f: impl Fn(P) -> Result<R, WasmError> + 'static,
+    ) -> FuncInst
+    where
+        P::Repr: ValTypeable + FromVecVal,
+        R::Repr: ValTypeable + ToOptionVal,
+    {
+        let type_ = FuncType(P::Repr::to_valtype(), R::Repr::to_valtype());
+        FuncInst::HostFunc {
+            type_,
+            host_code: Rc::new(move |params| {
+                let p = P::Repr::from_vec_val(params);
+                let r = into_generic(f(from_generic(p))?);
+                Ok(r.to_option_val())
+            }),
+        }
     }
 
     pub fn is_match(&self, type_: &FuncType) -> bool {
