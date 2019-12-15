@@ -167,57 +167,57 @@ impl SpecState {
                 "spectest".to_string() => hashmap! {
                     "print".to_string() => ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::HostFunc {
                         type_: FuncType(vec![], vec![]),
-                        host_code: |params| {
+                        host_code: Rc::new(|params| {
                             match &params[..] {
                                 [] => Ok(None),
                                 _ => panic!()
                             }
-                        }
+                        })
                     })))),
                     "print_i32".to_string() => ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::HostFunc {
                         type_: FuncType(vec![ValType::I32], vec![]),
-                        host_code: |params| {
+                        host_code: Rc::new(|params| {
                             match &params[..] {
                                 [Val::I32(_)] => Ok(None),
                                 _ => panic!()
                             }
-                        }
+                        })
                     })))),
                     "print_i32_f32".to_string() => ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::HostFunc {
                         type_: FuncType(vec![ValType::I32, ValType::F32], vec![]),
-                        host_code: |params| {
+                        host_code: Rc::new(|params| {
                             match &params[..] {
                                 [Val::I32(_), Val::F32(_)] => Ok(None),
                                 _ => panic!()
                             }
-                        }
+                        })
                     })))),
                     "print_f64_f64".to_string() => ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::HostFunc {
                         type_: FuncType(vec![ValType::F64, ValType::F64], vec![]),
-                        host_code: |params| {
+                        host_code: Rc::new(|params| {
                             match &params[..] {
                                 [Val::F64(_), Val::F64(_)] => Ok(None),
                                 _ => panic!()
                             }
-                        }
+                        })
                     })))),
                     "print_f32".to_string() => ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::HostFunc {
                         type_: FuncType(vec![ValType::F32], vec![]),
-                        host_code: |params| {
+                        host_code: Rc::new(|params| {
                             match &params[..] {
                                 [Val::F32(_)] => Ok(None),
                                 _ => panic!()
                             }
-                        }
+                        })
                     })))),
                     "print_f64".to_string() => ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::HostFunc {
                         type_: FuncType(vec![ValType::F64], vec![]),
-                        host_code: |params| {
+                        host_code: Rc::new(|params| {
                             match &params[..] {
                                 [Val::F64(_)] => Ok(None),
                                 _ => panic!()
                             }
-                        }
+                        })
                     })))),
                     "global_i32".to_string() => ExternalVal::Global(GlobalAddr(Rc::new(RefCell::new(GlobalInst {
                         value: Val::I32(666),

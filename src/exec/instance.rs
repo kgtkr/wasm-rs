@@ -11,15 +11,43 @@ use typenum::Unsigned;
 
 use super::numerics::Byteable;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use frunk::{from_generic, hlist::HList, into_generic, Generic, HCons, HNil};
 use generic_array::GenericArray;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::Cursor;
 use std::rc::{Rc, Weak};
 
+pub trait ValTypeable {
+    fn write_valtype(types: &mut Vec<ValType>);
+    fn to_valtype() -> Vec<ValType> {
+        let mut types = Vec::new();
+        Self::write_valtype(&mut types);
+        types
+    }
+}
+
+impl<T: InterpretPrimitive> ValTypeable for T {
+    fn write_valtype(types: &mut Vec<ValType>) {
+        types.push(T::Primitive::type_());
+    }
+}
+
+impl ValTypeable for HNil {
+    fn write_valtype(types: &mut Vec<ValType>) {}
+}
+
+impl<H: ValTypeable, T: HList + ValTypeable> ValTypeable for HCons<H, T> {
+    fn write_valtype(types: &mut Vec<ValType>) {
+        H::write_valtype(types);
+        T::write_valtype(types);
+    }
+}
+
 pub trait PrimitiveVal: Sized {
     fn try_from_val(val: Val) -> Option<Self>;
     fn wrap_val(self) -> Val;
+    fn type_() -> ValType;
 }
 
 impl PrimitiveVal for i32 {
@@ -33,6 +61,10 @@ impl PrimitiveVal for i32 {
 
     fn wrap_val(self) -> Val {
         Val::I32(self)
+    }
+
+    fn type_() -> ValType {
+        ValType::I32
     }
 }
 
@@ -48,6 +80,10 @@ impl PrimitiveVal for i64 {
     fn wrap_val(self) -> Val {
         Val::I64(self)
     }
+
+    fn type_() -> ValType {
+        ValType::I64
+    }
 }
 
 impl PrimitiveVal for f32 {
@@ -62,6 +98,10 @@ impl PrimitiveVal for f32 {
     fn wrap_val(self) -> Val {
         Val::F32(self)
     }
+
+    fn type_() -> ValType {
+        ValType::F32
+    }
 }
 
 impl PrimitiveVal for f64 {
@@ -75,6 +115,10 @@ impl PrimitiveVal for f64 {
 
     fn wrap_val(self) -> Val {
         Val::F64(self)
+    }
+
+    fn type_() -> ValType {
+        ValType::F64
     }
 }
 
@@ -238,7 +282,7 @@ pub struct ExportInst {
     value: ExternalVal,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum FuncInst {
     RuntimeFunc {
         type_: FuncType,
@@ -247,8 +291,14 @@ pub enum FuncInst {
     },
     HostFunc {
         type_: FuncType,
-        host_code: fn(Vec<Val>) -> Result<Option<Val>, WasmError>,
+        host_code: Rc<dyn Fn(Vec<Val>) -> Result<Option<Val>, WasmError>>,
     },
+}
+
+impl std::fmt::Debug for FuncInst {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<FuncInst>")
+    }
 }
 
 impl FuncInst {
@@ -258,6 +308,11 @@ impl FuncInst {
             code: func,
             module,
         }
+    }
+
+    pub fn new_typed_host() -> FuncInst {
+        // FuncInst::HostFunc {}
+        unimplemented!();
     }
 
     pub fn is_match(&self, type_: &FuncType) -> bool {
@@ -902,13 +957,13 @@ mod tests {
         )))));
         let print = ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::HostFunc {
             type_: FuncType(vec![ValType::I32], vec![]),
-            host_code: |params| match &params[..] {
+            host_code: Rc::new(|params| match &params[..] {
                 &[Val::I32(x)] => {
                     println!("{}", x);
                     Ok(None)
                 }
                 _ => panic!(),
-            },
+            }),
         }))));
 
         let memory_module =
@@ -954,13 +1009,13 @@ mod tests {
         )))));
         let print = ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::HostFunc {
             type_: FuncType(vec![ValType::I32], vec![]),
-            host_code: |params| match &params[..] {
+            host_code: Rc::new(|params| match &params[..] {
                 &[Val::I32(x)] => {
                     println!("{}", x);
                     Ok(None)
                 }
                 _ => panic!(),
-            },
+            }),
         }))));
 
         let memory_module =
@@ -1003,13 +1058,13 @@ mod tests {
     fn test_self_host() {
         let print = ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::HostFunc {
             type_: FuncType(vec![ValType::I32], vec![]),
-            host_code: |params| match &params[..] {
+            host_code: Rc::new(|params| match &params[..] {
                 &[Val::I32(x)] => {
                     println!("{}", x);
                     Ok(None)
                 }
                 _ => panic!(),
-            },
+            }),
         }))));
 
         let module =
