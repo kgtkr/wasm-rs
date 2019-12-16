@@ -1,7 +1,6 @@
-use super::stack::{AdminInstr, Frame, FrameStack, Label, LabelStack, Stack};
 use crate::structure::instructions::{Expr, Instr};
 use crate::structure::modules::{
-    ExportDesc, Func, FuncIdx, GlobalIdx, ImportDesc, Module, Table, TypeIdx, TypedIdx,
+    ExportDesc, FuncIdx, GlobalIdx, ImportDesc, Module, Table, TypeIdx, TypedIdx,
 };
 use crate::structure::types::{ElemType, FuncType, GlobalType, Limits, Mut, TableType, ValType};
 use crate::WasmError;
@@ -9,11 +8,11 @@ use crate::WasmError;
 use super::mem::MemAddr;
 use super::FuncAddr;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use frunk::{from_generic, hlist::HList, into_generic, Generic, HCons, HNil};
+use frunk::{hlist::HList, HCons, HNil};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::Cursor;
-use std::rc::{Rc, Weak};
+use std::rc::Rc;
 
 pub trait ValTypeable {
     fn write_valtype(types: &mut Vec<ValType>);

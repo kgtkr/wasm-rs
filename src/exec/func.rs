@@ -1,19 +1,13 @@
 use super::stack::{AdminInstr, Frame, FrameStack, Label, LabelStack, Stack};
-use crate::structure::instructions::{Expr, Instr};
-use crate::structure::modules::{
-    ExportDesc, Func, FuncIdx, GlobalIdx, ImportDesc, Module, Table, TypeIdx, TypedIdx,
-};
-use crate::structure::types::{ElemType, FuncType, GlobalType, Limits, Mut, TableType, ValType};
+use crate::structure::instructions::Expr;
+use crate::structure::modules::{Func, TypeIdx};
+use crate::structure::types::FuncType;
 use crate::WasmError;
 
 use super::instance::{FromVecVal, ModuleInst, ToOptionVal, TypedIdxAccess, Val, ValTypeable};
-use super::mem::MemAddr;
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use frunk::{from_generic, hlist::HList, into_generic, Generic, HCons, HNil};
+use frunk::{from_generic, into_generic, Generic};
 use std::cell::Ref;
 use std::cell::RefCell;
-use std::collections::HashMap;
-use std::io::Cursor;
 use std::rc::{Rc, Weak};
 
 #[derive(Clone, Debug)]
