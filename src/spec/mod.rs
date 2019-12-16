@@ -18,6 +18,7 @@ use std::panic;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::Path;
 use std::rc::Rc;
+
 #[derive(Debug, Clone, Copy)]
 struct SpecVal(Val);
 impl PartialEq for SpecVal {
