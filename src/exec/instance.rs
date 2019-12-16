@@ -7,6 +7,7 @@ use crate::structure::types::{ElemType, FuncType, GlobalType, Limits, Mut, Table
 use crate::WasmError;
 
 use super::mem::MemAddr;
+use super::FuncAddr;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use frunk::{from_generic, hlist::HList, into_generic, Generic, HCons, HNil};
 use std::cell::RefCell;
@@ -330,64 +331,6 @@ pub struct ExportInst {
     value: ExternalVal,
 }
 
-#[derive(Clone)]
-pub enum FuncInst {
-    RuntimeFunc {
-        type_: FuncType,
-        code: Func,
-        module: Weak<ModuleInst>,
-    },
-    HostFunc {
-        type_: FuncType,
-        host_code: Rc<dyn Fn(Vec<Val>) -> Result<Option<Val>, WasmError>>,
-    },
-}
-
-impl std::fmt::Debug for FuncInst {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "<FuncInst>")
-    }
-}
-
-impl FuncInst {
-    fn new(func: Func, module: Weak<ModuleInst>) -> FuncInst {
-        FuncInst::RuntimeFunc {
-            type_: module.upgrade().unwrap().types.get_idx(func.type_).clone(),
-            code: func,
-            module,
-        }
-    }
-
-    pub fn new_typed_host<P: Generic, R: Generic>(
-        f: impl Fn(P) -> Result<R, WasmError> + 'static,
-    ) -> FuncInst
-    where
-        P::Repr: ValTypeable + FromVecVal,
-        R::Repr: ValTypeable + ToOptionVal,
-    {
-        let type_ = FuncType(P::Repr::to_valtype(), R::Repr::to_valtype());
-        FuncInst::HostFunc {
-            type_,
-            host_code: Rc::new(move |params| {
-                let p = P::Repr::from_vec_val(params);
-                let r = into_generic(f(from_generic(p))?);
-                Ok(r.to_option_val())
-            }),
-        }
-    }
-
-    pub fn is_match(&self, type_: &FuncType) -> bool {
-        &self.type_() == type_
-    }
-
-    pub fn type_(&self) -> FuncType {
-        match self {
-            FuncInst::RuntimeFunc { type_, .. } => type_.clone(),
-            FuncInst::HostFunc { type_, .. } => type_.clone(),
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct TableInst {
     pub max: Option<usize>,
@@ -514,51 +457,6 @@ impl TypedIdxAccess<FuncIdx> for Vec<FuncAddr> {}
 impl TypedIdxAccess<GlobalIdx> for Vec<GlobalAddr> {}
 
 #[derive(Clone, Debug)]
-pub struct FuncAddr(pub Rc<RefCell<FuncInst>>);
-
-impl FuncAddr {
-    pub fn call(&self, params: Vec<Val>) -> Result<Option<Val>, WasmError> {
-        let mut stack = Stack {
-            stack: vec![FrameStack {
-                frame: Frame {
-                    locals: Vec::new(),
-                    module: Weak::new(),
-                    n: 0,
-                },
-                stack: vec![LabelStack {
-                    label: Label {
-                        instrs: vec![],
-                        n: 0,
-                    },
-                    instrs: vec![AdminInstr::Invoke(self.clone())],
-                    stack: params,
-                }],
-            }],
-        };
-
-        loop {
-            stack.step()?;
-            if stack.stack.len() == 1
-                && stack.stack.first().unwrap().stack.len() == 1
-                && stack
-                    .stack
-                    .first()
-                    .unwrap()
-                    .stack
-                    .first()
-                    .unwrap()
-                    .instrs
-                    .is_empty()
-            {
-                break;
-            }
-        }
-
-        Ok(stack.stack.pop().unwrap().stack.pop().unwrap().stack.pop())
-    }
-}
-
-#[derive(Clone, Debug)]
 pub struct TableAddr(pub Rc<RefCell<TableInst>>);
 
 #[derive(Clone, Debug, PartialEq)]
@@ -598,9 +496,7 @@ impl ModuleInst {
                 ImportDesc::Func(idx) => {
                     result.funcs.push(
                         val.as_func()
-                            .filter(|func| {
-                                func.0.borrow().type_().is_match(result.types.get_idx(*idx))
-                            })
+                            .filter(|func| func.type_().is_match(result.types.get_idx(*idx)))
                             .ok_or_else(|| WasmError::LinkError)?,
                     );
                 }
@@ -629,18 +525,7 @@ impl ModuleInst {
         }
 
         for _ in &module.funcs {
-            let dummy_func = FuncInst::RuntimeFunc {
-                type_: FuncType(Vec::new(), Vec::new()),
-                code: Func {
-                    type_: TypeIdx(0),
-                    locals: Vec::new(),
-                    body: Expr(Vec::new()),
-                },
-                module: Weak::new(),
-            };
-            result
-                .funcs
-                .push(FuncAddr(Rc::new(RefCell::new(dummy_func.clone()))));
+            result.funcs.push(FuncAddr::alloc_dummy());
         }
 
         if let Some(table) = module.tables.iter().next() {
@@ -727,8 +612,7 @@ impl ModuleInst {
                     }
                 })
                 .sum::<usize>();
-            let mut dummy = result.funcs[idx].0.borrow_mut();
-            *dummy = FuncInst::new(func.clone(), Rc::downgrade(&result));
+            result.funcs[idx].replace_dummy(func.clone(), Rc::downgrade(&result));
         }
 
         if let Some(start) = &module.start {
@@ -888,16 +772,10 @@ mod tests {
     #[ignore]
     fn test_cl8w_gcd() {
         let memory = ExternalVal::Mem(MemAddr::new(10, None));
-        let print = ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::HostFunc {
-            type_: FuncType(vec![ValType::I32], vec![]),
-            host_code: Rc::new(|params| match &params[..] {
-                &[Val::I32(x)] => {
-                    println!("{}", x);
-                    Ok(None)
-                }
-                _ => panic!(),
-            }),
-        }))));
+        let print = ExternalVal::Func(FuncAddr::alloc_host(|(x,): (i32,)| {
+            println!("{}", x);
+            Ok(())
+        }));
 
         let memory_module =
             Module::decode_end(&std::fs::read("./example/memory.wasm").unwrap()).unwrap();
@@ -938,16 +816,10 @@ mod tests {
     #[ignore]
     fn test_cl8w_ex() {
         let memory = ExternalVal::Mem(MemAddr::new(10, None));
-        let print = ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::HostFunc {
-            type_: FuncType(vec![ValType::I32], vec![]),
-            host_code: Rc::new(|params| match &params[..] {
-                &[Val::I32(x)] => {
-                    println!("{}", x);
-                    Ok(None)
-                }
-                _ => panic!(),
-            }),
-        }))));
+        let print = ExternalVal::Func(FuncAddr::alloc_host(|(x,): (i32,)| {
+            println!("{}", x);
+            Ok(())
+        }));
 
         let memory_module =
             Module::decode_end(&std::fs::read("./example/memory.wasm").unwrap()).unwrap();
@@ -987,16 +859,10 @@ mod tests {
     #[test]
     #[ignore]
     fn test_self_host() {
-        let print = ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::HostFunc {
-            type_: FuncType(vec![ValType::I32], vec![]),
-            host_code: Rc::new(|params| match &params[..] {
-                &[Val::I32(x)] => {
-                    println!("{}", x);
-                    Ok(None)
-                }
-                _ => panic!(),
-            }),
-        }))));
+        let print = ExternalVal::Func(FuncAddr::alloc_host(|(x,): (i32,)| {
+            println!("{}", x);
+            Ok(())
+        }));
 
         let module =
             Module::decode_end(&std::fs::read("./example/wasm-rs-self-host.wasm").unwrap())

@@ -1,8 +1,8 @@
 use crate::binary::Decoder;
 use crate::exec::instance::{
-    ExternalVal, FuncAddr, FuncInst, GlobalAddr, GlobalInst, ImportObjects, ModuleInst, TableAddr,
-    TableInst, Val,
+    ExternalVal, GlobalAddr, GlobalInst, ImportObjects, ModuleInst, TableAddr, TableInst, Val,
 };
+use crate::exec::FuncAddr;
 use crate::exec::MemAddr;
 
 use crate::structure::modules::{Mem, Module, Table};
@@ -167,12 +167,12 @@ impl SpecState {
             instance_map: HashMap::new(),
             registers: hashmap! {
                 "spectest".to_string() => hashmap! {
-                    "print".to_string() => ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::new_typed_host(|(): ()| Ok(())))))),
-                    "print_i32".to_string() => ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::new_typed_host(|(_,): (i32,)| Ok(())))))),
-                    "print_i32_f32".to_string() => ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::new_typed_host(|(_, _): (i32, f32)| Ok(())))))),
-                    "print_f64_f64".to_string() => ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::new_typed_host(|(_, _): (f64, f64)| Ok(())))))),
-                    "print_f32".to_string() => ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::new_typed_host(|(_,): (f32, )| Ok(())))))),
-                    "print_f64".to_string() => ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::new_typed_host(|(_,): (f64,)| Ok(())))))),
+                    "print".to_string() => ExternalVal::Func(FuncAddr::alloc_host(|(): ()| Ok(()))),
+                    "print_i32".to_string() => ExternalVal::Func(FuncAddr::alloc_host(|(_,): (i32,)| Ok(()))),
+                    "print_i32_f32".to_string() => ExternalVal::Func(FuncAddr::alloc_host(|(_, _): (i32, f32)| Ok(()))),
+                    "print_f64_f64".to_string() => ExternalVal::Func(FuncAddr::alloc_host(|(_, _): (f64, f64)| Ok(()))),
+                    "print_f32".to_string() => ExternalVal::Func(FuncAddr::alloc_host(|(_,): (f32, )| Ok(()))),
+                    "print_f64".to_string() => ExternalVal::Func(FuncAddr::alloc_host(|(_,): (f64,)| Ok(()))),
                     "global_i32".to_string() => ExternalVal::Global(GlobalAddr(Rc::new(RefCell::new(GlobalInst {
                         value: Val::I32(666),
                         mut_: Mut::Const

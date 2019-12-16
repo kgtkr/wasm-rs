@@ -1,5 +1,6 @@
+use super::func::{FuncAddr, FuncInst};
 use super::instance::InterpretVal;
-use super::instance::{FuncAddr, FuncInst, ModuleInst, TypedIdxAccess, Val};
+use super::instance::{ModuleInst, TypedIdxAccess, Val};
 use super::utils::{pop_n, sign_f32, sign_f64, Sign};
 use crate::structure::instructions::Instr;
 use crate::structure::modules::{LabelIdx, TypedIdx};
@@ -1081,7 +1082,7 @@ impl LabelStack {
                                     return Err(WasmError::RuntimeError);
                                 }
                             };
-                            if &func.0.borrow().type_() != instance.types.get_idx(t) {
+                            if &func.type_() != instance.types.get_idx(t) {
                                 return Err(WasmError::RuntimeError);
                             }
                             self.instrs.push(AdminInstr::Invoke(func.clone()));
@@ -1111,7 +1112,7 @@ impl Stack {
         if let Some(instr) = cur_frame.step()? {
             let cur_label = cur_frame.stack.last_mut().unwrap();
             match instr {
-                ModuleLevelInstr::Invoke(func) => match &*func.0.borrow() {
+                ModuleLevelInstr::Invoke(func) => match &*func.borrow() {
                     FuncInst::RuntimeFunc {
                         type_,
                         code,
