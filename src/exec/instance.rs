@@ -509,8 +509,6 @@ where
     }
 }
 
-impl TypedIdxAccess<FuncIdx> for Vec<FuncInst> {}
-impl TypedIdxAccess<GlobalIdx> for Vec<GlobalInst> {}
 impl TypedIdxAccess<TypeIdx> for Vec<FuncType> {}
 impl TypedIdxAccess<FuncIdx> for Vec<FuncAddr> {}
 impl TypedIdxAccess<GlobalIdx> for Vec<GlobalAddr> {}
