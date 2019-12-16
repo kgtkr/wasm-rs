@@ -1,24 +1,14 @@
-use super::stack::{AdminInstr, Frame, FrameStack, Label, LabelStack, Stack};
-use crate::structure::instructions::{Expr, Instr, Memarg};
-use crate::structure::modules::{
-    ExportDesc, Func, FuncIdx, GlobalIdx, ImportDesc, Mem, Module, Table, TypeIdx, TypedIdx,
-};
-use crate::structure::types::{
-    ElemType, FuncType, GlobalType, Limits, MemType, Mut, TableType, ValType,
-};
+use crate::structure::instructions::Memarg;
+use crate::structure::types::{Limits, MemType};
 use crate::WasmError;
 use typenum::Unsigned;
 
 use super::numerics::Byteable;
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use frunk::{from_generic, hlist::HList, into_generic, Generic, HCons, HNil};
 use generic_array::GenericArray;
 use std::cell::RefCell;
 use std::cell::{Ref, RefMut};
-use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::io::Cursor;
-use std::rc::{Rc, Weak};
+use std::rc::Rc;
 
 #[derive(Debug, Clone, PartialEq)]
 struct MemInst {

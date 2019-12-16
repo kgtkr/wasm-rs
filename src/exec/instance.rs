@@ -1,19 +1,14 @@
 use super::stack::{AdminInstr, Frame, FrameStack, Label, LabelStack, Stack};
-use crate::structure::instructions::{Expr, Instr, Memarg};
+use crate::structure::instructions::{Expr, Instr};
 use crate::structure::modules::{
-    ExportDesc, Func, FuncIdx, GlobalIdx, ImportDesc, Mem, Module, Table, TypeIdx, TypedIdx,
+    ExportDesc, Func, FuncIdx, GlobalIdx, ImportDesc, Module, Table, TypeIdx, TypedIdx,
 };
-use crate::structure::types::{
-    ElemType, FuncType, GlobalType, Limits, MemType, Mut, TableType, ValType,
-};
+use crate::structure::types::{ElemType, FuncType, GlobalType, Limits, Mut, TableType, ValType};
 use crate::WasmError;
-use typenum::Unsigned;
 
 use super::mem::MemAddr;
-use super::numerics::Byteable;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use frunk::{from_generic, hlist::HList, into_generic, Generic, HCons, HNil};
-use generic_array::GenericArray;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::Cursor;
@@ -35,7 +30,7 @@ impl<T: InterpretPrimitive> ValTypeable for T {
 }
 
 impl ValTypeable for HNil {
-    fn write_valtype(types: &mut Vec<ValType>) {}
+    fn write_valtype(_: &mut Vec<ValType>) {}
 }
 
 impl<H: ValTypeable, T: HList + ValTypeable> ValTypeable for HCons<H, T> {
@@ -78,7 +73,7 @@ pub trait FromVecVal: Sized {
 }
 
 impl FromVecVal for HNil {
-    fn from_vec_val_pop_tail(vals: &mut Vec<Val>) -> Self {
+    fn from_vec_val_pop_tail(_: &mut Vec<Val>) -> Self {
         HNil
     }
 }
