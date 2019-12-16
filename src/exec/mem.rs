@@ -94,7 +94,7 @@ impl MemAddr {
         })
     }
 
-    pub fn alloc(type_: &MemType) -> MemAddr {
+    pub(super) fn alloc(type_: &MemType) -> MemAddr {
         let min = type_.0.min;
         let max = type_.0.max;
         MemAddr::new(min, max)
