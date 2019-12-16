@@ -9,6 +9,7 @@ use crate::structure::types::{
 use crate::WasmError;
 use typenum::Unsigned;
 
+use super::mem::MemAddr;
 use super::numerics::Byteable;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use frunk::{from_generic, hlist::HList, into_generic, Generic, HCons, HNil};
@@ -441,86 +442,6 @@ impl TableInst {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct MemInst {
-    pub max: Option<usize>,
-    pub data: Vec<u8>,
-}
-
-impl MemInst {
-    const PAGE_SIZE: usize = 65536;
-    const MAX_PAGE_SIZE: i32 = 65536;
-
-    pub fn new(mem: &Mem) -> MemInst {
-        let min = mem.type_.0.min;
-        let max = mem.type_.0.max;
-        MemInst::from_min_max(min, max)
-    }
-
-    pub fn from_min_max(min: u32, max: Option<u32>) -> MemInst {
-        let min = min as usize * MemInst::PAGE_SIZE;
-        let max = max.map(|max| max as usize);
-        MemInst {
-            max,
-            data: {
-                let mut vec = Vec::with_capacity(min);
-                vec.resize(min, 0);
-                vec
-            },
-        }
-    }
-
-    fn instantiation_valid(&self, offset: usize, init: Vec<u8>) -> Result<(), WasmError> {
-        if offset
-            .checked_add(init.len())
-            .map(|x| x > self.data.len())
-            .unwrap_or(true)
-        {
-            Err(WasmError::LinkError)
-        } else {
-            Ok(())
-        }
-    }
-
-    fn init_data(&mut self, offset: usize, init: Vec<u8>) {
-        for (i, x) in init.into_iter().enumerate() {
-            self.data[offset + i] = x;
-        }
-    }
-
-    pub fn page_size(&self) -> i32 {
-        (self.data.len() / MemInst::PAGE_SIZE) as i32
-    }
-
-    pub fn grow(&mut self, add_size: i32) -> i32 {
-        let prev = self.page_size();
-        let new_size = prev + add_size;
-        if self.max.map(|max| new_size as usize > max).unwrap_or(false)
-            || new_size > MemInst::MAX_PAGE_SIZE
-        {
-            -1
-        } else {
-            self.data.resize(new_size as usize * MemInst::PAGE_SIZE, 0);
-            prev
-        }
-    }
-
-    pub fn mut_buffer(&mut self) -> &mut [u8] {
-        &mut self.data[..]
-    }
-
-    pub fn buffer(&self) -> &[u8] {
-        &self.data[..]
-    }
-
-    pub fn type_(&self) -> MemType {
-        MemType(Limits {
-            min: self.page_size() as u32,
-            max: self.max.map(|x| x as u32),
-        })
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub struct GlobalInst {
     pub value: Val,
     pub mut_: Mut,
@@ -648,36 +569,6 @@ impl FuncAddr {
 pub struct TableAddr(pub Rc<RefCell<TableInst>>);
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct MemAddr(pub Rc<RefCell<MemInst>>);
-
-impl MemAddr {
-    pub fn read<T: Byteable>(&self, memarg: &Memarg, ptr: i32) -> Result<T, WasmError> {
-        let pos = ptr as usize + memarg.offset as usize;
-        let len = T::N::to_usize();
-        let raw = &self.0.borrow().data;
-        if pos.checked_add(len).map(|x| raw.len() < x).unwrap_or(true) {
-            return Err(WasmError::RuntimeError);
-        }
-        Ok(T::from_bytes(GenericArray::from_slice(
-            &raw[pos..pos + len],
-        )))
-    }
-
-    pub fn write<T: Byteable>(&self, memarg: &Memarg, ptr: i32, x: T) -> Result<(), WasmError> {
-        let pos = ptr as usize + memarg.offset as usize;
-        let len = T::N::to_usize();
-        let raw = &mut self.0.borrow_mut().data;
-        if pos.checked_add(len).map(|x| raw.len() < x).unwrap_or(true) {
-            return Err(WasmError::RuntimeError);
-        }
-        for (i, x) in x.to_bytes().into_iter().enumerate() {
-            raw[pos + i] = x;
-        }
-        Ok(())
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
 pub struct GlobalAddr(pub Rc<RefCell<GlobalInst>>);
 
 #[derive(Debug)]
@@ -730,7 +621,7 @@ impl ModuleInst {
                 ImportDesc::Mem(type_) => {
                     let _ = result.mem.replace(
                         val.as_mem()
-                            .filter(|mem| mem.0.borrow().type_().is_match(type_))
+                            .filter(|mem| mem.type_().is_match(type_))
                             .ok_or_else(|| WasmError::LinkError)?,
                     );
                 }
@@ -766,9 +657,7 @@ impl ModuleInst {
         }
 
         if let Some(mem) = module.mems.iter().next() {
-            let _ = result
-                .mem
-                .replace(MemAddr(Rc::new(RefCell::new(MemInst::new(mem)))));
+            let _ = result.mem.replace(MemAddr::alloc(&mem.type_));
         }
 
         for global in &module.globals {
@@ -792,16 +681,10 @@ impl ModuleInst {
         }
         for data in &module.data {
             let offset = result.eval_const_expr(&data.offset).unwrap_i32() as usize;
-            result
-                .mem
-                .as_ref()
-                .unwrap()
-                .0
-                .borrow()
-                .instantiation_valid(
-                    offset,
-                    data.init.clone().into_iter().map(|x| x.0).collect(),
-                )?;
+            result.mem.as_ref().unwrap().instantiation_valid(
+                offset,
+                data.init.clone().into_iter().map(|x| x.0).collect(),
+            )?;
         }
 
         for elem in &module.elem {
@@ -818,8 +701,6 @@ impl ModuleInst {
                 .mem
                 .as_ref()
                 .unwrap()
-                .0
-                .borrow_mut()
                 .init_data(offset, data.init.clone().into_iter().map(|x| x.0).collect());
         }
 
@@ -980,13 +861,12 @@ mod tests {
             .call(vec![Val::I32(input_bytes.len() as i32)])
             .unwrap()
             .unwrap()
-            .unwrap_i32() as usize;
-        for i in 0..input_bytes.len() {
-            let mem = instance.export("memory").unwrap_mem();
-            let mut mem = mem.0.borrow_mut();
-            let buf = mem.mut_buffer();
-            buf[input_ptr + i] = input_bytes[i];
-        }
+            .unwrap_i32();
+
+        instance
+            .export("memory")
+            .unwrap_mem()
+            .write_buffer(input_ptr, &input_bytes[..]);
 
         let output_ptr = instance
             .export("md5")
@@ -997,13 +877,10 @@ mod tests {
             .unwrap_i32() as usize;
 
         let mem = instance.export("memory").unwrap_mem();
-        let mem = mem.0.borrow();
-        let raw = mem.buffer();
         assert_eq!(
             CString::new(
-                raw.into_iter()
+                mem.into_iter()
                     .skip(output_ptr)
-                    .cloned()
                     .take_while(|x| *x != 0)
                     .collect::<Vec<_>>(),
             )
@@ -1017,9 +894,7 @@ mod tests {
     #[test]
     #[ignore]
     fn test_cl8w_gcd() {
-        let memory = ExternalVal::Mem(MemAddr(Rc::new(RefCell::new(MemInst::from_min_max(
-            10, None,
-        )))));
+        let memory = ExternalVal::Mem(MemAddr::new(10, None));
         let print = ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::HostFunc {
             type_: FuncType(vec![ValType::I32], vec![]),
             host_code: Rc::new(|params| match &params[..] {
@@ -1069,9 +944,7 @@ mod tests {
     #[test]
     #[ignore]
     fn test_cl8w_ex() {
-        let memory = ExternalVal::Mem(MemAddr(Rc::new(RefCell::new(MemInst::from_min_max(
-            10, None,
-        )))));
+        let memory = ExternalVal::Mem(MemAddr::new(10, None));
         let print = ExternalVal::Func(FuncAddr(Rc::new(RefCell::new(FuncInst::HostFunc {
             type_: FuncType(vec![ValType::I32], vec![]),
             host_code: Rc::new(|params| match &params[..] {

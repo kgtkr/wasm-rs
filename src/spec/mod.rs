@@ -1,8 +1,9 @@
 use crate::binary::Decoder;
 use crate::exec::instance::{
-    ExternalVal, FuncAddr, FuncInst, GlobalAddr, GlobalInst, ImportObjects, MemAddr, MemInst,
-    ModuleInst, TableAddr, TableInst, Val,
+    ExternalVal, FuncAddr, FuncInst, GlobalAddr, GlobalInst, ImportObjects, ModuleInst, TableAddr,
+    TableInst, Val,
 };
+use crate::exec::MemAddr;
 
 use crate::structure::modules::{Mem, Module, Table};
 use crate::structure::types::{ElemType, Limits, MemType, Mut, TableType};
@@ -187,9 +188,7 @@ impl SpecState {
                     "table".to_string() => ExternalVal::Table(TableAddr(Rc::new(RefCell::new(TableInst::new(&Table {
                         type_: TableType(Limits { min: 10, max: Some(20) }, ElemType::FuncRef)
                     }))))),
-                    "memory".to_string() => ExternalVal::Mem(MemAddr(Rc::new(RefCell::new(MemInst::new(&Mem {
-                        type_: MemType(Limits { min: 1, max: Some(2) })
-                    }))))),
+                    "memory".to_string() => ExternalVal::Mem(MemAddr::new(1,Some(2))),
                 }
             },
         }

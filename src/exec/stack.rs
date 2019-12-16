@@ -1008,13 +1008,13 @@ impl LabelStack {
                         Instr::MemorySize => {
                             let instance = frame.module.upgrade().unwrap();
                             self.run_ok(|(): ()| -> (i32,) {
-                                (instance.mem.as_ref().unwrap().0.borrow().page_size(),)
+                                (instance.mem.as_ref().unwrap().page_size(),)
                             });
                         }
                         Instr::MemoryGrow => {
                             let instance = frame.module.upgrade().unwrap();
                             self.run_ok(|(x,): (i32,)| -> (i32,) {
-                                (instance.mem.as_ref().unwrap().0.borrow_mut().grow(x),)
+                                (instance.mem.as_ref().unwrap().grow(x),)
                             });
                         }
                         Instr::Nop => {}
