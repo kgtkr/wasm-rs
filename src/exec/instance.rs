@@ -181,14 +181,15 @@ impl ModuleInst {
                 .table
                 .as_ref()
                 .unwrap()
-                .instantiation_valid(offset, elem.init.clone())?;
+                .instantiation_valid(offset, &elem.init)?;
         }
         for data in &module.data {
             let offset = result.eval_const_expr(&data.offset).unwrap_i32() as usize;
-            result.mem.as_ref().unwrap().instantiation_valid(
-                offset,
-                data.init.clone().into_iter().map(|x| x.0).collect(),
-            )?;
+            result
+                .mem
+                .as_ref()
+                .unwrap()
+                .instantiation_valid(offset, &data.init.iter().map(|x| x.0).collect())?;
         }
 
         for elem in &module.elem {
@@ -197,7 +198,7 @@ impl ModuleInst {
                 .table
                 .as_ref()
                 .unwrap()
-                .init_elem(&result.funcs, offset, elem.init.clone());
+                .init_elem(&result.funcs, offset, &elem.init);
         }
         for data in &module.data {
             let offset = result.eval_const_expr(&data.offset).unwrap_i32() as usize;
@@ -205,7 +206,7 @@ impl ModuleInst {
                 .mem
                 .as_ref()
                 .unwrap()
-                .init_data(offset, data.init.clone().into_iter().map(|x| x.0).collect());
+                .init_data(offset, &data.init.iter().map(|x| x.0).collect());
         }
 
         for export in &module.exports {
@@ -242,7 +243,7 @@ impl ModuleInst {
         }
 
         if let Some(start) = &module.start {
-            result.funcs.get_idx(start.func).clone().call(vec![])?;
+            result.funcs.get_idx(start.func).call(vec![])?;
         }
 
         Ok(result)
@@ -265,14 +266,12 @@ impl ModuleInst {
             .find(|e| e.name.as_str() == name)
             .map(|x| x.value.clone())
             .unwrap()
-            .clone()
     }
 
     pub fn exports(&self) -> ExternalModule {
         self.exports
-            .clone()
-            .into_iter()
-            .map(|x| (x.name, x.value))
+            .iter()
+            .map(|x| (x.name.clone(), x.value.clone()))
             .collect()
     }
 }

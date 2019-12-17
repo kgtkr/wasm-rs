@@ -113,7 +113,7 @@ impl MemAddr {
         })))
     }
 
-    pub fn instantiation_valid(&self, offset: usize, init: Vec<u8>) -> Result<(), WasmError> {
+    pub fn instantiation_valid(&self, offset: usize, init: &Vec<u8>) -> Result<(), WasmError> {
         if offset
             .checked_add(init.len())
             .map(|x| x > self.inst().data.len())
@@ -125,10 +125,10 @@ impl MemAddr {
         }
     }
 
-    pub fn init_data(&self, offset: usize, init: Vec<u8>) {
+    pub fn init_data(&self, offset: usize, init: &Vec<u8>) {
         let inst = &mut *self.mut_inst();
-        for (i, x) in init.into_iter().enumerate() {
-            inst.data[offset + i] = x;
+        for (i, x) in init.iter().enumerate() {
+            inst.data[offset + i] = *x;
         }
     }
 

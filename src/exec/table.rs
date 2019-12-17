@@ -55,7 +55,7 @@ impl TableAddr {
     pub(super) fn instantiation_valid(
         &self,
         offset: usize,
-        init: Vec<FuncIdx>,
+        init: &Vec<FuncIdx>,
     ) -> Result<(), WasmError> {
         let inst = self.inst();
         if offset
@@ -69,10 +69,10 @@ impl TableAddr {
         }
     }
 
-    pub(super) fn init_elem(&self, funcs: &Vec<FuncAddr>, offset: usize, init: Vec<FuncIdx>) {
+    pub(super) fn init_elem(&self, funcs: &Vec<FuncAddr>, offset: usize, init: &Vec<FuncIdx>) {
         let mut inst = self.mut_inst();
-        for (i, x) in init.into_iter().enumerate() {
-            inst.elem[offset + i] = Some(funcs.get_idx(x).clone());
+        for (i, x) in init.iter().enumerate() {
+            inst.elem[offset + i] = Some(funcs.get_idx(*x).clone());
         }
     }
 
