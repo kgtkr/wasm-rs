@@ -1,10 +1,10 @@
 use crate::binary::Decoder;
-use crate::exec::instance::{ExternalVal, ImportObjects, ModuleInst};
 use crate::exec::FuncAddr;
 use crate::exec::GlobalAddr;
 use crate::exec::MemAddr;
 use crate::exec::TableAddr;
 use crate::exec::Val;
+use crate::exec::{ExternalVal, ImportObjects, ModuleInst};
 use crate::structure::modules::Module;
 use crate::structure::types::Mut;
 use crate::WasmError;

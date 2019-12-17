@@ -1,5 +1,5 @@
 mod func;
-pub mod instance;
+mod instance;
 mod mem;
 mod numerics;
 mod stack;
@@ -11,4 +11,5 @@ pub use table::TableAddr;
 mod global;
 pub use global::GlobalAddr;
 mod val;
+pub use instance::{ExternalVal, ImportObjects, ModuleInst};
 pub use val::Val;
