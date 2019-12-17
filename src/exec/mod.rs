@@ -8,3 +8,5 @@ pub use func::FuncAddr;
 pub use mem::MemAddr;
 mod table;
 pub use table::TableAddr;
+mod global;
+pub use global::GlobalAddr;

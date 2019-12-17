@@ -2,15 +2,15 @@ use crate::structure::instructions::{Expr, Instr};
 use crate::structure::modules::{
     ExportDesc, FuncIdx, GlobalIdx, ImportDesc, Module, TypeIdx, TypedIdx,
 };
-use crate::structure::types::{FuncType, GlobalType, Mut, ValType};
+use crate::structure::types::{FuncType, ValType};
 use crate::WasmError;
 
+use super::global::GlobalAddr;
 use super::mem::MemAddr;
 use super::table::TableAddr;
 use super::FuncAddr;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use frunk::{hlist::HList, HCons, HNil};
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::Cursor;
 use std::rc::Rc;
@@ -331,18 +331,6 @@ pub struct ExportInst {
     value: ExternalVal,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct GlobalInst {
-    pub value: Val,
-    pub mut_: Mut,
-}
-
-impl GlobalInst {
-    pub fn type_(&self) -> GlobalType {
-        GlobalType(self.mut_.clone(), self.value.val_type())
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Copy)]
 pub enum Val {
     I32(i32),
@@ -408,9 +396,6 @@ impl TypedIdxAccess<TypeIdx> for Vec<FuncType> {}
 impl TypedIdxAccess<FuncIdx> for Vec<FuncAddr> {}
 impl TypedIdxAccess<GlobalIdx> for Vec<GlobalAddr> {}
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct GlobalAddr(pub Rc<RefCell<GlobalInst>>);
-
 #[derive(Debug)]
 pub struct ModuleInst {
     pub types: Vec<FuncType>,
@@ -466,7 +451,7 @@ impl ModuleInst {
                 ImportDesc::Global(type_) => {
                     result.globals.push(
                         val.as_global()
-                            .filter(|global| global.0.borrow().type_().is_match(type_))
+                            .filter(|global| global.type_().is_match(type_))
                             .ok_or_else(|| WasmError::LinkError)?,
                     );
                 }
@@ -486,12 +471,10 @@ impl ModuleInst {
         }
 
         for global in &module.globals {
-            result
-                .globals
-                .push(GlobalAddr(Rc::new(RefCell::new(GlobalInst {
-                    value: result.eval_const_expr(&global.init),
-                    mut_: global.type_.0,
-                }))));
+            result.globals.push(GlobalAddr::alloc(
+                global.type_.clone(),
+                result.eval_const_expr(&global.init),
+            ));
         }
 
         for elem in &module.elem {
@@ -573,7 +556,7 @@ impl ModuleInst {
             &[Instr::I64Const(x)] => Val::I64(x),
             &[Instr::F32Const(x)] => Val::F32(x),
             &[Instr::F64Const(x)] => Val::F64(x),
-            &[Instr::GlobalGet(i)] => self.globals[i.to_idx()].0.borrow().value,
+            &[Instr::GlobalGet(i)] => self.globals[i.to_idx()].get(),
             _ => panic!(),
         }
     }

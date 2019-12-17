@@ -1,17 +1,16 @@
 use crate::binary::Decoder;
-use crate::exec::instance::{ExternalVal, GlobalAddr, GlobalInst, ImportObjects, ModuleInst, Val};
+use crate::exec::instance::{ExternalVal, ImportObjects, ModuleInst, Val};
 use crate::exec::FuncAddr;
+use crate::exec::GlobalAddr;
 use crate::exec::MemAddr;
 use crate::exec::TableAddr;
 
-use crate::structure::modules::{Mem, Module, Table};
-use crate::structure::types::{ElemType, Limits, MemType, Mut, TableType};
-use crate::structure::types::{FuncType, ValType};
+use crate::structure::modules::Module;
+use crate::structure::types::Mut;
 use crate::WasmError;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use maplit::hashmap;
 use serde_json::Value;
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::Cursor;
 use std::panic;
@@ -131,9 +130,7 @@ impl Action {
                     .instance(&self.module)
                     .export(field)
                     .unwrap_global()
-                    .0
-                    .borrow()
-                    .value,
+                    .get(),
             )]),
         }
     }
@@ -172,18 +169,9 @@ impl SpecState {
                     "print_f64_f64".to_string() => ExternalVal::Func(FuncAddr::alloc_host(|(_, _): (f64, f64)| Ok(()))),
                     "print_f32".to_string() => ExternalVal::Func(FuncAddr::alloc_host(|(_,): (f32, )| Ok(()))),
                     "print_f64".to_string() => ExternalVal::Func(FuncAddr::alloc_host(|(_,): (f64,)| Ok(()))),
-                    "global_i32".to_string() => ExternalVal::Global(GlobalAddr(Rc::new(RefCell::new(GlobalInst {
-                        value: Val::I32(666),
-                        mut_: Mut::Const
-                    })))),
-                    "global_f32".to_string() => ExternalVal::Global(GlobalAddr(Rc::new(RefCell::new(GlobalInst {
-                        value: Val::F32(666.0),
-                        mut_: Mut::Const
-                    })))),
-                    "global_f64".to_string() => ExternalVal::Global(GlobalAddr(Rc::new(RefCell::new(GlobalInst {
-                        value: Val::F64(666.0),
-                        mut_: Mut::Const
-                    })))),
+                    "global_i32".to_string() => ExternalVal::Global(GlobalAddr::new(Mut::Const, Val::I32(666))),
+                    "global_f32".to_string() => ExternalVal::Global(GlobalAddr::new(Mut::Const, Val::F32(666.0))),
+                    "global_f64".to_string() => ExternalVal::Global(GlobalAddr::new(Mut::Const, Val::F64(666.0))),
                     "table".to_string() => ExternalVal::Table(TableAddr::new(10, Some(20))),
                     "memory".to_string() => ExternalVal::Mem(MemAddr::new(1,Some(2))),
                 }

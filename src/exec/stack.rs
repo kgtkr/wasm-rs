@@ -827,15 +827,14 @@ impl LabelStack {
                             let instance = frame.module.upgrade().unwrap();
 
                             self.run_ok(|(): ()| -> (Val,) {
-                                (instance.globals[idx.to_idx()].0.borrow().value,)
+                                (instance.globals[idx.to_idx()].get(),)
                             });
                         }
                         Instr::GlobalSet(idx) => {
                             let instance = frame.module.upgrade().unwrap();
 
                             self.run_ok(|(x,): (Val,)| -> () {
-                                let mut global = instance.globals[idx.to_idx()].0.borrow_mut();
-                                global.value = x;
+                                instance.globals[idx.to_idx()].set(x).unwrap();
                                 ()
                             });
                         }
