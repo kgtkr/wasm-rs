@@ -1,8 +1,8 @@
 use crate::structure::instructions::{Expr, Instr};
 use crate::structure::modules::{
-    ExportDesc, FuncIdx, GlobalIdx, ImportDesc, Module, Table, TypeIdx, TypedIdx,
+    ExportDesc, FuncIdx, GlobalIdx, ImportDesc, Module, TypeIdx, TypedIdx,
 };
-use crate::structure::types::{ElemType, FuncType, GlobalType, Limits, Mut, TableType, ValType};
+use crate::structure::types::{FuncType, GlobalType, Mut, ValType};
 use crate::WasmError;
 
 use super::mem::MemAddr;

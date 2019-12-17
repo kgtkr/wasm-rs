@@ -1,19 +1,10 @@
-use crate::structure::instructions::{Expr, Instr};
-use crate::structure::modules::{
-    ExportDesc, FuncIdx, GlobalIdx, ImportDesc, Module, Table, TypeIdx, TypedIdx,
-};
-use crate::structure::types::{ElemType, FuncType, GlobalType, Limits, Mut, TableType, ValType};
-use crate::WasmError;
-
-use super::mem::MemAddr;
 use super::FuncAddr;
 use crate::exec::instance::TypedIdxAccess;
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use frunk::{hlist::HList, HCons, HNil};
+use crate::structure::modules::FuncIdx;
+use crate::structure::types::{ElemType, Limits, TableType};
+use crate::WasmError;
 use std::cell::RefCell;
 use std::cell::{Ref, RefMut};
-use std::collections::HashMap;
-use std::io::Cursor;
 use std::rc::Rc;
 
 #[derive(Debug, Clone)]
