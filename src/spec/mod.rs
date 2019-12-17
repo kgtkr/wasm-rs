@@ -5,7 +5,6 @@ use crate::exec::MemAddr;
 use crate::exec::TableAddr;
 use crate::exec::Val;
 use crate::exec::{ExternalVal, ImportObjects, ModuleInst};
-use crate::structure::modules::Module;
 use crate::structure::types::Mut;
 use crate::WasmError;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
