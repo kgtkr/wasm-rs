@@ -1,6 +1,6 @@
-use super::instance::InterpretPrimitive;
-use super::instance::{ModuleInst, PrimitiveVal, TypedIdxAccess, Val};
+use super::instance::{ModuleInst, TypedIdxAccess};
 use super::stack::{AdminInstr, Frame, FrameStack, Label, LabelStack, Stack};
+use super::val::{InterpretPrimitive, PrimitiveVal, Val};
 use crate::structure::instructions::Expr;
 use crate::structure::modules::{Func, TypeIdx};
 use crate::structure::types::{FuncType, ValType};

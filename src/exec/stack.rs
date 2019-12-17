@@ -1,7 +1,7 @@
 use super::func::{FuncAddr, FuncInst};
-use super::instance::InterpretVal;
-use super::instance::{ModuleInst, TypedIdxAccess, Val};
+use super::instance::{ModuleInst, TypedIdxAccess};
 use super::utils::{pop_n, sign_f32, sign_f64, Sign};
+use super::val::{InterpretVal, Val};
 use crate::structure::instructions::Instr;
 use crate::structure::modules::{LabelIdx, TypedIdx};
 use crate::structure::types::ValType;

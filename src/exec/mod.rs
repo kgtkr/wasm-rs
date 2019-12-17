@@ -10,3 +10,5 @@ mod table;
 pub use table::TableAddr;
 mod global;
 pub use global::GlobalAddr;
+mod val;
+pub use val::Val;

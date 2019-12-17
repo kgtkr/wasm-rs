@@ -1,6 +1,6 @@
 use crate::structure::types::{GlobalType, Mut};
 
-use super::instance::Val;
+use super::val::Val;
 use std::cell::RefCell;
 use std::cell::{Ref, RefMut};
 use std::rc::Rc;
