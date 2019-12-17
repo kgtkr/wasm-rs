@@ -10,88 +10,9 @@ use super::mem::MemAddr;
 use super::table::TableAddr;
 use super::FuncAddr;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use frunk::{hlist::HList, HCons, HNil};
 use std::collections::HashMap;
 use std::io::Cursor;
 use std::rc::Rc;
-
-pub trait ValTypeable {
-    fn write_valtype(types: &mut Vec<ValType>);
-    fn to_valtype() -> Vec<ValType> {
-        let mut types = Vec::new();
-        Self::write_valtype(&mut types);
-        types
-    }
-}
-
-impl<T: InterpretPrimitive> ValTypeable for T {
-    fn write_valtype(types: &mut Vec<ValType>) {
-        types.push(T::Primitive::type_());
-    }
-}
-
-impl ValTypeable for HNil {
-    fn write_valtype(_: &mut Vec<ValType>) {}
-}
-
-impl<H: ValTypeable, T: HList + ValTypeable> ValTypeable for HCons<H, T> {
-    fn write_valtype(types: &mut Vec<ValType>) {
-        H::write_valtype(types);
-        T::write_valtype(types);
-    }
-}
-
-pub trait ToOptionVal {
-    fn to_option_val(self) -> Option<Val>;
-}
-
-impl ToOptionVal for HNil {
-    fn to_option_val(self) -> Option<Val> {
-        None
-    }
-}
-
-impl<T: ToOptionVal> ToOptionVal for HCons<T, HNil> {
-    fn to_option_val(self) -> Option<Val> {
-        self.head.to_option_val()
-    }
-}
-
-impl<T: InterpretPrimitive> ToOptionVal for T {
-    fn to_option_val(self) -> Option<Val> {
-        Some(self.to_primitive().wrap_val())
-    }
-}
-
-pub trait FromVecVal: Sized {
-    fn from_vec_val_pop_tail(vals: &mut Vec<Val>) -> Self;
-
-    fn from_vec_val(mut vals: Vec<Val>) -> Self {
-        let res = Self::from_vec_val_pop_tail(&mut vals);
-        assert_eq!(vals.len(), 0);
-        res
-    }
-}
-
-impl FromVecVal for HNil {
-    fn from_vec_val_pop_tail(_: &mut Vec<Val>) -> Self {
-        HNil
-    }
-}
-
-impl<H: FromVecVal, T: HList + FromVecVal> FromVecVal for HCons<H, T> {
-    fn from_vec_val_pop_tail(vals: &mut Vec<Val>) -> Self {
-        let t = T::from_vec_val_pop_tail(vals);
-        let h = H::from_vec_val_pop_tail(vals);
-        HCons { head: h, tail: t }
-    }
-}
-
-impl<T: InterpretPrimitive> FromVecVal for T {
-    fn from_vec_val_pop_tail(vals: &mut Vec<Val>) -> Self {
-        T::reinterpret(T::Primitive::try_from_val(vals.pop().unwrap()).unwrap())
-    }
-}
 
 pub trait PrimitiveVal: Sized {
     fn try_from_val(val: Val) -> Option<Self>;
