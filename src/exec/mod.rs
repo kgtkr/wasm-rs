@@ -6,3 +6,5 @@ mod stack;
 mod utils;
 pub use func::FuncAddr;
 pub use mem::MemAddr;
+mod table;
+pub use table::TableAddr;

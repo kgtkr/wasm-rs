@@ -6,6 +6,7 @@ use crate::structure::types::{ElemType, FuncType, GlobalType, Limits, Mut, Table
 use crate::WasmError;
 
 use super::mem::MemAddr;
+use super::table::TableAddr;
 use super::FuncAddr;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use frunk::{hlist::HList, HCons, HNil};
@@ -330,54 +331,6 @@ pub struct ExportInst {
     value: ExternalVal,
 }
 
-#[derive(Debug, Clone)]
-pub struct TableInst {
-    pub max: Option<usize>,
-    pub elem: Vec<Option<FuncAddr>>,
-}
-
-impl TableInst {
-    pub fn new(table: &Table) -> TableInst {
-        TableInst {
-            max: table.type_.0.max.map(|x| x as usize),
-            elem: {
-                let min = table.type_.0.min as usize;
-                let mut vec = Vec::with_capacity(min);
-                vec.resize(min, None);
-                vec
-            },
-        }
-    }
-
-    pub fn type_(&self) -> TableType {
-        TableType(
-            Limits {
-                min: self.elem.len() as u32,
-                max: self.max.map(|x| x as u32),
-            },
-            ElemType::FuncRef,
-        )
-    }
-
-    fn instantiation_valid(&self, offset: usize, init: Vec<FuncIdx>) -> Result<(), WasmError> {
-        if offset
-            .checked_add(init.len())
-            .map(|x| x > self.elem.len())
-            .unwrap_or(true)
-        {
-            Err(WasmError::LinkError)
-        } else {
-            Ok(())
-        }
-    }
-
-    fn init_elem(&mut self, funcs: &Vec<FuncAddr>, offset: usize, init: Vec<FuncIdx>) {
-        for (i, x) in init.into_iter().enumerate() {
-            self.elem[offset + i] = Some(funcs.get_idx(x).clone());
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct GlobalInst {
     pub value: Val,
@@ -455,9 +408,6 @@ impl TypedIdxAccess<TypeIdx> for Vec<FuncType> {}
 impl TypedIdxAccess<FuncIdx> for Vec<FuncAddr> {}
 impl TypedIdxAccess<GlobalIdx> for Vec<GlobalAddr> {}
 
-#[derive(Clone, Debug)]
-pub struct TableAddr(pub Rc<RefCell<TableInst>>);
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct GlobalAddr(pub Rc<RefCell<GlobalInst>>);
 
@@ -502,7 +452,7 @@ impl ModuleInst {
                 ImportDesc::Table(type_) => {
                     let _ = result.table.replace(
                         val.as_table()
-                            .filter(|table| table.0.borrow().type_().is_match(type_))
+                            .filter(|table| table.type_().is_match(type_))
                             .ok_or_else(|| WasmError::LinkError)?,
                     );
                 }
@@ -528,9 +478,7 @@ impl ModuleInst {
         }
 
         if let Some(table) = module.tables.iter().next() {
-            let _ = result
-                .table
-                .replace(TableAddr(Rc::new(RefCell::new(TableInst::new(table)))));
+            let _ = result.table.replace(TableAddr::alloc(&table.type_));
         }
 
         if let Some(mem) = module.mems.iter().next() {
@@ -552,8 +500,6 @@ impl ModuleInst {
                 .table
                 .as_ref()
                 .unwrap()
-                .0
-                .borrow()
                 .instantiation_valid(offset, elem.init.clone())?;
         }
         for data in &module.data {
@@ -566,11 +512,11 @@ impl ModuleInst {
 
         for elem in &module.elem {
             let offset = result.eval_const_expr(&elem.offset).unwrap_i32() as usize;
-            result.table.as_ref().unwrap().0.borrow_mut().init_elem(
-                &result.funcs,
-                offset,
-                elem.init.clone(),
-            );
+            result
+                .table
+                .as_ref()
+                .unwrap()
+                .init_elem(&result.funcs, offset, elem.init.clone());
         }
         for data in &module.data {
             let offset = result.eval_const_expr(&data.offset).unwrap_i32() as usize;
