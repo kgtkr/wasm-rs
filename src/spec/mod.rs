@@ -1,4 +1,4 @@
-use crate::binary::Decoder;
+use crate::binary::decode_module;
 use crate::exec::FuncAddr;
 use crate::exec::GlobalAddr;
 use crate::exec::MemAddr;
@@ -236,7 +236,7 @@ impl Command {
         match &self.paylaod {
             CommandPayload::Module { filename, name } => {
                 let module = ModuleInst::new(
-                    &Module::decode_end(&std::fs::read(base_dir.join(filename)).unwrap()).unwrap(),
+                    &decode_module(&std::fs::read(base_dir.join(filename)).unwrap()).unwrap(),
                     state.registers.clone(),
                 )
                 .unwrap();
@@ -262,8 +262,7 @@ impl Command {
             CommandPayload::AssertUninstantiable { filename } => {
                 assert_eq!(
                     ModuleInst::new(
-                        &Module::decode_end(&std::fs::read(base_dir.join(filename)).unwrap())
-                            .unwrap(),
+                        &decode_module(&std::fs::read(base_dir.join(filename)).unwrap()).unwrap(),
                         state.registers.clone(),
                     )
                     .unwrap_err(),
@@ -273,8 +272,7 @@ impl Command {
             CommandPayload::AssertUnlinkable { filename } => {
                 assert_eq!(
                     ModuleInst::new(
-                        &Module::decode_end(&std::fs::read(base_dir.join(filename)).unwrap())
-                            .unwrap(),
+                        &decode_module(&std::fs::read(base_dir.join(filename)).unwrap()).unwrap(),
                         state.registers.clone(),
                     )
                     .unwrap_err(),

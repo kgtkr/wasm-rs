@@ -280,13 +280,13 @@ impl ModuleInst {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::binary::Decoder;
+    use crate::binary::decode_module;
     use maplit::hashmap;
 
     #[test]
     #[ignore]
     fn test_add() {
-        let module = Module::decode_end(&std::fs::read("./example/add.wasm").unwrap()).unwrap();
+        let module = decode_module(&std::fs::read("./example/add.wasm").unwrap()).unwrap();
         let instance = ModuleInst::new(&module, HashMap::new()).unwrap();
         assert_eq!(
             instance
@@ -300,7 +300,7 @@ mod tests {
     #[test]
     #[ignore]
     fn test_gcd() {
-        let module = Module::decode_end(&std::fs::read("./example/gcd.wasm").unwrap()).unwrap();
+        let module = decode_module(&std::fs::read("./example/gcd.wasm").unwrap()).unwrap();
         let instance = ModuleInst::new(&module, HashMap::new()).unwrap();
 
         assert_eq!(
@@ -315,7 +315,7 @@ mod tests {
     #[test]
     #[ignore]
     fn test_pow() {
-        let module = Module::decode_end(&std::fs::read("./example/pow.wasm").unwrap()).unwrap();
+        let module = decode_module(&std::fs::read("./example/pow.wasm").unwrap()).unwrap();
         let instance = ModuleInst::new(&module, HashMap::new()).unwrap();
         assert_eq!(
             instance
@@ -329,8 +329,7 @@ mod tests {
     #[test]
     #[ignore]
     fn test_br_table() {
-        let module =
-            Module::decode_end(&std::fs::read("./example/br_table.wasm").unwrap()).unwrap();
+        let module = decode_module(&std::fs::read("./example/br_table.wasm").unwrap()).unwrap();
         let instance = ModuleInst::new(&module, HashMap::new()).unwrap();
 
         assert_eq!(
@@ -354,7 +353,7 @@ mod tests {
     fn test_md5() {
         use std::ffi::CString;
 
-        let module = Module::decode_end(&std::fs::read("./example/md5.wasm").unwrap()).unwrap();
+        let module = decode_module(&std::fs::read("./example/md5.wasm").unwrap()).unwrap();
         let instance = ModuleInst::new(&module, HashMap::new()).unwrap();
 
         let input_bytes = CString::new("abc").unwrap().into_bytes();
@@ -404,7 +403,7 @@ mod tests {
         }));
 
         let memory_module =
-            Module::decode_end(&std::fs::read("./example/memory.wasm").unwrap()).unwrap();
+            decode_module(&std::fs::read("./example/memory.wasm").unwrap()).unwrap();
         let memory_instance = ModuleInst::new(
             &memory_module,
             hashmap! {
@@ -416,7 +415,7 @@ mod tests {
         .unwrap();
 
         let main_module =
-            Module::decode_end(&std::fs::read("./example/cl8w-gcd.wasm").unwrap()).unwrap();
+            decode_module(&std::fs::read("./example/cl8w-gcd.wasm").unwrap()).unwrap();
         let main_instance = ModuleInst::new(
             &main_module,
             hashmap! {
@@ -448,7 +447,7 @@ mod tests {
         }));
 
         let memory_module =
-            Module::decode_end(&std::fs::read("./example/memory.wasm").unwrap()).unwrap();
+            decode_module(&std::fs::read("./example/memory.wasm").unwrap()).unwrap();
         let memory_instance = ModuleInst::new(
             &memory_module,
             hashmap! {
@@ -459,8 +458,7 @@ mod tests {
         )
         .unwrap();
 
-        let main_module =
-            Module::decode_end(&std::fs::read("./example/cl8w-ex.wasm").unwrap()).unwrap();
+        let main_module = decode_module(&std::fs::read("./example/cl8w-ex.wasm").unwrap()).unwrap();
         let main_instance = ModuleInst::new(
             &main_module,
             hashmap! {
@@ -491,8 +489,7 @@ mod tests {
         }));
 
         let module =
-            Module::decode_end(&std::fs::read("./example/wasm-rs-self-host.wasm").unwrap())
-                .unwrap();
+            decode_module(&std::fs::read("./example/wasm-rs-self-host.wasm").unwrap()).unwrap();
         let instance = ModuleInst::new(
             &module,
             hashmap! {
