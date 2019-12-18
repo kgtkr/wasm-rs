@@ -567,47 +567,6 @@ impl Decoder for Module {
 }
 
 #[test]
-#[ignore]
-fn test_add() {
-    use crate::structure::instructions::Instr;
-    assert_eq!(
-        Module::decode_end(&std::fs::read("./example/add.wasm").unwrap()).unwrap(),
-        Module {
-            types: vec![FuncType(
-                vec![ValType::I32, ValType::I32],
-                vec![ValType::I32],
-            )],
-            funcs: vec![Func {
-                type_: TypeIdx(0),
-                locals: vec![],
-                body: Expr(vec![
-                    Instr::LocalGet(LocalIdx(0)),
-                    Instr::LocalGet(LocalIdx(1)),
-                    Instr::I32Add,
-                ]),
-            }],
-            tables: vec![],
-            mems: vec![],
-            globals: vec![],
-            elem: vec![],
-            data: vec![],
-            start: None,
-            imports: vec![],
-            exports: vec![Export {
-                name: Name("add".to_string()),
-                desc: ExportDesc::Func(FuncIdx(0)),
-            }],
-        }
-    );
-}
-
-#[test]
-#[ignore]
-fn test_md5() {
-    assert!(Module::decode_end(&std::fs::read("./example/md5.wasm").unwrap()).is_ok(),);
-}
-
-#[test]
 fn tests() {
     use super::test_helper;
 
