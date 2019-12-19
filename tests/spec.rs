@@ -1,13 +1,7 @@
-use crate::binary::decode_module;
-use crate::exec::FuncAddr;
-use crate::exec::GlobalAddr;
-use crate::exec::MemAddr;
-use crate::exec::TableAddr;
-use crate::exec::Val;
-use crate::exec::{ExternalVal, ImportObjects, ModuleInst};
-use crate::structure::types::Mut;
-use crate::WasmError;
+#![feature(backtrace)]
+
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use lazy_static::lazy_static;
 use maplit::hashmap;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -16,6 +10,15 @@ use std::panic;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::Path;
 use std::rc::Rc;
+use wasm_rs::binary::decode_module;
+use wasm_rs::exec::FuncAddr;
+use wasm_rs::exec::GlobalAddr;
+use wasm_rs::exec::MemAddr;
+use wasm_rs::exec::TableAddr;
+use wasm_rs::exec::Val;
+use wasm_rs::exec::{ExternalVal, ImportObjects, ModuleInst};
+use wasm_rs::structure::types::Mut;
+use wasm_rs::WasmError;
 
 #[derive(Debug, Clone, Copy)]
 struct SpecVal(Val);
