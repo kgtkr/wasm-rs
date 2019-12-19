@@ -21,6 +21,6 @@ $ cargo run --example cl8w-on-wasm-on-wasm --release
 ```
 $ git submodule init
 $ git submodule update
-$ ./init.sh
+$ ./build-spec.sh
 $ cargo test
 ```
