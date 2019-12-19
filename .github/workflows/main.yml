@@ -26,4 +26,17 @@ jobs:
           toolchain: nightly
           target: x86_64-unknown-linux-gnu
           override: true
-      - run: cargo test
+      - run: |
+          cargo test
+      - run: |
+          cargo build --all-targets --release
+
+          test "$(cargo run --example cl8w-ex --release -q)" = "$(echo -n -e "1\n3\n5\n7\n9\n11\n13\n15\n17\n19\n")"
+
+          test "$(cargo run --example cl8w-gcd --release -q)" = "$(echo -n -e "4\n")"
+
+          (cd md5-bin && cargo build --target wasm32-unknown-unknown --release)
+          test "$(cargo run --example md5 --release -q)" = "$(echo -n -e "900150983cd24fb0d6963f7d28e17f72\n")"
+
+          (cd cl8w-on-wasm-bin && cargo build --target wasm32-unknown-unknown --release)
+          test "$(cargo run --example cl8w-on-wasm-on-wasm --release -q)" = "$(echo -n -e "1\n3\n5\n7\n9\n11\n13\n15\n17\n19\n")"
