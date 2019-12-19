@@ -1,6 +1,8 @@
 use super::instructions::Expr;
 use super::types::{FuncType, GlobalType, MemType, TableType, ValType};
 use super::values::{Byte, Name};
+#[cfg(test)]
+use proptest_derive::Arbitrary;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Module {

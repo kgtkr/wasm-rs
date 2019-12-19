@@ -1,3 +1,6 @@
+#[cfg(test)]
+use proptest_derive::Arbitrary;
+
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct FuncType(pub Vec<ValType>, pub Vec<ValType>);

@@ -1,5 +1,7 @@
 use super::modules::{FuncIdx, GlobalIdx, LabelIdx, LocalIdx, TypeIdx};
 use super::types::ResultType;
+#[cfg(test)]
+use proptest_derive::Arbitrary;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Expr(pub Vec<Instr>);

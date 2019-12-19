@@ -7,7 +7,3 @@ pub mod structure;
 pub mod validation;
 mod wasm_error;
 pub use wasm_error::WasmError;
-
-#[cfg(test)]
-#[macro_use]
-extern crate proptest_derive;

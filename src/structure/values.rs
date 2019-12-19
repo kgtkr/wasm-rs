@@ -1,3 +1,6 @@
+#[cfg(test)]
+use proptest_derive::Arbitrary;
+
 #[derive(Debug, Clone, PartialEq, Copy)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct Byte(pub u8);
