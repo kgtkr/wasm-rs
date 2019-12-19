@@ -84,16 +84,16 @@ impl FromJSON for Val {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum ActionPayload {
+pub enum ActionKind {
     Invoke { field: String, args: Vec<Val> },
     Get { field: String },
 }
 
-impl FromJSON for ActionPayload {
-    fn from_json(json: &Value) -> ActionPayload {
+impl FromJSON for ActionKind {
+    fn from_json(json: &Value) -> ActionKind {
         let json_obj = json.as_object().unwrap();
         match json_obj.get("type").unwrap().as_str().unwrap() {
-            "invoke" => ActionPayload::Invoke {
+            "invoke" => ActionKind::Invoke {
                 field: json_obj.get("field").unwrap().as_str().unwrap().to_string(),
                 args: json_obj
                     .get("args")
@@ -104,7 +104,7 @@ impl FromJSON for ActionPayload {
                     .map(Val::from_json)
                     .collect::<Vec<_>>(),
             },
-            "get" => ActionPayload::Get {
+            "get" => ActionKind::Get {
                 field: json_obj.get("field").unwrap().as_str().unwrap().to_string(),
             },
             _ => panic!(),
@@ -114,20 +114,20 @@ impl FromJSON for ActionPayload {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Action {
-    payload: ActionPayload,
+    kind: ActionKind,
     module: Option<String>,
 }
 
 impl Action {
     fn run(&self, state: &mut SpecState) -> Result<Vec<SpecVal>, WasmError> {
-        match &self.payload {
-            ActionPayload::Invoke { field, args } => state
+        match &self.kind {
+            ActionKind::Invoke { field, args } => state
                 .instance(&self.module)
                 .export(field)
                 .unwrap_func()
                 .call(args.clone())
                 .map(|x| x.into_iter().map(SpecVal).collect::<Vec<_>>()),
-            ActionPayload::Get { field } => Ok(vec![SpecVal(
+            ActionKind::Get { field } => Ok(vec![SpecVal(
                 state
                     .instance(&self.module)
                     .export(field)
@@ -141,7 +141,7 @@ impl Action {
 impl FromJSON for Action {
     fn from_json(json: &Value) -> Action {
         Action {
-            payload: ActionPayload::from_json(json),
+            kind: ActionKind::from_json(json),
             module: json
                 .as_object()
                 .unwrap()
@@ -230,13 +230,13 @@ impl Spec {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Command {
     line: i32,
-    paylaod: CommandPayload,
+    paylaod: CommandKind,
 }
 
 impl Command {
     fn run(&self, base_dir: &Path, state: &mut SpecState) {
         match &self.paylaod {
-            CommandPayload::Module { filename, name } => {
+            CommandKind::Module { filename, name } => {
                 let module = ModuleInst::new(
                     &decode_module(&std::fs::read(base_dir.join(filename)).unwrap()).unwrap(),
                     state.registers.clone(),
@@ -247,21 +247,21 @@ impl Command {
                     state.instance_map.insert(name.clone(), module.clone());
                 }
             }
-            CommandPayload::AssertReturn { action, expected } => {
+            CommandKind::AssertReturn { action, expected } => {
                 assert_eq!(&action.run(state).unwrap(), expected);
             }
-            CommandPayload::AssertTrap { action } => {
+            CommandKind::AssertTrap { action } => {
                 assert_eq!(action.run(state), Err(WasmError::RuntimeError));
             }
-            CommandPayload::Register { as_, name } => {
+            CommandKind::Register { as_, name } => {
                 state
                     .registers
                     .insert(as_.clone(), state.instance(name).exports());
             }
-            CommandPayload::Action { action, expected } => {
+            CommandKind::Action { action, expected } => {
                 assert_eq!(&action.run(state).unwrap(), expected);
             }
-            CommandPayload::AssertUninstantiable { filename } => {
+            CommandKind::AssertUninstantiable { filename } => {
                 assert_eq!(
                     ModuleInst::new(
                         &decode_module(&std::fs::read(base_dir.join(filename)).unwrap()).unwrap(),
@@ -271,7 +271,7 @@ impl Command {
                     WasmError::RuntimeError
                 );
             }
-            CommandPayload::AssertUnlinkable { filename } => {
+            CommandKind::AssertUnlinkable { filename } => {
                 assert_eq!(
                     ModuleInst::new(
                         &decode_module(&std::fs::read(base_dir.join(filename)).unwrap()).unwrap(),
@@ -281,7 +281,7 @@ impl Command {
                     WasmError::LinkError
                 );
             }
-            CommandPayload::Skip { .. } => {}
+            CommandKind::Skip { .. } => {}
         }
     }
 }
@@ -296,13 +296,13 @@ impl FromJSON for Command {
                 .unwrap()
                 .as_i64()
                 .unwrap() as i32,
-            paylaod: CommandPayload::from_json(json),
+            paylaod: CommandKind::from_json(json),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
-enum CommandPayload {
+enum CommandKind {
     Module {
         filename: String,
         name: Option<String>,
@@ -333,11 +333,11 @@ enum CommandPayload {
     },
 }
 
-impl FromJSON for CommandPayload {
-    fn from_json(json: &Value) -> CommandPayload {
+impl FromJSON for CommandKind {
+    fn from_json(json: &Value) -> CommandKind {
         let json_obj = json.as_object().unwrap();
         match json_obj.get("type").unwrap().as_str().unwrap() {
-            "module" => CommandPayload::Module {
+            "module" => CommandKind::Module {
                 filename: json_obj
                     .get("filename")
                     .unwrap()
@@ -350,7 +350,7 @@ impl FromJSON for CommandPayload {
                     .get("name")
                     .map(|x| x.as_str().unwrap().to_string()),
             },
-            "assert_return" => CommandPayload::AssertReturn {
+            "assert_return" => CommandKind::AssertReturn {
                 action: Action::from_json(json_obj.get("action").unwrap()),
                 expected: json_obj
                     .get("expected")
@@ -361,7 +361,7 @@ impl FromJSON for CommandPayload {
                     .map(SpecVal::from_json)
                     .collect::<Vec<_>>(),
             },
-            "register" => CommandPayload::Register {
+            "register" => CommandKind::Register {
                 as_: json_obj.get("as").unwrap().as_str().unwrap().to_string(),
                 name: json
                     .as_object()
@@ -369,7 +369,7 @@ impl FromJSON for CommandPayload {
                     .get("name")
                     .map(|x| x.as_str().unwrap().to_string()),
             },
-            "action" => CommandPayload::Action {
+            "action" => CommandKind::Action {
                 action: Action::from_json(json_obj.get("action").unwrap()),
                 expected: json_obj
                     .get("expected")
@@ -380,10 +380,10 @@ impl FromJSON for CommandPayload {
                     .map(SpecVal::from_json)
                     .collect::<Vec<_>>(),
             },
-            "assert_trap" => CommandPayload::AssertTrap {
+            "assert_trap" => CommandKind::AssertTrap {
                 action: Action::from_json(json_obj.get("action").unwrap()),
             },
-            "assert_uninstantiable" => CommandPayload::AssertUninstantiable {
+            "assert_uninstantiable" => CommandKind::AssertUninstantiable {
                 filename: json_obj
                     .get("filename")
                     .unwrap()
@@ -391,7 +391,7 @@ impl FromJSON for CommandPayload {
                     .unwrap()
                     .to_string(),
             },
-            "assert_unlinkable" => CommandPayload::AssertUnlinkable {
+            "assert_unlinkable" => CommandKind::AssertUnlinkable {
                 filename: json_obj
                     .get("filename")
                     .unwrap()
@@ -399,19 +399,19 @@ impl FromJSON for CommandPayload {
                     .unwrap()
                     .to_string(),
             },
-            "assert_malformed" => CommandPayload::Skip {
+            "assert_malformed" => CommandKind::Skip {
                 type_: "assert_malformed".to_string(),
             },
-            "assert_invalid" => CommandPayload::Skip {
+            "assert_invalid" => CommandKind::Skip {
                 type_: "assert_invalid".to_string(),
             },
-            "assert_exhaustion" => CommandPayload::Skip {
+            "assert_exhaustion" => CommandKind::Skip {
                 type_: "assert_exhaustion".to_string(),
             },
-            "assert_return_canonical_nan" => CommandPayload::Skip {
+            "assert_return_canonical_nan" => CommandKind::Skip {
                 type_: "assert_return_canonical_nan".to_string(),
             },
-            "assert_return_arithmetic_nan" => CommandPayload::Skip {
+            "assert_return_arithmetic_nan" => CommandKind::Skip {
                 type_: "assert_return_arithmetic_nan".to_string(),
             },
             ty => panic!("unknown type: {}", ty),
