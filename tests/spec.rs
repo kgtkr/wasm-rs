@@ -438,7 +438,7 @@ fn test_specs() {
         default_hook(panic_info);
     }));
 
-    let base_dir = Path::new("./spec");
+    let base_dir = Path::new("./wast-dist");
     let mut passed_count = 0;
     let mut failed_count = 0;
     let mut fail_msgs = Vec::new();

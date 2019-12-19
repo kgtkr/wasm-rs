@@ -1,8 +1,8 @@
 #!/bin/bash -eu
-rm -rf spec
-mkdir spec
-cp ./wasm-spec/test/core/*.wast ./spec
+rm -rf wast-dist
+mkdir wast-dist
+cp ./WebAssembly/spec/test/core/*.wast ./wast-dist
 
-for file in $(ls spec); do
-  wast2json spec/$file -o spec/$file.json
+for file in $(ls wast-dist); do
+  wast2json wast-dist/$file -o wast-dist/$file.json
 done
