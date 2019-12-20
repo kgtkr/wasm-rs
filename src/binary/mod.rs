@@ -19,5 +19,5 @@ pub fn encode_module(module: &Module) -> Vec<u8> {
 }
 
 pub fn decode_module(bytes: &[u8]) -> Result<Module, nom::Err<(&[u8], nom::error::ErrorKind)>> {
-    Module::decode_end(bytes)
+    Module::decode_to_end(bytes)
 }
