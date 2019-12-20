@@ -7,7 +7,7 @@ where
 {
     fn decode(input: &[u8]) -> IResult<&[u8], Self>;
 
-    fn decode_end(input: &[u8]) -> Result<Self, nom::Err<(&[u8], nom::error::ErrorKind)>> {
+    fn decode_to_end(input: &[u8]) -> Result<Self, nom::Err<(&[u8], nom::error::ErrorKind)>> {
         let (_, (x, _)) = tuple((Self::decode, eof()))(input)?;
         Ok(x)
     }
